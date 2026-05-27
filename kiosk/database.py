@@ -46,7 +46,7 @@ def initialize_database(app):
                 image_kiosk TEXT,
                 image_tv TEXT,
                 image_thumb TEXT,
-                status TEXT NOT NULL DEFAULT 'draft',
+                status TEXT NOT NULL DEFAULT 'hidden',
                 sort_order INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL

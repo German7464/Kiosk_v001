@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Changed the default event status from `draft` to `hidden`.
 - Added SQLite database initialization with MVP tables and default settings.
 - Added `AGENTS.md` to project tracking, removed the PyCharm sample file, and aligned the architecture document with the actual project structure.
 - Added basic Flask startup with `/kiosk` and `/preview` placeholder pages.
