@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Preview{% endblock %}
+
+{% block content %}
+<section class="placeholder">
+    <p class="label">Preview mode</p>
+    <h1>Preview placeholder</h1>
+    <nav class="links" aria-label="Preview links">
+        <a href="{{ url_for('kiosk_home') }}">Open kiosk</a>
+        <a href="{{ url_for('preview') }}">Open preview</a>
+    </nav>
+</section>
+{% endblock %}
