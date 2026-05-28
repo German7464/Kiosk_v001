@@ -1,0 +1,21 @@
+<article class="admin-preview admin-preview--{{ preview_mode }} admin-preview--{{ preview_size }}{% if preview_size == 'compact' %} admin-event-preview admin-event-preview-{{ preview_mode }}{% else %} admin-event-form-preview-card admin-event-form-preview-card--{{ preview_mode }}{% endif %}" data-admin-preview data-preview-label="{{ preview_label|e }}" data-preview-mode="{{ preview_mode }}" data-preview-title="{{ preview_title|e }}" data-preview-date="{{ preview_date|e }}" data-preview-place="{{ preview_place|e }}" data-preview-description="{{ preview_description|e }}" data-preview-image="{{ preview_image|e }}">
+    <p class="admin-preview-label admin-preview__label">{{ preview_label }}</p>
+    <div class="{% if preview_size == 'compact' %}admin-preview-media{% else %}admin-form-preview-image{% endif %} admin-preview__media" data-placeholder="{{ t('common.image_area') }}">
+        {% if preview_image %}
+        <img src="{{ preview_image }}" alt="{{ preview_title }}">
+        {% else %}
+        <span class="admin-preview__placeholder">{{ t("common.image_area") }}</span>
+        {% endif %}
+    </div>
+    <div class="{% if preview_size == 'full' %}admin-event-form-preview-copy {% endif %}admin-preview__text">
+        <p class="event-date admin-preview__date" data-form-preview-date>{{ preview_date }}</p>
+        {% if preview_size == "compact" %}
+        <h3 class="admin-preview-title admin-preview__title" data-form-preview-title>{{ preview_title }}</h3>
+        {% else %}
+        <h3 class="admin-preview__title" data-form-preview-title>{{ preview_title }}</h3>
+        {% endif %}
+        <p class="admin-preview__description" data-form-preview-description>{{ preview_description }}</p>
+        <p class="event-place admin-preview__place" data-form-preview-place>{{ preview_place }}</p>
+    </div>
+    <button class="admin-preview__open" type="button" data-admin-preview-open>{{ t("admin.open_preview") }}</button>
+</article>

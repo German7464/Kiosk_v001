@@ -879,7 +879,7 @@ h1 {
     line-height: 1.14;
 }
 
-.admin-event-form-preview-card button {
+.admin-preview__open {
     min-height: 44px;
     justify-self: start;
     padding: 0 16px;
@@ -917,8 +917,18 @@ h1 {
     min-width: 0;
 }
 
+.admin-preview__title,
+.admin-preview__description,
+.admin-preview__date,
+.admin-preview__place,
+.admin-preview__meta {
+    margin: 0;
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
 .admin-event-form-preview-card--tv .admin-preview-label,
-.admin-event-form-preview-card--tv button {
+.admin-event-form-preview-card--tv .admin-preview__open {
     grid-column: 1 / -1;
 }
 
@@ -2015,6 +2025,11 @@ textarea {
         linear-gradient(180deg, #ffffff, #f8faff);
 }
 
+.admin-event-preview-kiosk .admin-preview__text {
+    display: grid;
+    gap: 8px;
+}
+
 .admin-event-preview:hover,
 .admin-event-preview:focus-visible {
     outline: 3px solid rgba(109, 93, 252, 0.18);
@@ -2086,6 +2101,19 @@ textarea {
 
 .admin-event-preview-tv .admin-preview-media span {
     color: rgba(248, 251, 255, 0.8);
+}
+
+.admin-event-preview-tv .admin-preview__text {
+    display: grid;
+    align-content: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 10px 0;
+}
+
+.admin-event-preview-tv .admin-preview__open {
+    align-self: end;
+    justify-self: start;
 }
 
 .admin-event-preview-tv .admin-preview-title,

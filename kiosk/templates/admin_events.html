@@ -19,30 +19,12 @@
         {% for event in events %}
         <article class="admin-event-card">
             <div class="admin-event-preview-grid">
-                <button class="admin-preview admin-preview--kiosk admin-preview--compact admin-event-preview admin-event-preview-kiosk" type="button" data-admin-preview data-admin-preview-open data-preview-label="{{ t('admin.kiosk_preview') }}" data-preview-title="{{ event.title|e }}" data-preview-date="{{ (event.event_date or t('common.date_to_be_announced'))|e }}" data-preview-place="{{ (event.place or t('common.place_to_be_announced'))|e }}" data-preview-description="{{ (event.short_description or t('common.no_short_description'))|e }}" data-preview-image="{{ (event.image_thumb or '')|e }}" data-preview-mode="kiosk">
-                    <span class="admin-preview-label admin-preview__label">{{ t("admin.kiosk_preview") }}</span>
-                    <span class="admin-preview-media admin-preview__media" data-placeholder="{{ t('common.image_area') }}">
-                        {% if event.image_thumb %}
-                        <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
-                        {% else %}
-                        <span class="admin-preview__placeholder">{{ t("common.image_area") }}</span>
-                        {% endif %}
-                    </span>
-                    <span class="admin-preview-title admin-preview__title">{{ event.title }}</span>
-                    <span class="admin-preview-meta admin-preview__meta">{{ event.event_date or t("common.date_to_be_announced") }}</span>
-                </button>
-                <button class="admin-preview admin-preview--tv admin-preview--compact admin-event-preview admin-event-preview-tv" type="button" data-admin-preview data-admin-preview-open data-preview-label="{{ t('admin.tv_preview') }}" data-preview-title="{{ event.title|e }}" data-preview-date="{{ (event.event_date or t('common.date_to_be_announced'))|e }}" data-preview-place="{{ (event.place or t('common.place_to_be_announced'))|e }}" data-preview-description="{{ (event.short_description or t('common.no_short_description'))|e }}" data-preview-image="{{ (event.image_thumb or '')|e }}" data-preview-mode="tv">
-                    <span class="admin-preview-label admin-preview__label">{{ t("admin.tv_preview") }}</span>
-                    <span class="admin-preview-media admin-preview__media" data-placeholder="{{ t('common.image_area') }}">
-                        {% if event.image_thumb %}
-                        <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
-                        {% else %}
-                        <span class="admin-preview__placeholder">{{ t("common.image_area") }}</span>
-                        {% endif %}
-                    </span>
-                    <span class="admin-preview-title admin-preview__title">{{ event.title }}</span>
-                    <span class="admin-preview-meta admin-preview__meta">{{ event.place or t("common.place_to_be_announced") }}</span>
-                </button>
+                {% with preview_mode="kiosk", preview_size="compact", preview_label=t("admin.kiosk_preview"), preview_title=event.title, preview_date=event.event_date or t("common.date_to_be_announced"), preview_place=event.place or t("common.place_to_be_announced"), preview_description=event.short_description or t("common.no_short_description"), preview_image=event.image_thumb or "" %}
+                {% include "admin_event_preview.html" %}
+                {% endwith %}
+                {% with preview_mode="tv", preview_size="compact", preview_label=t("admin.tv_preview"), preview_title=event.title, preview_date=event.event_date or t("common.date_to_be_announced"), preview_place=event.place or t("common.place_to_be_announced"), preview_description=event.short_description or t("common.no_short_description"), preview_image=event.image_thumb or "" %}
+                {% include "admin_event_preview.html" %}
+                {% endwith %}
             </div>
             <div class="admin-event-card-body">
                 <div class="admin-event-card-copy">

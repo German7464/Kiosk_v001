@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Refactored admin event previews into a shared Jinja preview partial used by the event list and create/edit forms.
 - Unified admin event preview markup, styles, image handling, and modal behavior across event list and create/edit forms.
 - Fixed admin preview image handling so preview images do not tile and broken images fall back to shared placeholders.
 - Improved admin event create and edit form previews with separate kiosk and TV blocks plus a centered large preview modal.
