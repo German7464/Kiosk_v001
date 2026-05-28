@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Kiosk Events{% endblock %}
+
+{% block content %}
+<section class="events-screen" data-inactivity-seconds="60">
+    <header class="events-header">
+        <a class="back-action" href="{{ url_for('kiosk_home') }}">Back to home</a>
+        <div>
+            <p class="label">Event cards</p>
+            <h1>Current events</h1>
+        </div>
+        <a class="admin-transition" href="/admin" aria-label="Admin transition">Admin</a>
+    </header>
+
+    <div class="events-toolbar">
+        <div class="tag-filter-area" aria-label="Tag filters">
+            <button class="tag-button active" type="button" data-tag-filter="all">All events</button>
+            <div class="tag-list" data-tag-list></div>
+            <button class="tag-button" type="button" data-open-tags>All tags</button>
+        </div>
+        <div class="version-badge" data-content-version>Version loading</div>
+    </div>
+
+    <section class="event-card-display" aria-live="polite">
+        <article class="event-card" data-event-card>
+            <div class="empty-state" data-empty-state>
+                <p class="label">No active events</p>
+                <h2>Events will appear here after they are published.</h2>
+                <p>The kiosk events page is ready and waiting for active event cards.</p>
+            </div>
+        </article>
+    </section>
+
+    <footer class="events-controls">
+        <button class="nav-button" type="button" data-previous-event>Previous</button>
+        <div class="card-counter" data-card-counter>0 / 0</div>
+        <button class="nav-button" type="button" data-next-event>Next</button>
+    </footer>
+
+    <div class="tags-modal" data-tags-modal hidden>
+        <div class="tags-modal-panel" role="dialog" aria-modal="true" aria-labelledby="tags-modal-title">
+            <div class="tags-modal-header">
+                <h2 id="tags-modal-title">All tags</h2>
+                <button class="close-button" type="button" data-close-tags>Close</button>
+            </div>
+            <div class="tags-modal-body" data-all-tags>
+                <p>No tags available yet.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/kiosk_events.js') }}"></script>
+{% endblock %}

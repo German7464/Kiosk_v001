@@ -16,6 +16,10 @@ def create_app():
     def kiosk_home():
         return render_template("kiosk_home.html")
 
+    @app.get("/kiosk/events")
+    def kiosk_events():
+        return render_template("kiosk_events.html")
+
     @app.get("/preview")
     def preview():
         return render_template("preview.html")

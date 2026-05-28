@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Added the MVP kiosk events page with public API loading, card navigation, tag area, inactivity return, hidden admin transition, and empty state.
 - Added the MVP kiosk home screen with a touch-friendly layout, system branding, decorative background, and events entry button.
 - Added initial read-only public API endpoints for version, active events, event details, and tags.
 - Changed the default event status from `draft` to `hidden`.
