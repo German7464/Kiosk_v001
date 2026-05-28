@@ -8,7 +8,7 @@
         {% if settings.site_icon %}
         <img class="system-icon-image" src="{{ settings.site_icon }}" alt="{{ settings.site_title }}">
         {% else %}
-        <div class="system-icon" aria-hidden="true">K</div>
+        <img class="system-icon-image" src="{{ url_for('static', filename='img/site_icon.png') }}" alt="{{ settings.site_title }}">
         {% endif %}
         <p class="system-name">{{ settings.site_title }}</p>
     </div>

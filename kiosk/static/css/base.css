@@ -1021,3 +1021,533 @@ h1 {
         grid-template-columns: 1fr;
     }
 }
+
+html {
+    overflow-x: hidden;
+}
+
+body {
+    overflow-x: hidden;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+img,
+svg,
+video,
+canvas {
+    max-width: 100%;
+}
+
+h1,
+h2,
+p,
+a,
+button,
+label,
+span,
+input,
+textarea,
+select {
+    overflow-wrap: anywhere;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.page {
+    width: 100%;
+    align-items: start;
+    justify-items: center;
+    padding: clamp(14px, 2.8vw, 32px);
+}
+
+.placeholder,
+.admin-panel,
+.kiosk-home,
+.events-screen,
+.tv-screen {
+    width: min(100%, var(--screen-max, 1280px));
+    max-width: calc(100vw - clamp(28px, 5.6vw, 64px));
+}
+
+.placeholder {
+    --screen-max: 780px;
+    align-self: center;
+}
+
+.kiosk-home {
+    --screen-max: 1240px;
+    min-height: min(820px, calc(100vh - clamp(28px, 5.6vw, 64px)));
+    align-self: center;
+    grid-template-rows: minmax(0, auto) minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+}
+
+.kiosk-brand {
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(16px, 2.2vw, 28px);
+}
+
+.system-icon-image,
+.system-icon {
+    width: clamp(132px, 20vw, 320px);
+    height: clamp(132px, 20vw, 320px);
+}
+
+.system-icon-image {
+    padding: clamp(10px, 2vw, 28px);
+    object-fit: contain;
+}
+
+.system-name {
+    max-width: min(980px, 100%);
+    padding: clamp(12px, 1.8vw, 20px) clamp(18px, 3.2vw, 42px);
+    border-radius: 8px;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--violet), #7c3aed 52%, #ec4899);
+    box-shadow: 0 18px 42px rgba(124, 58, 237, 0.2);
+    font-size: clamp(22px, 3vw, 34px);
+}
+
+.kiosk-content {
+    width: min(920px, 100%);
+    align-self: start;
+    padding-top: clamp(32px, 5vh, 58px);
+}
+
+.kiosk-content h1 {
+    font-size: clamp(42px, 7.2vw, 86px);
+}
+
+.kiosk-description {
+    margin-inline: auto;
+    font-size: clamp(20px, 2.5vw, 30px);
+}
+
+.primary-action {
+    width: min(100%, 440px);
+    min-width: 0;
+    min-height: clamp(72px, 8vw, 96px);
+    font-size: clamp(22px, 2.6vw, 32px);
+}
+
+.events-screen {
+    --screen-max: 1280px;
+    min-height: min(860px, calc(100vh - clamp(28px, 5.6vw, 64px)));
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.events-header,
+.events-toolbar,
+.events-controls,
+.tag-filter-area,
+.tag-list,
+.admin-actions,
+.admin-row-actions,
+.admin-inline-form {
+    min-width: 0;
+}
+
+.events-header h1 {
+    font-size: clamp(34px, 4.6vw, 62px);
+}
+
+.events-header > div {
+    min-width: 0;
+}
+
+.tag-filter-area {
+    max-width: 100%;
+}
+
+.tag-button {
+    max-width: 100%;
+    min-height: 60px;
+    white-space: normal;
+}
+
+.version-badge {
+    max-width: 100%;
+}
+
+.event-card {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.event-card-body {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.event-card-image {
+    aspect-ratio: 16 / 9;
+    max-height: min(42vh, 380px);
+    object-fit: contain;
+}
+
+.empty-state h2,
+.event-title {
+    font-size: clamp(30px, 5vw, 58px);
+}
+
+.empty-state p,
+.event-description,
+.event-place,
+.event-date {
+    max-width: 100%;
+    font-size: clamp(19px, 2.5vw, 28px);
+}
+
+.nav-button {
+    min-height: 68px;
+}
+
+.tags-modal-panel {
+    width: min(100%, 820px);
+    max-width: calc(100vw - 28px);
+    max-height: calc(100vh - 28px);
+}
+
+.tags-modal-body {
+    min-width: 0;
+}
+
+.modal-tag {
+    max-width: 100%;
+}
+
+.tv-screen {
+    --screen-max: 1360px;
+    min-height: min(840px, calc(100vh - clamp(28px, 5.6vw, 64px)));
+}
+
+.tv-card {
+    min-height: calc(min(840px, 100vh - clamp(28px, 5.6vw, 64px)) - 110px);
+    grid-template-columns: minmax(320px, 1.08fr) minmax(320px, 0.92fr);
+}
+
+.tv-image-area {
+    min-height: clamp(300px, 48vh, 560px);
+    aspect-ratio: 4 / 3;
+}
+
+.tv-card-content {
+    min-width: 0;
+}
+
+.tv-card-content h1,
+.tv-empty-state h1 {
+    font-size: clamp(44px, 6.4vw, 94px);
+}
+
+.tv-date,
+.tv-place,
+.tv-description,
+.tv-empty-state p {
+    font-size: clamp(22px, 3vw, 36px);
+}
+
+.admin-panel {
+    --screen-max: 680px;
+    align-self: start;
+    overflow: hidden;
+}
+
+.admin-panel-wide {
+    --screen-max: 1120px;
+}
+
+.admin-form,
+.admin-inline-form,
+.admin-event-list,
+.admin-checkbox-list {
+    min-width: 0;
+}
+
+.admin-form input,
+.admin-inline-form input,
+.admin-form textarea,
+.admin-form select {
+    width: 100%;
+    min-width: 0;
+}
+
+.admin-form textarea {
+    resize: vertical;
+}
+
+.admin-event-list {
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.admin-event-row {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(120px, auto) minmax(0, 1fr) minmax(180px, auto);
+}
+
+.admin-event-row > div {
+    min-width: 0;
+}
+
+.admin-event-thumb,
+.admin-event-thumb-placeholder {
+    aspect-ratio: 3 / 2;
+    height: auto;
+    max-width: 148px;
+}
+
+.admin-row-actions form {
+    min-width: 0;
+}
+
+.admin-row-actions a,
+.admin-row-actions button,
+.admin-actions a,
+.admin-actions button,
+.admin-inline-form a,
+.admin-inline-form button,
+.admin-form button {
+    white-space: normal;
+}
+
+.admin-checkbox-list label {
+    min-width: 0;
+}
+
+.admin-icon-preview img,
+.admin-image-preview img {
+    max-width: 100%;
+}
+
+@media (min-width: 980px) {
+    .event-card-body:has(.event-card-image) {
+        grid-template-columns: minmax(340px, 0.9fr) minmax(0, 1.1fr);
+        align-items: center;
+        column-gap: clamp(28px, 4vw, 56px);
+    }
+
+    .event-card-body:has(.event-card-image) .event-card-image {
+        grid-row: span 4;
+        max-height: min(54vh, 520px);
+    }
+}
+
+@media (max-width: 1100px) {
+    .tv-card {
+        grid-template-columns: 1fr;
+        gap: 28px;
+    }
+
+    .tv-card-content h1,
+    .tv-empty-state h1 {
+        font-size: clamp(42px, 7vw, 72px);
+    }
+}
+
+@media (max-width: 920px) {
+    .events-header,
+    .events-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .events-header {
+        text-align: center;
+    }
+
+    .back-action {
+        width: 100%;
+    }
+
+    .tag-filter-area {
+        justify-content: center;
+    }
+
+    .version-badge {
+        text-align: center;
+    }
+
+    .admin-event-list {
+        overflow-x: visible;
+    }
+
+    .admin-event-row {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-event-thumb,
+    .admin-event-thumb-placeholder {
+        width: min(100%, 260px);
+        max-width: none;
+    }
+}
+
+@media (max-width: 720px) {
+    .placeholder,
+    .admin-panel,
+    .kiosk-home,
+    .events-screen,
+    .tv-screen {
+        max-width: calc(100vw - 28px);
+    }
+
+    .kiosk-home,
+    .events-screen,
+    .tv-screen {
+        min-height: calc(100vh - 28px);
+    }
+
+    .kiosk-home,
+    .events-screen,
+    .tv-screen,
+    .placeholder,
+    .admin-panel,
+    .tags-modal-panel {
+        padding: 22px;
+    }
+
+    .system-icon-image,
+    .system-icon {
+        width: clamp(120px, 46vw, 220px);
+        height: clamp(120px, 46vw, 220px);
+    }
+
+    .system-name {
+        font-size: clamp(20px, 6vw, 28px);
+    }
+
+    .kiosk-content {
+        padding-top: 28px;
+    }
+
+    .kiosk-content h1 {
+        font-size: clamp(36px, 10vw, 54px);
+    }
+
+    .kiosk-description {
+        font-size: clamp(18px, 5.2vw, 24px);
+    }
+
+    .events-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .nav-button,
+    .card-counter {
+        width: 100%;
+    }
+
+    .event-card-display {
+        min-height: 360px;
+    }
+
+    .event-card {
+        padding: 22px;
+    }
+
+    .event-card-image {
+        max-height: 280px;
+    }
+
+    .tags-modal {
+        padding: 14px;
+    }
+
+    .tags-modal-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .close-button {
+        width: 100%;
+    }
+
+    .tv-system-name,
+    .tv-version {
+        max-width: 100%;
+    }
+
+    .tv-card {
+        min-height: auto;
+    }
+
+    .tv-image-area {
+        min-height: clamp(240px, 42vh, 360px);
+    }
+
+    .admin-inline-form,
+    .admin-actions,
+    .admin-row-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-inline-form > *,
+    .admin-actions > *,
+    .admin-row-actions > *,
+    .admin-row-actions form,
+    .admin-row-actions a,
+    .admin-row-actions button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 460px) {
+    .page {
+        padding: 10px;
+    }
+
+    .placeholder,
+    .admin-panel,
+    .kiosk-home,
+    .events-screen,
+    .tv-screen {
+        max-width: calc(100vw - 20px);
+        border-radius: 8px;
+    }
+
+    .kiosk-home,
+    .events-screen,
+    .tv-screen,
+    .placeholder,
+    .admin-panel,
+    .tags-modal-panel {
+        padding: 18px;
+    }
+
+    .label {
+        font-size: 12px;
+    }
+
+    .links a,
+    .admin-form button,
+    .admin-actions button,
+    .admin-actions a,
+    .admin-inline-form button,
+    .admin-inline-form a {
+        min-height: 58px;
+    }
+
+    .tag-button,
+    .nav-button,
+    .back-action {
+        min-height: 64px;
+    }
+
+    .tv-card-content h1,
+    .tv-empty-state h1 {
+        font-size: clamp(36px, 12vw, 54px);
+    }
+}

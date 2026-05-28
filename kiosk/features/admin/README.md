@@ -21,6 +21,7 @@ Provides MVP admin authentication, event management, event image upload, tag man
 - `kiosk/core/i18n.py`
 - `kiosk/database.py`
 - `kiosk/app.py`
+- `kiosk/static/img/site_icon.png`
 - `kiosk/translations/ru.json`
 - `kiosk/translations/en.json`
 - `kiosk/translations/de.json`
@@ -70,7 +71,7 @@ Creating, editing, deleting, hiding, showing, moving, or uploading an image for 
 
 ## How the Feature Is Shown in Kiosk Mode
 
-Kiosk mode receives active events, optimized kiosk images, and assigned event tags through the public API after admin changes. The kiosk home screen uses the saved system title, system icon, and interface language.
+Kiosk mode receives active events, optimized kiosk images, and assigned event tags through the public API after admin changes. The kiosk home screen uses the saved system title, uploaded system icon when available, the default static system icon otherwise, and interface language.
 
 ## How the Feature Is Shown in TV Mode
 
