@@ -7,9 +7,13 @@ from kiosk.features.admin import admin_blueprint
 from kiosk.features.api import api_blueprint
 
 
-def create_app():
+def create_app(config_overrides=None):
     app = Flask(__name__)
     app.config.from_object(Config)
+    if config_overrides:
+        app.config.update(config_overrides)
+        if "STATIC_FOLDER" in config_overrides:
+            app.static_folder = str(config_overrides["STATIC_FOLDER"])
     app.teardown_appcontext(close_database)
     initialize_database(app)
     app.register_blueprint(admin_blueprint)

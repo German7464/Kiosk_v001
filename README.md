@@ -35,3 +35,13 @@ Before future tasks, read:
 3. The `README.md` inside the related major feature folder, when that feature exists
 
 Do not analyze the whole repository for every task. Make the smallest useful change, stay inside the MVP, and update [docs/CHANGELOG.md](docs/CHANGELOG.md) after completed work.
+
+## Developer Smoke Tests
+
+Run the reusable MVP smoke tests before packaging:
+
+```bash
+python -m unittest discover -s tests
+```
+
+The tests use an isolated temporary SQLite database and temporary upload folders. They do not use `instance/kiosk.sqlite`.
