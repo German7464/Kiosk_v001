@@ -137,3 +137,19 @@ Use:
 Do not use in-app browser checks.
 Do not try to open pages through iab.
 The user will perform visual browser checks manually when needed.
+
+## Report format
+
+After each implementation step, include:
+
+- Changed files
+- Technical checks and results
+- Flask test client status codes
+- Git status
+- Local commit hash and message
+- Manual visual check URLs for affected pages
+
+Do not use in-app browser checks.
+Do not try to open pages through iab.
+Use Flask test client checks only.
+The user will perform visual checks manually.
