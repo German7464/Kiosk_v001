@@ -10,6 +10,7 @@ __pycache__/
 
 instance/
 logs/
+kiosk/static/uploads/
 dist/
 build/
 *.spec

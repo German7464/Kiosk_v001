@@ -9,7 +9,12 @@
     {% if error %}
     <p class="form-error">{{ error }}</p>
     {% endif %}
-    <form class="admin-form" method="post" action="{{ action_url }}">
+    <form class="admin-form" method="post" action="{{ action_url }}" enctype="multipart/form-data">
+        {% if event and event.image_thumb %}
+        <div class="admin-image-preview">
+            <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
+        </div>
+        {% endif %}
         <label>
             <span>Title</span>
             <input type="text" name="title" value="{{ event.title if event else '' }}" required>
@@ -40,6 +45,10 @@
         <label>
             <span>Sort order</span>
             <input type="number" name="sort_order" value="{{ event.sort_order if event else 0 }}">
+        </label>
+        <label>
+            <span>Event image</span>
+            <input type="file" name="event_image" accept="image/*">
         </label>
         <div class="admin-actions">
             <button type="submit">Save event</button>

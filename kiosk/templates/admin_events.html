@@ -14,6 +14,11 @@
     <div class="admin-event-list">
         {% for event in events %}
         <article class="admin-event-row">
+            {% if event.image_thumb %}
+            <img class="admin-event-thumb" src="{{ event.image_thumb }}" alt="{{ event.title }}">
+            {% else %}
+            <div class="admin-event-thumb-placeholder"></div>
+            {% endif %}
             <div>
                 <p class="event-date">{{ event.event_date or "Date to be announced" }}</p>
                 <h2>{{ event.title }}</h2>

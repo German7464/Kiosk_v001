@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Added MVP event image upload with Pillow processing for original, kiosk, TV, and thumbnail image versions.
 - Added MVP system settings management for system title and interface language.
 - Added MVP admin tag management, event tag assignment, and public event tag responses.
 - Added MVP admin event management with event CRUD, visibility toggles, sort order changes, and content version updates.

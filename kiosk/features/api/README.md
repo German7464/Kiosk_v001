@@ -35,11 +35,11 @@ This feature does not update content version. It only reads the current version 
 
 ## How the Feature Is Shown in Kiosk Mode
 
-Kiosk mode can use these endpoints to load active events, assigned event tags, the tag list, and content version.
+Kiosk mode can use these endpoints to load active events, optimized kiosk image paths, assigned event tags, the tag list, and content version.
 
 ## How the Feature Is Shown in TV Mode
 
-TV mode can use these endpoints to load active events, assigned event tags, and content version.
+TV mode can use these endpoints to load active events, optimized TV image paths, assigned event tags, and content version.
 
 ## How the Feature Is Managed in Admin Panel
 

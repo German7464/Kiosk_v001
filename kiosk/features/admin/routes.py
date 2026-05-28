@@ -5,6 +5,7 @@ from functools import wraps
 from flask import Blueprint, abort, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from kiosk.core.images import process_event_image
 from kiosk.database import get_database, increase_content_version
 
 
@@ -48,6 +49,7 @@ def get_event_by_id(event_id):
     event = get_database().execute(
         """
         SELECT id, title, short_description, full_description, event_date, place,
+               image_original, image_kiosk, image_tv, image_thumb,
                status, sort_order, created_at, updated_at
         FROM events
         WHERE id = ?
@@ -104,6 +106,30 @@ def parse_sort_order(value):
 def save_event_change(database):
     increase_content_version(database)
     database.commit()
+
+
+def uploaded_event_image():
+    return request.files.get("event_image")
+
+
+def update_event_images(database, event_id, image_paths):
+    if image_paths is None:
+        return
+
+    database.execute(
+        """
+        UPDATE events
+        SET image_original = ?, image_kiosk = ?, image_tv = ?, image_thumb = ?
+        WHERE id = ?
+        """,
+        (
+            image_paths["image_original"],
+            image_paths["image_kiosk"],
+            image_paths["image_tv"],
+            image_paths["image_thumb"],
+            event_id,
+        ),
+    )
 
 
 def tag_form_name():
@@ -265,7 +291,8 @@ def delete_tag(tag_id):
 def admin_events():
     events = get_database().execute(
         """
-        SELECT id, title, short_description, event_date, place, status, sort_order, updated_at
+        SELECT id, title, short_description, event_date, place, image_thumb,
+               status, sort_order, updated_at
         FROM events
         ORDER BY sort_order ASC, id ASC
         """
@@ -287,6 +314,11 @@ def create_event_post():
 
     if not form_data["title"]:
         return render_template("admin_event_form.html", event=form_data, action_url=url_for("admin.create_event_post"), error="Title is required."), 400
+
+    try:
+        image_paths = process_event_image(uploaded_event_image())
+    except ValueError as error:
+        return render_template("admin_event_form.html", event=form_data, action_url=url_for("admin.create_event_post"), error=str(error)), 400
 
     database = get_database()
     created_at = datetime.now(timezone.utc).isoformat()
@@ -310,6 +342,7 @@ def create_event_post():
             created_at,
         ),
     )
+    update_event_images(database, cursor.lastrowid, image_paths)
     save_event_change(database)
 
     return redirect(url_for("admin.edit_event", event_id=cursor.lastrowid))
@@ -330,6 +363,12 @@ def edit_event_post(event_id):
 
     if not form_data["title"]:
         return render_template("admin_event_form.html", event=form_data, action_url=url_for("admin.edit_event_post", event_id=event_id), error="Title is required."), 400
+
+    try:
+        image_paths = process_event_image(uploaded_event_image())
+    except ValueError as error:
+        event = get_event_by_id(event_id)
+        return render_template("admin_event_form.html", event=event, action_url=url_for("admin.edit_event_post", event_id=event_id), error=str(error)), 400
 
     database = get_database()
     updated_at = datetime.now(timezone.utc).isoformat()
@@ -352,6 +391,7 @@ def edit_event_post(event_id):
             event_id,
         ),
     )
+    update_event_images(database, event_id, image_paths)
     save_event_change(database)
 
     return redirect(url_for("admin.edit_event", event_id=event_id))

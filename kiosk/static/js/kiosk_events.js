@@ -44,6 +44,15 @@ function renderEvent() {
     const event = events[currentEventIndex];
     const eventBody = document.createElement("div");
     eventBody.className = "event-card-body";
+
+    if (event.image_kiosk) {
+        const image = document.createElement("img");
+        image.className = "event-card-image";
+        image.src = event.image_kiosk;
+        image.alt = event.title;
+        eventBody.appendChild(image);
+    }
+
     eventBody.appendChild(createTextElement("p", "event-date", event.event_date || "Date to be announced"));
     eventBody.appendChild(createTextElement("h2", "event-title", event.title));
     eventBody.appendChild(createTextElement("p", "event-description", event.short_description || event.full_description || "No description yet."));

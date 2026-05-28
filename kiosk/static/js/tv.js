@@ -21,8 +21,8 @@ function applyTvEvent(event) {
         tvPlace.textContent = event.place || "Place to be announced";
         tvDescription.textContent = event.short_description || "No description yet.";
 
-        if (event.image_tv || event.image_kiosk || event.image_original) {
-            const imageUrl = event.image_tv || event.image_kiosk || event.image_original;
+        if (event.image_tv || event.image_kiosk) {
+            const imageUrl = event.image_tv || event.image_kiosk;
             tvImage.innerHTML = "";
             tvImage.style.backgroundImage = `url("${imageUrl}")`;
         } else {
