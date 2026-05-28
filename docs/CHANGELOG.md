@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Added MVP system settings management for system title and interface language.
 - Added MVP admin tag management, event tag assignment, and public event tag responses.
 - Added MVP admin event management with event CRUD, visibility toggles, sort order changes, and content version updates.
 - Added MVP admin authentication with protected admin placeholder, login, logout, password change, hashed passwords, and default admin user creation.

@@ -110,10 +110,62 @@ def tag_form_name():
     return request.form.get("name", "").strip()
 
 
+def get_admin_settings():
+    rows = get_database().execute(
+        """
+        SELECT key, value
+        FROM settings
+        WHERE key IN (?, ?)
+        """,
+        ("site_title", "interface_language"),
+    ).fetchall()
+    settings = {row["key"]: row["value"] for row in rows}
+    return {
+        "site_title": settings.get("site_title", "Kiosk_v001"),
+        "interface_language": settings.get("interface_language", "en"),
+    }
+
+
+def save_setting(database, key, value, updated_at):
+    database.execute(
+        """
+        INSERT INTO settings (key, value, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+        """,
+        (key, value, updated_at),
+    )
+
+
 @admin_blueprint.get("")
 @admin_required
 def admin_home():
     return render_template("admin_home.html", username=session.get("admin_username"))
+
+
+@admin_blueprint.get("/settings")
+@admin_required
+def admin_settings():
+    return render_template("admin_settings.html", settings=get_admin_settings())
+
+
+@admin_blueprint.post("/settings")
+@admin_required
+def save_admin_settings():
+    site_title = request.form.get("site_title", "").strip() or "Kiosk_v001"
+    interface_language = request.form.get("interface_language", "en")
+
+    if interface_language not in {"ru", "en", "de"}:
+        interface_language = "en"
+
+    database = get_database()
+    updated_at = datetime.now(timezone.utc).isoformat()
+    save_setting(database, "site_title", site_title, updated_at)
+    save_setting(database, "interface_language", interface_language, updated_at)
+    increase_content_version(database)
+    database.commit()
+
+    return redirect(url_for("admin.admin_settings"))
 
 
 @admin_blueprint.get("/tags")

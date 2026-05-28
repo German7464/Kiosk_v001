@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provides MVP admin authentication, event management, tag management, and event tag assignment.
+Provides MVP admin authentication, event management, tag management, event tag assignment, and system settings management.
 
 ## Related Files
 
@@ -16,6 +16,7 @@ Provides MVP admin authentication, event management, tag management, and event t
 - `kiosk/templates/admin_tags.html`
 - `kiosk/templates/admin_tag_form.html`
 - `kiosk/templates/admin_event_tags.html`
+- `kiosk/templates/admin_settings.html`
 - `kiosk/database.py`
 - `kiosk/app.py`
 
@@ -51,6 +52,8 @@ Provides MVP admin authentication, event management, tag management, and event t
 - `POST /admin/tags/<id>/delete`
 - `GET /admin/events/<id>/tags`
 - `POST /admin/events/<id>/tags`
+- `GET /admin/settings`
+- `POST /admin/settings`
 
 ## Related API Endpoints
 
@@ -58,16 +61,16 @@ Provides MVP admin authentication, event management, tag management, and event t
 
 ## How the Feature Updates Content Version
 
-Creating, editing, deleting, hiding, showing, or moving an event increases `settings.content_version` and inserts a row into `content_versions`. Creating, editing, deleting, assigning, or removing tags also increases content version.
+Creating, editing, deleting, hiding, showing, or moving an event increases `settings.content_version` and inserts a row into `content_versions`. Creating, editing, deleting, assigning, or removing tags also increases content version. Saving system settings also increases content version.
 
 ## How the Feature Is Shown in Kiosk Mode
 
-Kiosk mode receives active events and assigned event tags through the public API after admin changes.
+Kiosk mode receives active events and assigned event tags through the public API after admin changes. The kiosk home screen uses the saved system title.
 
 ## How the Feature Is Shown in TV Mode
 
-TV mode receives active events and assigned event tags through the public API after admin changes.
+TV mode receives active events and assigned event tags through the public API after admin changes. The TV screen uses the saved system title.
 
 ## How the Feature Is Managed in Admin Panel
 
-The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. It can also list, create, edit, and delete tags, then assign or remove tags on events. Image, settings, and translation management are not implemented yet.
+The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. It can also list, create, edit, and delete tags, then assign or remove tags on events. It can edit the system title and interface language setting. Image, icon, and translation file management are not implemented yet.

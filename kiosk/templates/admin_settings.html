@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings{% endblock %}
+
+{% block content %}
+<section class="admin-panel">
+    <p class="label">Admin settings</p>
+    <h1>System settings</h1>
+    <form class="admin-form" method="post" action="{{ url_for('admin.save_admin_settings') }}">
+        <label>
+            <span>System title</span>
+            <input type="text" name="site_title" value="{{ settings.site_title }}" required>
+        </label>
+        <label>
+            <span>Interface language</span>
+            <select name="interface_language">
+                <option value="ru" {% if settings.interface_language == "ru" %}selected{% endif %}>ru</option>
+                <option value="en" {% if settings.interface_language == "en" %}selected{% endif %}>en</option>
+                <option value="de" {% if settings.interface_language == "de" %}selected{% endif %}>de</option>
+            </select>
+        </label>
+        <div class="admin-actions">
+            <button type="submit">Save settings</button>
+            <a href="{{ url_for('admin.admin_home') }}">Back to admin</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

@@ -10,6 +10,7 @@
     <div class="admin-actions">
         <a href="{{ url_for('admin.admin_events') }}">Manage events</a>
         <a href="{{ url_for('admin.admin_tags') }}">Manage tags</a>
+        <a href="{{ url_for('admin.admin_settings') }}">System settings</a>
         <a href="{{ url_for('admin.change_password') }}">Change password</a>
         <form method="post" action="{{ url_for('admin.logout') }}">
             <button type="submit">Logout</button>
