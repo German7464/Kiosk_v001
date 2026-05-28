@@ -19,8 +19,8 @@
         {% for event in events %}
         <article class="admin-event-card">
             <div class="admin-event-preview-grid">
-                <button class="admin-event-preview admin-event-preview-kiosk" type="button" data-open-admin-preview data-preview-title="{{ event.title|e }}" data-preview-date="{{ (event.event_date or t('common.date_to_be_announced'))|e }}" data-preview-place="{{ (event.place or t('common.place_to_be_announced'))|e }}" data-preview-description="{{ (event.short_description or t('common.no_short_description'))|e }}" data-preview-image="{{ (event.image_thumb or '')|e }}" data-preview-mode="kiosk">
-                    <span class="admin-preview-label">{{ t("admin.kiosk_preview") }}</span>
+                <button class="admin-preview admin-preview--kiosk admin-preview--compact admin-event-preview admin-event-preview-kiosk" type="button" data-admin-preview data-admin-preview-open data-preview-label="{{ t('admin.kiosk_preview') }}" data-preview-title="{{ event.title|e }}" data-preview-date="{{ (event.event_date or t('common.date_to_be_announced'))|e }}" data-preview-place="{{ (event.place or t('common.place_to_be_announced'))|e }}" data-preview-description="{{ (event.short_description or t('common.no_short_description'))|e }}" data-preview-image="{{ (event.image_thumb or '')|e }}" data-preview-mode="kiosk">
+                    <span class="admin-preview-label admin-preview__label">{{ t("admin.kiosk_preview") }}</span>
                     <span class="admin-preview-media admin-preview__media" data-placeholder="{{ t('common.image_area') }}">
                         {% if event.image_thumb %}
                         <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
@@ -28,11 +28,11 @@
                         <span class="admin-preview__placeholder">{{ t("common.image_area") }}</span>
                         {% endif %}
                     </span>
-                    <span class="admin-preview-title">{{ event.title }}</span>
-                    <span class="admin-preview-meta">{{ event.event_date or t("common.date_to_be_announced") }}</span>
+                    <span class="admin-preview-title admin-preview__title">{{ event.title }}</span>
+                    <span class="admin-preview-meta admin-preview__meta">{{ event.event_date or t("common.date_to_be_announced") }}</span>
                 </button>
-                <button class="admin-event-preview admin-event-preview-tv" type="button" data-open-admin-preview data-preview-title="{{ event.title|e }}" data-preview-date="{{ (event.event_date or t('common.date_to_be_announced'))|e }}" data-preview-place="{{ (event.place or t('common.place_to_be_announced'))|e }}" data-preview-description="{{ (event.short_description or t('common.no_short_description'))|e }}" data-preview-image="{{ (event.image_thumb or '')|e }}" data-preview-mode="tv">
-                    <span class="admin-preview-label">{{ t("admin.tv_preview") }}</span>
+                <button class="admin-preview admin-preview--tv admin-preview--compact admin-event-preview admin-event-preview-tv" type="button" data-admin-preview data-admin-preview-open data-preview-label="{{ t('admin.tv_preview') }}" data-preview-title="{{ event.title|e }}" data-preview-date="{{ (event.event_date or t('common.date_to_be_announced'))|e }}" data-preview-place="{{ (event.place or t('common.place_to_be_announced'))|e }}" data-preview-description="{{ (event.short_description or t('common.no_short_description'))|e }}" data-preview-image="{{ (event.image_thumb or '')|e }}" data-preview-mode="tv">
+                    <span class="admin-preview-label admin-preview__label">{{ t("admin.tv_preview") }}</span>
                     <span class="admin-preview-media admin-preview__media" data-placeholder="{{ t('common.image_area') }}">
                         {% if event.image_thumb %}
                         <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
@@ -40,8 +40,8 @@
                         <span class="admin-preview__placeholder">{{ t("common.image_area") }}</span>
                         {% endif %}
                     </span>
-                    <span class="admin-preview-title">{{ event.title }}</span>
-                    <span class="admin-preview-meta">{{ event.place or t("common.place_to_be_announced") }}</span>
+                    <span class="admin-preview-title admin-preview__title">{{ event.title }}</span>
+                    <span class="admin-preview-meta admin-preview__meta">{{ event.place or t("common.place_to_be_announced") }}</span>
                 </button>
             </div>
             <div class="admin-event-card-body">
@@ -79,21 +79,21 @@
     {% endif %}
 </section>
 {% if events %}
-<div class="admin-preview-modal" data-admin-preview-modal data-kiosk-preview-label="{{ t('admin.kiosk_preview') }}" data-tv-preview-label="{{ t('admin.tv_preview') }}" hidden>
+<div class="admin-preview-modal" data-admin-preview-modal hidden>
     <div class="admin-preview-modal-panel" role="dialog" aria-modal="true" aria-labelledby="admin-preview-modal-title">
         <div class="admin-preview-modal-header">
-            <p class="label" data-admin-preview-mode>{{ t("admin.event_preview") }}</p>
-            <button class="close-button" type="button" data-close-admin-preview>{{ t("common.close") }}</button>
+            <p class="label" data-admin-preview-modal-mode>{{ t("admin.event_preview") }}</p>
+            <button class="close-button" type="button" data-admin-preview-close>{{ t("common.close") }}</button>
         </div>
-        <div class="admin-preview-modal-card" data-admin-preview-card>
-            <div class="admin-preview-modal-image admin-preview__media" data-admin-preview-image data-placeholder="{{ t('common.image_area') }}">
+        <div class="admin-preview-modal-card" data-admin-preview-modal-card>
+            <div class="admin-preview-modal-image admin-preview__media" data-admin-preview-modal-image data-placeholder="{{ t('common.image_area') }}">
                 <span class="admin-preview__placeholder">{{ t("common.image_area") }}</span>
             </div>
-            <div class="admin-preview-modal-copy">
-                <p class="event-date" data-admin-preview-date></p>
-                <h2 id="admin-preview-modal-title" data-admin-preview-title></h2>
-                <p data-admin-preview-description></p>
-                <p class="event-place" data-admin-preview-place></p>
+            <div class="admin-preview-modal-copy admin-preview__text">
+                <p class="event-date" data-admin-preview-modal-date></p>
+                <h2 id="admin-preview-modal-title" data-admin-preview-modal-title></h2>
+                <p data-admin-preview-modal-description></p>
+                <p class="event-place" data-admin-preview-modal-place></p>
             </div>
         </div>
     </div>
@@ -102,5 +102,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/admin_events.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin_event_preview.js') }}"></script>
 {% endblock %}
