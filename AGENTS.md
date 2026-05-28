@@ -125,9 +125,9 @@ When communicating with the user, answer in Russian.
 
 Project documentation, file names, code identifiers, commit messages, and README files must remain in English.
 
-## Testing rules
+## Testing and report rules
 
-Run required technical checks after each implementation step.
+After each implementation step, run required technical checks.
 
 Use:
 - python -m compileall run.py kiosk
@@ -136,20 +136,13 @@ Use:
 
 Do not use in-app browser checks.
 Do not try to open pages through iab.
+Use Flask test client checks only.
 The user will perform visual browser checks manually when needed.
 
-## Report format
-
-After each implementation step, include:
-
+After each implementation step, include in the final report:
 - Changed files
 - Technical checks and results
 - Flask test client status codes
 - Git status
 - Local commit hash and message
 - Manual visual check URLs for affected pages
-
-Do not use in-app browser checks.
-Do not try to open pages through iab.
-Use Flask test client checks only.
-The user will perform visual checks manually.
