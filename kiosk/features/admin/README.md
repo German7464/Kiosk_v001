@@ -22,6 +22,7 @@ Provides MVP admin authentication, event management, event image upload, tag man
 - `kiosk/database.py`
 - `kiosk/app.py`
 - `kiosk/static/img/site_icon.png`
+- `kiosk/static/js/admin_events.js`
 - `kiosk/translations/ru.json`
 - `kiosk/translations/en.json`
 - `kiosk/translations/de.json`
@@ -79,4 +80,4 @@ TV mode receives active events, optimized TV images, and assigned event tags thr
 
 ## How the Feature Is Managed in Admin Panel
 
-The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. It can upload event images and stores originals outside public static folders while exposing optimized kiosk, TV, and thumb versions. It can also list, create, edit, and delete tags, then assign or remove tags on events. It can edit the system title, interface language setting, and system icon. Interface translations are loaded from JSON files. Translation file management is not implemented in the admin panel.
+The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. The event list uses responsive cards with compact kiosk and TV preview blocks plus a view-only larger preview modal. It can upload event images and stores originals outside public static folders while exposing optimized kiosk, TV, and thumb versions. It can also list, create, edit, and delete tags, then assign or remove tags on events. It can edit the system title, interface language setting, and system icon. Interface translations are loaded from JSON files. Translation file management is not implemented in the admin panel.
