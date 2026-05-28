@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}TV Display{% endblock %}
+
+{% block content %}
+<section class="tv-screen" data-slide-duration="10000">
+    <div class="tv-version" data-tv-version>Version loading</div>
+    <article class="tv-card" data-tv-card>
+        <div class="tv-image-area" data-tv-image>
+            <span>Image area</span>
+        </div>
+        <div class="tv-card-content">
+            <p class="tv-date" data-tv-date>Date to be announced</p>
+            <h1 data-tv-title>Events will appear here</h1>
+            <p class="tv-place" data-tv-place>Place to be announced</p>
+            <p class="tv-description" data-tv-description>The TV display is ready and waiting for active event cards.</p>
+        </div>
+    </article>
+    <div class="tv-empty-state" data-tv-empty-state hidden>
+        <p class="label">No active events</p>
+        <h1>No events are published yet.</h1>
+        <p>Active event cards will appear here automatically.</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tv.js') }}"></script>
+{% endblock %}

@@ -20,6 +20,10 @@ def create_app():
     def kiosk_events():
         return render_template("kiosk_events.html")
 
+    @app.get("/tv")
+    def tv():
+        return render_template("tv.html")
+
     @app.get("/preview")
     def preview():
         return render_template("preview.html")
