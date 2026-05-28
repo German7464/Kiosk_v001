@@ -824,37 +824,116 @@ h1 {
 
 .admin-form-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 22px;
     align-items: start;
     min-width: 0;
 }
 
-.admin-form-preview {
+.admin-event-form-preview {
     display: grid;
-    gap: 12px;
+    gap: 16px;
     min-width: 0;
 }
 
-.admin-form-preview-card {
+.admin-event-form-preview-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+}
+
+.admin-event-form-preview-header h2 {
+    margin: 0;
+    font-size: clamp(24px, 3vw, 36px);
+}
+
+.admin-event-form-preview-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: 16px;
+    min-width: 0;
+}
+
+.admin-event-form-preview-card {
     display: grid;
     gap: 12px;
     min-width: 0;
-    padding: 18px;
+    padding: 16px;
     border: 1px solid rgba(109, 93, 252, 0.16);
     border-radius: 8px;
     background: #ffffff;
     box-shadow: 0 12px 28px rgba(45, 55, 100, 0.08);
 }
 
-.admin-form-preview-card h2,
-.admin-form-preview-card p {
+.admin-event-form-preview-card h3,
+.admin-event-form-preview-card p {
     margin: 0;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
-.admin-form-preview-card h2 {
+.admin-event-form-preview-card h3 {
     font-size: clamp(22px, 2.4vw, 32px);
     line-height: 1.14;
+}
+
+.admin-event-form-preview-card button {
+    min-height: 44px;
+    justify-self: start;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 8px;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--violet), var(--blue));
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.admin-event-form-preview-card--kiosk {
+    background:
+        linear-gradient(180deg, #ffffff, #f8faff);
+}
+
+.admin-event-form-preview-card--tv {
+    grid-template-columns: minmax(160px, 0.95fr) minmax(0, 1.05fr);
+    align-items: stretch;
+    color: #f8fbff;
+    background:
+        linear-gradient(135deg, rgba(32, 25, 84, 0.96), rgba(37, 99, 235, 0.88));
+}
+
+.admin-event-form-preview-card--tv .admin-preview-label,
+.admin-event-form-preview-card--tv button {
+    grid-column: 1 / -1;
+}
+
+.admin-event-form-preview-card--tv .admin-event-form-preview-copy {
+    display: grid;
+    align-content: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.48);
+}
+
+.admin-event-form-preview-card--tv h3 {
+    color: #ffffff;
+    font-size: clamp(26px, 3.2vw, 44px);
+}
+
+.admin-event-form-preview-card--tv p {
+    color: #e6edff;
+}
+
+.admin-event-form-preview-card--tv .event-date,
+.admin-event-form-preview-card--tv .event-place {
+    color: #bae6fd;
+    font-weight: 800;
 }
 
 .admin-form-preview-image {
@@ -2230,6 +2309,8 @@ textarea {
 @media (max-width: 980px) {
     .admin-events-header,
     .admin-event-card-body,
+    .admin-event-form-preview-grid,
+    .admin-event-form-preview-card--tv,
     .admin-preview-modal-card--tv,
     .admin-preview-modal-card {
         grid-template-columns: 1fr;

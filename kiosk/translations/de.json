@@ -27,6 +27,7 @@
     "admin.new_tag_name": "Neuer Tag-Name",
     "admin.no_events": "Es wurden noch keine Veranstaltungen erstellt.",
     "admin.no_tags": "Es wurden noch keine Tags erstellt.",
+    "admin.open_preview": "Vorschau öffnen",
     "admin.password": "Passwort",
     "admin.place": "Ort",
     "admin.save_event": "Veranstaltung speichern",

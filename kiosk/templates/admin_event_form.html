@@ -9,15 +9,59 @@
     {% if error %}
     <p class="form-error">{{ error }}</p>
     {% endif %}
+    <section class="admin-event-form-preview" data-event-form-preview data-image-placeholder="{{ t('common.image_area') }}" data-date-placeholder="{{ t('common.date_to_be_announced') }}" data-place-placeholder="{{ t('common.place_to_be_announced') }}" data-description-placeholder="{{ t('common.no_short_description') }}" data-title-placeholder="{{ t('admin.title') }}">
+        <div class="admin-event-form-preview-header">
+            <div>
+                <p class="label">{{ t("admin.event_preview") }}</p>
+                <h2>{{ t("admin.event_preview") }}</h2>
+            </div>
+        </div>
+        <div class="admin-event-form-preview-grid">
+            <article class="admin-event-form-preview-card admin-event-form-preview-card--kiosk">
+                <p class="admin-preview-label">{{ t("admin.kiosk_preview") }}</p>
+                <div class="admin-form-preview-image" data-form-preview-image data-initial-image="{{ event.image_thumb if event and event.image_thumb else '' }}">
+                    {% if event and event.image_thumb %}
+                    <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
+                    {% else %}
+                    <span>{{ t("common.image_area") }}</span>
+                    {% endif %}
+                </div>
+                <div class="admin-event-form-preview-copy">
+                    <p class="event-date" data-form-preview-date>{{ event.event_date if event and event.event_date else t("common.date_to_be_announced") }}</p>
+                    <h3 data-form-preview-title>{{ event.title if event and event.title else t("admin.title") }}</h3>
+                    <p data-form-preview-description>{{ event.short_description if event and event.short_description else t("common.no_short_description") }}</p>
+                    <p class="event-place" data-form-preview-place>{{ event.place if event and event.place else t("common.place_to_be_announced") }}</p>
+                </div>
+                <button type="button" data-open-form-preview data-preview-mode="kiosk" data-preview-label="{{ t('admin.kiosk_preview') }}">{{ t("admin.open_preview") }}</button>
+            </article>
+            <article class="admin-event-form-preview-card admin-event-form-preview-card--tv">
+                <p class="admin-preview-label">{{ t("admin.tv_preview") }}</p>
+                <div class="admin-form-preview-image" data-form-preview-image data-initial-image="{{ event.image_thumb if event and event.image_thumb else '' }}">
+                    {% if event and event.image_thumb %}
+                    <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
+                    {% else %}
+                    <span>{{ t("common.image_area") }}</span>
+                    {% endif %}
+                </div>
+                <div class="admin-event-form-preview-copy">
+                    <p class="event-date" data-form-preview-date>{{ event.event_date if event and event.event_date else t("common.date_to_be_announced") }}</p>
+                    <h3 data-form-preview-title>{{ event.title if event and event.title else t("admin.title") }}</h3>
+                    <p data-form-preview-description>{{ event.short_description if event and event.short_description else t("common.no_short_description") }}</p>
+                    <p class="event-place" data-form-preview-place>{{ event.place if event and event.place else t("common.place_to_be_announced") }}</p>
+                </div>
+                <button type="button" data-open-form-preview data-preview-mode="tv" data-preview-label="{{ t('admin.tv_preview') }}">{{ t("admin.open_preview") }}</button>
+            </article>
+        </div>
+    </section>
     <div class="admin-form-layout">
         <form class="admin-form" method="post" action="{{ action_url }}" enctype="multipart/form-data">
             <label>
                 <span>{{ t("admin.title") }}</span>
-                <input type="text" name="title" value="{{ event.title if event else '' }}" required>
+                <input type="text" name="title" value="{{ event.title if event else '' }}" required data-event-preview-field="title">
             </label>
             <label>
                 <span>{{ t("admin.short_description") }}</span>
-                <textarea name="short_description" rows="3">{{ event.short_description if event else '' }}</textarea>
+                <textarea name="short_description" rows="3" data-event-preview-field="short_description">{{ event.short_description if event else '' }}</textarea>
             </label>
             <label>
                 <span>{{ t("admin.full_description") }}</span>
@@ -25,11 +69,11 @@
             </label>
             <label>
                 <span>{{ t("admin.event_date") }}</span>
-                <input type="date" name="event_date" value="{{ event.event_date if event else '' }}">
+                <input type="date" name="event_date" value="{{ event.event_date if event else '' }}" data-event-preview-field="event_date">
             </label>
             <label>
                 <span>{{ t("admin.place") }}</span>
-                <input type="text" name="place" value="{{ event.place if event else '' }}">
+                <input type="text" name="place" value="{{ event.place if event else '' }}" data-event-preview-field="place">
             </label>
             <label>
                 <span>{{ t("admin.status") }}</span>
@@ -44,29 +88,36 @@
             </label>
             <label>
                 <span>{{ t("admin.event_image") }}</span>
-                <input type="file" name="event_image" accept="image/*">
+                <input type="file" name="event_image" accept="image/*" data-event-preview-field="image">
             </label>
             <div class="admin-actions">
                 <button type="submit">{{ t("admin.save_event") }}</button>
                 <a href="{{ url_for('admin.admin_events') }}">{{ t("common.back_to_events") }}</a>
             </div>
         </form>
-        <aside class="admin-form-preview" aria-label="{{ t('admin.event_preview') }}">
-            <p class="label">{{ t("admin.event_preview") }}</p>
-            <div class="admin-form-preview-card">
-                <div class="admin-form-preview-image">
-                    {% if event and event.image_thumb %}
-                    <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
-                    {% else %}
-                    <span>{{ t("common.image_area") }}</span>
-                    {% endif %}
-                </div>
-                <p class="event-date">{{ event.event_date if event and event.event_date else t("common.date_to_be_announced") }}</p>
-                <h2>{{ event.title if event and event.title else t("admin.title") }}</h2>
-                <p>{{ event.short_description if event and event.short_description else t("common.no_short_description") }}</p>
-                <p class="event-place">{{ event.place if event and event.place else t("common.place_to_be_announced") }}</p>
-            </div>
-        </aside>
     </div>
 </section>
+<div class="admin-preview-modal" data-form-preview-modal hidden>
+    <div class="admin-preview-modal-panel" role="dialog" aria-modal="true" aria-labelledby="admin-form-preview-modal-title">
+        <div class="admin-preview-modal-header">
+            <p class="label" data-form-preview-modal-mode>{{ t("admin.event_preview") }}</p>
+            <button class="close-button" type="button" data-close-form-preview>{{ t("common.close") }}</button>
+        </div>
+        <div class="admin-preview-modal-card" data-form-preview-modal-card>
+            <div class="admin-preview-modal-image" data-form-preview-modal-image data-placeholder="{{ t('common.image_area') }}">
+                <span>{{ t("common.image_area") }}</span>
+            </div>
+            <div class="admin-preview-modal-copy">
+                <p class="event-date" data-form-preview-modal-date></p>
+                <h2 id="admin-form-preview-modal-title" data-form-preview-modal-title></h2>
+                <p data-form-preview-modal-description></p>
+                <p class="event-place" data-form-preview-modal-place></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin_event_form.js') }}"></script>
 {% endblock %}

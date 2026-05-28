@@ -27,6 +27,7 @@
     "admin.new_tag_name": "Название нового тега",
     "admin.no_events": "События еще не созданы.",
     "admin.no_tags": "Теги еще не созданы.",
+    "admin.open_preview": "Открыть предпросмотр",
     "admin.password": "Пароль",
     "admin.place": "Место",
     "admin.save_event": "Сохранить событие",

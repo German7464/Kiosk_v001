@@ -27,6 +27,7 @@
     "admin.new_tag_name": "New tag name",
     "admin.no_events": "No events have been created yet.",
     "admin.no_tags": "No tags have been created yet.",
+    "admin.open_preview": "Open preview",
     "admin.password": "Password",
     "admin.place": "Place",
     "admin.save_event": "Save event",
