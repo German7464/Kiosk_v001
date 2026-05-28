@@ -124,3 +124,16 @@ Do not implement in MVP:
 When communicating with the user, answer in Russian.
 
 Project documentation, file names, code identifiers, commit messages, and README files must remain in English.
+
+## Testing rules
+
+Run required technical checks after each implementation step.
+
+Use:
+- python -m compileall run.py kiosk
+- Flask test client checks for affected routes
+- git status
+
+Do not use in-app browser checks.
+Do not try to open pages through iab.
+The user will perform visual browser checks manually when needed.
