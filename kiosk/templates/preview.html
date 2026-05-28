@@ -5,10 +5,12 @@
 {% block content %}
 <section class="placeholder">
     <p class="label">Preview mode</p>
-    <h1>Preview placeholder</h1>
+    <h1>Display mode preview</h1>
     <nav class="links" aria-label="Preview links">
         <a href="{{ url_for('kiosk_home') }}">Open kiosk</a>
-        <a href="{{ url_for('preview') }}">Open preview</a>
+        <a href="/kiosk/events">Open kiosk events</a>
+        <a href="/tv">Open TV display</a>
+        <a href="/admin">Open admin</a>
     </nav>
 </section>
 {% endblock %}

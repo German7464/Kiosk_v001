@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Updated the preview page with links to kiosk, kiosk events, TV display, and admin routes.
 - Added the MVP TV display mode with automatic event slideshow, large event card layout, image area, smooth transition, and empty state.
 - Added the MVP kiosk events page with public API loading, card navigation, tag area, inactivity return, hidden admin transition, and empty state.
 - Added the MVP kiosk home screen with a touch-friendly layout, system branding, decorative background, and events entry button.
