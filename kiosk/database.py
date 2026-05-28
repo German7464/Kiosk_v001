@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime, timezone
 
 from flask import current_app, g
+from werkzeug.security import generate_password_hash
 
 
 def get_database():
@@ -81,6 +82,7 @@ def initialize_database(app):
             """
         )
         seed_settings(database)
+        seed_default_admin_user(database)
         database.commit()
 
 
@@ -110,4 +112,20 @@ def seed_settings(database):
         WHERE NOT EXISTS (SELECT 1 FROM content_versions)
         """,
         (1, updated_at),
+    )
+
+
+def seed_default_admin_user(database):
+    user_count = database.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+
+    if user_count > 0:
+        return
+
+    created_at = datetime.now(timezone.utc).isoformat()
+    database.execute(
+        """
+        INSERT INTO users (username, password_hash, created_at, updated_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        ("admin", generate_password_hash("admin"), created_at, created_at),
     )
