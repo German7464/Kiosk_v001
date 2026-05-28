@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Applied the MVP visual style pass for kiosk, TV, preview, and admin screens.
 - Added MVP client auto-update polling with staggered refresh delays for kiosk events, TV, and preview screens.
 - Added MVP interface translations with ru, en, and de JSON files and fallback text loading.
 - Added MVP system icon upload with private original storage and optimized public icon output.
