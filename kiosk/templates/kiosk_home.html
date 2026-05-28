@@ -5,7 +5,11 @@
 {% block content %}
 <section class="kiosk-home" aria-labelledby="kiosk-title">
     <div class="kiosk-brand">
+        {% if settings.site_icon %}
+        <img class="system-icon-image" src="{{ settings.site_icon }}" alt="{{ settings.site_title }}">
+        {% else %}
         <div class="system-icon" aria-hidden="true">K</div>
+        {% endif %}
         <p class="system-name">{{ settings.site_title }}</p>
     </div>
     <div class="kiosk-content">

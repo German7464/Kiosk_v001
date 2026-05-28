@@ -102,6 +102,15 @@ h1 {
     box-shadow: 0 18px 36px rgba(37, 99, 235, 0.24);
 }
 
+.system-icon-image {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 18px 36px rgba(37, 99, 235, 0.24);
+}
+
 .system-name {
     margin: 0;
     font-size: 30px;
@@ -686,6 +695,14 @@ h1 {
     background: #e2e8f0;
 }
 
+.admin-icon-preview img {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #e2e8f0;
+}
+
 .admin-event-row h2,
 .admin-event-row p {
     margin: 0 0 8px;
@@ -776,6 +793,11 @@ h1 {
         width: 72px;
         height: 72px;
         font-size: 34px;
+    }
+
+    .system-icon-image {
+        width: 72px;
+        height: 72px;
     }
 
     .system-name {

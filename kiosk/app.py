@@ -19,14 +19,15 @@ def create_app():
             """
             SELECT key, value
             FROM settings
-            WHERE key IN (?, ?)
+            WHERE key IN (?, ?, ?)
             """,
-            ("site_title", "interface_language"),
+            ("site_title", "interface_language", "site_icon"),
         ).fetchall()
         settings = {row["key"]: row["value"] for row in rows}
         return {
             "site_title": settings.get("site_title", "Kiosk_v001"),
             "interface_language": settings.get("interface_language", "en"),
+            "site_icon": settings.get("site_icon", ""),
         }
 
     @app.get("/kiosk")

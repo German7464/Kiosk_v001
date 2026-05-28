@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provides MVP admin authentication, event management, event image upload, tag management, event tag assignment, and system settings management.
+Provides MVP admin authentication, event management, event image upload, tag management, event tag assignment, system settings management, and system icon upload.
 
 ## Related Files
 
@@ -74,4 +74,4 @@ TV mode receives active events, optimized TV images, and assigned event tags thr
 
 ## How the Feature Is Managed in Admin Panel
 
-The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. It can upload event images and stores originals outside public static folders while exposing optimized kiosk, TV, and thumb versions. It can also list, create, edit, and delete tags, then assign or remove tags on events. It can edit the system title and interface language setting. Icon and translation file management are not implemented yet.
+The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. It can upload event images and stores originals outside public static folders while exposing optimized kiosk, TV, and thumb versions. It can also list, create, edit, and delete tags, then assign or remove tags on events. It can edit the system title, interface language setting, and system icon. Translation file management is not implemented yet.

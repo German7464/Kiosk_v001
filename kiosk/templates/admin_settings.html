@@ -6,7 +6,15 @@
 <section class="admin-panel">
     <p class="label">Admin settings</p>
     <h1>System settings</h1>
-    <form class="admin-form" method="post" action="{{ url_for('admin.save_admin_settings') }}">
+    {% if error %}
+    <p class="form-error">{{ error }}</p>
+    {% endif %}
+    <form class="admin-form" method="post" action="{{ url_for('admin.save_admin_settings') }}" enctype="multipart/form-data">
+        {% if settings.site_icon %}
+        <div class="admin-icon-preview">
+            <img src="{{ settings.site_icon }}" alt="{{ settings.site_title }}">
+        </div>
+        {% endif %}
         <label>
             <span>System title</span>
             <input type="text" name="site_title" value="{{ settings.site_title }}" required>
@@ -18,6 +26,10 @@
                 <option value="en" {% if settings.interface_language == "en" %}selected{% endif %}>en</option>
                 <option value="de" {% if settings.interface_language == "de" %}selected{% endif %}>de</option>
             </select>
+        </label>
+        <label>
+            <span>System icon</span>
+            <input type="file" name="site_icon" accept="image/*">
         </label>
         <div class="admin-actions">
             <button type="submit">Save settings</button>

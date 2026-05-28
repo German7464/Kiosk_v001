@@ -5,7 +5,7 @@ from functools import wraps
 from flask import Blueprint, abort, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from kiosk.core.images import process_event_image
+from kiosk.core.images import process_event_image, process_system_icon
 from kiosk.database import get_database, increase_content_version
 
 
@@ -141,14 +141,15 @@ def get_admin_settings():
         """
         SELECT key, value
         FROM settings
-        WHERE key IN (?, ?)
+        WHERE key IN (?, ?, ?)
         """,
-        ("site_title", "interface_language"),
+        ("site_title", "interface_language", "site_icon"),
     ).fetchall()
     settings = {row["key"]: row["value"] for row in rows}
     return {
         "site_title": settings.get("site_title", "Kiosk_v001"),
         "interface_language": settings.get("interface_language", "en"),
+        "site_icon": settings.get("site_icon", ""),
     }
 
 
@@ -184,10 +185,19 @@ def save_admin_settings():
     if interface_language not in {"ru", "en", "de"}:
         interface_language = "en"
 
+    try:
+        icon_paths = process_system_icon(request.files.get("site_icon"))
+    except ValueError as error:
+        return render_template("admin_settings.html", settings=get_admin_settings(), error=str(error)), 400
+
     database = get_database()
     updated_at = datetime.now(timezone.utc).isoformat()
     save_setting(database, "site_title", site_title, updated_at)
     save_setting(database, "interface_language", interface_language, updated_at)
+
+    if icon_paths is not None:
+        save_setting(database, "site_icon", icon_paths["site_icon"], updated_at)
+
     increase_content_version(database)
     database.commit()
 

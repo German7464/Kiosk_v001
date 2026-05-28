@@ -48,6 +48,36 @@ def process_event_image(uploaded_file):
     return image_paths
 
 
+def process_system_icon(uploaded_file):
+    if uploaded_file is None or not uploaded_file.filename:
+        return None
+
+    filename = secure_filename(uploaded_file.filename)
+    suffix = Path(filename).suffix.lower() or ".image"
+    image_id = uuid4().hex
+    original_dir = current_app.config["PRIVATE_UPLOAD_DIR"] / "original" / "icons"
+    public_dir = current_app.config["PUBLIC_UPLOAD_DIR"] / "icons"
+    original_dir.mkdir(parents=True, exist_ok=True)
+    public_dir.mkdir(parents=True, exist_ok=True)
+    original_path = original_dir / f"{image_id}{suffix}"
+    public_path = public_dir / f"{image_id}.png"
+    uploaded_file.save(original_path)
+
+    try:
+        with Image.open(original_path) as image:
+            image.verify()
+    except OSError as error:
+        original_path.unlink(missing_ok=True)
+        raise ValueError("Unsupported icon file.") from error
+
+    save_optimized_icon(original_path, public_path)
+
+    return {
+        "icon_original": private_path_value(original_path),
+        "site_icon": public_path_value(public_path),
+    }
+
+
 def save_optimized_image(source_path, output_path, size):
     with Image.open(source_path) as image:
         image = ImageOps.exif_transpose(image)
@@ -57,6 +87,17 @@ def save_optimized_image(source_path, output_path, size):
             image = image.convert("RGB")
 
         image.save(output_path, "JPEG", quality=82, optimize=True, progressive=True)
+
+
+def save_optimized_icon(source_path, output_path):
+    with Image.open(source_path) as image:
+        image = ImageOps.exif_transpose(image)
+        image = ImageOps.contain(image, (256, 256))
+
+        if image.mode != "RGBA":
+            image = image.convert("RGBA")
+
+        image.save(output_path, "PNG", optimize=True)
 
 
 def private_path_value(path):
