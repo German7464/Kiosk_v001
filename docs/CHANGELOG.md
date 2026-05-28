@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Verified final MVP readiness before Waitress and EXE packaging and corrected outdated README status text.
 - Added reusable unittest MVP smoke tests with isolated temporary database and upload storage.
 - Added frontend fallbacks for missing event image files in kiosk events, TV display, and admin event previews.
 - Fixed the admin events page with responsive event cards, compact kiosk and TV previews, and a view-only preview modal.

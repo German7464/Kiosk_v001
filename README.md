@@ -24,7 +24,7 @@ Only the MVP scope defined in [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md) is allowed.
 
 ## Development Status
 
-Initial documentation has been created. Application code, Flask structure, database files, templates, static assets, routes, services, and models have not been created yet.
+The MVP Flask application is implemented with SQLite storage, admin management flows, public display routes, public API endpoints, image processing, translations, responsive layouts, and reusable developer smoke tests.
 
 ## Working With This Project
 
