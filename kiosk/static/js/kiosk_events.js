@@ -35,6 +35,11 @@ function createTextElement(tagName, className, text) {
     return element;
 }
 
+function replaceMissingKioskImage(image) {
+    const placeholder = createTextElement("span", "event-image-placeholder", labels.imageArea);
+    image.replaceWith(placeholder);
+}
+
 function renderEvent() {
     eventCard.innerHTML = "";
 
@@ -55,7 +60,10 @@ function renderEvent() {
         image.className = "event-card-image";
         image.src = event.image_kiosk;
         image.alt = event.title;
+        image.addEventListener("error", () => replaceMissingKioskImage(image), { once: true });
         eventBody.appendChild(image);
+    } else {
+        eventBody.appendChild(createTextElement("span", "event-image-placeholder", labels.imageArea));
     }
 
     eventBody.appendChild(createTextElement("p", "event-date", event.event_date || labels.datePlaceholder));

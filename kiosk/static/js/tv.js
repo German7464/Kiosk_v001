@@ -28,18 +28,31 @@ function applyTvEvent(event) {
         tvPlace.textContent = event.place || labels.placePlaceholder;
         tvDescription.textContent = event.short_description || labels.descriptionPlaceholder;
 
-        if (event.image_tv || event.image_kiosk) {
-            const imageUrl = event.image_tv || event.image_kiosk;
-            tvImage.innerHTML = "";
-            tvImage.style.backgroundImage = `url("${imageUrl}")`;
-        } else {
-            tvImage.style.backgroundImage = "";
-            tvImage.innerHTML = `<span>${labels.imageArea}</span>`;
-        }
+        setTvImage(event.image_tv || event.image_kiosk);
 
         tvCard.classList.add("is-visible");
         transitionActive = false;
     }, 220);
+}
+
+function showTvImagePlaceholder() {
+    tvImage.style.backgroundImage = "";
+    tvImage.innerHTML = `<span>${labels.imageArea}</span>`;
+}
+
+function setTvImage(imageUrl) {
+    if (!imageUrl) {
+        showTvImagePlaceholder();
+        return;
+    }
+
+    const image = new Image();
+    image.onload = () => {
+        tvImage.innerHTML = "";
+        tvImage.style.backgroundImage = `url("${imageUrl}")`;
+    };
+    image.onerror = showTvImagePlaceholder;
+    image.src = imageUrl;
 }
 
 function showNextTvEvent() {

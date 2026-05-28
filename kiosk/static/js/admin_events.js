@@ -12,13 +12,37 @@ function setPreviewImage(imageUrl) {
     adminPreviewImage.style.backgroundImage = "";
 
     if (!imageUrl) {
-        const placeholder = document.createElement("span");
-        placeholder.textContent = adminPreviewImage.dataset.placeholder || "Image area";
-        adminPreviewImage.appendChild(placeholder);
+        showAdminPreviewPlaceholder();
         return;
     }
 
-    adminPreviewImage.style.backgroundImage = `url("${imageUrl}")`;
+    const image = new Image();
+    image.onload = () => {
+        adminPreviewImage.innerHTML = "";
+        adminPreviewImage.style.backgroundImage = `url("${imageUrl}")`;
+    };
+    image.onerror = showAdminPreviewPlaceholder;
+    image.src = imageUrl;
+}
+
+function showAdminPreviewPlaceholder() {
+    const placeholder = document.createElement("span");
+    adminPreviewImage.innerHTML = "";
+    adminPreviewImage.style.backgroundImage = "";
+    placeholder.textContent = adminPreviewImage.dataset.placeholder || "Image area";
+    adminPreviewImage.appendChild(placeholder);
+}
+
+function replaceMissingAdminThumb(image) {
+    const wrapper = image.closest(".admin-preview-media");
+    const placeholder = document.createElement("span");
+
+    if (!wrapper) {
+        return;
+    }
+
+    placeholder.textContent = wrapper.dataset.placeholder || "Image area";
+    image.replaceWith(placeholder);
 }
 
 function openAdminPreview(button) {
@@ -37,6 +61,10 @@ function closeAdminPreviewModal() {
 
 document.querySelectorAll("[data-open-admin-preview]").forEach((button) => {
     button.addEventListener("click", () => openAdminPreview(button));
+});
+
+document.querySelectorAll(".admin-preview-media img").forEach((image) => {
+    image.addEventListener("error", () => replaceMissingAdminThumb(image), { once: true });
 });
 
 if (closeAdminPreview) {

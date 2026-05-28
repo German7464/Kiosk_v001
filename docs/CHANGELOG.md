@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Added frontend fallbacks for missing event image files in kiosk events, TV display, and admin event previews.
 - Fixed the admin events page with responsive event cards, compact kiosk and TV previews, and a view-only preview modal.
 - Improved MVP responsive layout using the old prototype as visual inspiration and added the prototype site icon as the default kiosk icon.
 - Applied the MVP visual style pass for kiosk, TV, preview, and admin screens.
