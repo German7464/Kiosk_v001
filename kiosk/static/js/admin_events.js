@@ -46,7 +46,7 @@ function replaceMissingAdminThumb(image) {
 }
 
 function openAdminPreview(button) {
-    adminPreviewMode.textContent = button.dataset.previewMode === "tv" ? "TV preview" : "Kiosk preview";
+    adminPreviewMode.textContent = button.dataset.previewMode === "tv" ? adminPreviewModal.dataset.tvPreviewLabel : adminPreviewModal.dataset.kioskPreviewLabel;
     adminPreviewTitle.textContent = button.dataset.previewTitle;
     adminPreviewDate.textContent = button.dataset.previewDate;
     adminPreviewPlace.textContent = button.dataset.previewPlace;

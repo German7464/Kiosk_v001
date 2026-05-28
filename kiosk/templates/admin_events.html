@@ -20,7 +20,7 @@
         <article class="admin-event-card">
             <div class="admin-event-preview-grid">
                 <button class="admin-event-preview admin-event-preview-kiosk" type="button" data-open-admin-preview data-preview-title="{{ event.title|e }}" data-preview-date="{{ (event.event_date or t('common.date_to_be_announced'))|e }}" data-preview-place="{{ (event.place or t('common.place_to_be_announced'))|e }}" data-preview-description="{{ (event.short_description or t('common.no_short_description'))|e }}" data-preview-image="{{ (event.image_thumb or '')|e }}" data-preview-mode="kiosk">
-                    <span class="admin-preview-label">Kiosk preview</span>
+                    <span class="admin-preview-label">{{ t("admin.kiosk_preview") }}</span>
                     <span class="admin-preview-media" data-placeholder="{{ t('common.image_area') }}">
                         {% if event.image_thumb %}
                         <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
@@ -32,7 +32,7 @@
                     <span class="admin-preview-meta">{{ event.event_date or t("common.date_to_be_announced") }}</span>
                 </button>
                 <button class="admin-event-preview admin-event-preview-tv" type="button" data-open-admin-preview data-preview-title="{{ event.title|e }}" data-preview-date="{{ (event.event_date or t('common.date_to_be_announced'))|e }}" data-preview-place="{{ (event.place or t('common.place_to_be_announced'))|e }}" data-preview-description="{{ (event.short_description or t('common.no_short_description'))|e }}" data-preview-image="{{ (event.image_thumb or '')|e }}" data-preview-mode="tv">
-                    <span class="admin-preview-label">TV preview</span>
+                    <span class="admin-preview-label">{{ t("admin.tv_preview") }}</span>
                     <span class="admin-preview-media" data-placeholder="{{ t('common.image_area') }}">
                         {% if event.image_thumb %}
                         <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
@@ -50,7 +50,7 @@
                     <h2>{{ event.title }}</h2>
                     <p>{{ event.short_description or t("common.no_short_description") }}</p>
                     <p>{{ event.place or t("common.place_to_be_announced") }}</p>
-                    <p class="admin-event-meta">{{ t("admin.status") }}: {{ event.status }} / {{ t("admin.sort_order") }}: {{ event.sort_order }}</p>
+                    <p class="admin-event-meta">{{ t("admin.status") }}: {{ t("common." ~ event.status) }} / {{ t("admin.sort_order") }}: {{ event.sort_order }}</p>
                 </div>
                 <div class="admin-event-actions">
                     <a href="{{ url_for('admin.edit_event', event_id=event.id) }}">{{ t("admin.edit") }}</a>
@@ -74,29 +74,31 @@
         </article>
         {% endfor %}
     </div>
-    <div class="admin-preview-modal" data-admin-preview-modal hidden>
-        <div class="admin-preview-modal-panel" role="dialog" aria-modal="true" aria-labelledby="admin-preview-modal-title">
-            <div class="admin-preview-modal-header">
-                <p class="label" data-admin-preview-mode>Preview</p>
-                <button class="close-button" type="button" data-close-admin-preview>{{ t("common.close") }}</button>
-            </div>
-            <div class="admin-preview-modal-card">
-                <div class="admin-preview-modal-image" data-admin-preview-image data-placeholder="{{ t('common.image_area') }}">
-                    <span>{{ t("common.image_area") }}</span>
-                </div>
-                <div class="admin-preview-modal-copy">
-                    <p class="event-date" data-admin-preview-date></p>
-                    <h2 id="admin-preview-modal-title" data-admin-preview-title></h2>
-                    <p data-admin-preview-description></p>
-                    <p class="event-place" data-admin-preview-place></p>
-                </div>
-            </div>
-        </div>
-    </div>
     {% else %}
     <p class="admin-copy">{{ t("admin.no_events") }}</p>
     {% endif %}
 </section>
+{% if events %}
+<div class="admin-preview-modal" data-admin-preview-modal data-kiosk-preview-label="{{ t('admin.kiosk_preview') }}" data-tv-preview-label="{{ t('admin.tv_preview') }}" hidden>
+    <div class="admin-preview-modal-panel" role="dialog" aria-modal="true" aria-labelledby="admin-preview-modal-title">
+        <div class="admin-preview-modal-header">
+            <p class="label" data-admin-preview-mode>{{ t("admin.event_preview") }}</p>
+            <button class="close-button" type="button" data-close-admin-preview>{{ t("common.close") }}</button>
+        </div>
+        <div class="admin-preview-modal-card">
+            <div class="admin-preview-modal-image" data-admin-preview-image data-placeholder="{{ t('common.image_area') }}">
+                <span>{{ t("common.image_area") }}</span>
+            </div>
+            <div class="admin-preview-modal-copy">
+                <p class="event-date" data-admin-preview-date></p>
+                <h2 id="admin-preview-modal-title" data-admin-preview-title></h2>
+                <p data-admin-preview-description></p>
+                <p class="event-place" data-admin-preview-place></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
