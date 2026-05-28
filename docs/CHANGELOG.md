@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Added a Waitress production-style local startup entrypoint while keeping the Flask development startup.
 - Verified final MVP readiness before Waitress and EXE packaging and corrected outdated README status text.
 - Added reusable unittest MVP smoke tests with isolated temporary database and upload storage.
 - Added frontend fallbacks for missing event image files in kiosk events, TV display, and admin event previews.

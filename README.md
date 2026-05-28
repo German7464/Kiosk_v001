@@ -36,6 +36,26 @@ Before future tasks, read:
 
 Do not analyze the whole repository for every task. Make the smallest useful change, stay inside the MVP, and update [docs/CHANGELOG.md](docs/CHANGELOG.md) after completed work.
 
+## Running Locally
+
+Development mode:
+
+```bash
+python run.py
+```
+
+Waitress mode for local production-style testing:
+
+```bash
+python serve.py
+```
+
+The default local kiosk URL is:
+
+```text
+http://127.0.0.1:5000/kiosk
+```
+
 ## Developer Smoke Tests
 
 Run the reusable MVP smoke tests before packaging:
