@@ -11,6 +11,7 @@ const openTagsButton = document.querySelector("[data-open-tags]");
 const closeTagsButton = document.querySelector("[data-close-tags]");
 const contentVersion = document.querySelector("[data-content-version]");
 const inactivitySeconds = Number(eventsScreen.dataset.inactivitySeconds);
+const labels = eventsScreen.dataset;
 
 let events = [];
 let currentEventIndex = 0;
@@ -53,10 +54,10 @@ function renderEvent() {
         eventBody.appendChild(image);
     }
 
-    eventBody.appendChild(createTextElement("p", "event-date", event.event_date || "Date to be announced"));
+    eventBody.appendChild(createTextElement("p", "event-date", event.event_date || labels.datePlaceholder));
     eventBody.appendChild(createTextElement("h2", "event-title", event.title));
-    eventBody.appendChild(createTextElement("p", "event-description", event.short_description || event.full_description || "No description yet."));
-    eventBody.appendChild(createTextElement("p", "event-place", event.place || "Place to be announced"));
+    eventBody.appendChild(createTextElement("p", "event-description", event.short_description || event.full_description || labels.descriptionPlaceholder));
+    eventBody.appendChild(createTextElement("p", "event-place", event.place || labels.placePlaceholder));
 
     eventCard.appendChild(eventBody);
     previousButton.disabled = events.length < 2;
@@ -69,7 +70,7 @@ function renderTags(tags) {
     allTags.innerHTML = "";
 
     if (tags.length === 0) {
-        allTags.appendChild(createTextElement("p", "modal-empty", "No tags available yet."));
+        allTags.appendChild(createTextElement("p", "modal-empty", labels.noTags));
         return;
     }
 
@@ -108,7 +109,7 @@ async function loadKioskEventsPage() {
     const eventsData = await eventsResponse.json();
     const tagsData = await tagsResponse.json();
 
-    contentVersion.textContent = `Version ${versionData.content_version}`;
+    contentVersion.textContent = `${labels.versionLabel} ${versionData.content_version}`;
     events = eventsData.events || [];
     currentEventIndex = 0;
     renderTags(tagsData.tags || []);
@@ -131,7 +132,7 @@ closeTagsButton.addEventListener("click", () => {
 });
 
 loadKioskEventsPage().catch(() => {
-    contentVersion.textContent = "Version unavailable";
+    contentVersion.textContent = labels.versionUnavailable;
     renderEvent();
 });
 resetInactivityTimer();

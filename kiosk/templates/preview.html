@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Preview{% endblock %}
+{% block title %}{{ t("preview.label") }}{% endblock %}
 
 {% block content %}
 <section class="placeholder">
-    <p class="label">Preview mode</p>
-    <h1>{{ settings.site_title }} preview</h1>
-    <nav class="links" aria-label="Preview links">
-        <a href="{{ url_for('kiosk_home') }}">Open kiosk</a>
-        <a href="/kiosk/events">Open kiosk events</a>
-        <a href="/tv">Open TV display</a>
-        <a href="/admin">Open admin</a>
+    <p class="label">{{ t("preview.label") }}</p>
+    <h1>{{ settings.site_title }} {{ t("preview.title_suffix") }}</h1>
+    <nav class="links" aria-label="{{ t('preview.label') }}">
+        <a href="{{ url_for('kiosk_home') }}">{{ t("preview.kiosk") }}</a>
+        <a href="/kiosk/events">{{ t("preview.kiosk_events") }}</a>
+        <a href="/tv">{{ t("preview.tv") }}</a>
+        <a href="/admin">{{ t("preview.admin") }}</a>
     </nav>
 </section>
 {% endblock %}

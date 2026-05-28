@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}System Settings{% endblock %}
+{% block title %}{{ t("admin.system_settings") }}{% endblock %}
 
 {% block content %}
 <section class="admin-panel">
-    <p class="label">Admin settings</p>
-    <h1>System settings</h1>
+    <p class="label">{{ t("admin.settings") }}</p>
+    <h1>{{ t("admin.system_settings") }}</h1>
     {% if error %}
     <p class="form-error">{{ error }}</p>
     {% endif %}
@@ -16,11 +16,11 @@
         </div>
         {% endif %}
         <label>
-            <span>System title</span>
+            <span>{{ t("admin.system_title") }}</span>
             <input type="text" name="site_title" value="{{ settings.site_title }}" required>
         </label>
         <label>
-            <span>Interface language</span>
+            <span>{{ t("admin.interface_language") }}</span>
             <select name="interface_language">
                 <option value="ru" {% if settings.interface_language == "ru" %}selected{% endif %}>ru</option>
                 <option value="en" {% if settings.interface_language == "en" %}selected{% endif %}>en</option>
@@ -28,12 +28,12 @@
             </select>
         </label>
         <label>
-            <span>System icon</span>
+            <span>{{ t("admin.system_icon") }}</span>
             <input type="file" name="site_icon" accept="image/*">
         </label>
         <div class="admin-actions">
-            <button type="submit">Save settings</button>
-            <a href="{{ url_for('admin.admin_home') }}">Back to admin</a>
+            <button type="submit">{{ t("admin.save_settings") }}</button>
+            <a href="{{ url_for('admin.admin_home') }}">{{ t("common.back_to_admin") }}</a>
         </div>
     </form>
 </section>

@@ -8,6 +8,7 @@ const tvDescription = document.querySelector("[data-tv-description]");
 const tvVersion = document.querySelector("[data-tv-version]");
 const tvEmptyState = document.querySelector("[data-tv-empty-state]");
 const slideDuration = Number(tvScreen.dataset.slideDuration);
+const labels = tvScreen.dataset;
 
 let tvEvents = [];
 let tvEventIndex = 0;
@@ -16,10 +17,10 @@ function applyTvEvent(event) {
     tvCard.classList.remove("is-visible");
 
     window.setTimeout(() => {
-        tvDate.textContent = event.event_date || "Date to be announced";
+        tvDate.textContent = event.event_date || labels.datePlaceholder;
         tvTitle.textContent = event.title;
-        tvPlace.textContent = event.place || "Place to be announced";
-        tvDescription.textContent = event.short_description || "No description yet.";
+        tvPlace.textContent = event.place || labels.placePlaceholder;
+        tvDescription.textContent = event.short_description || labels.descriptionPlaceholder;
 
         if (event.image_tv || event.image_kiosk) {
             const imageUrl = event.image_tv || event.image_kiosk;
@@ -27,7 +28,7 @@ function applyTvEvent(event) {
             tvImage.style.backgroundImage = `url("${imageUrl}")`;
         } else {
             tvImage.style.backgroundImage = "";
-            tvImage.innerHTML = "<span>Image area</span>";
+            tvImage.innerHTML = `<span>${labels.imageArea}</span>`;
         }
 
         tvCard.classList.add("is-visible");
@@ -52,7 +53,7 @@ async function loadTvDisplay() {
     const versionData = await versionResponse.json();
     const eventsData = await eventsResponse.json();
 
-    tvVersion.textContent = `Version ${versionData.content_version}`;
+    tvVersion.textContent = `${labels.versionLabel} ${versionData.content_version}`;
     tvEvents = eventsData.events || [];
 
     if (tvEvents.length === 0) {
@@ -68,7 +69,7 @@ async function loadTvDisplay() {
 }
 
 loadTvDisplay().catch(() => {
-    tvVersion.textContent = "Version unavailable";
+    tvVersion.textContent = labels.versionUnavailable;
     tvCard.hidden = true;
     tvEmptyState.hidden = false;
 });

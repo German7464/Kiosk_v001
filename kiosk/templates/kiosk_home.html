@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Kiosk Home{% endblock %}
+{% block title %}{{ t("kiosk.home_heading") }}{% endblock %}
 
 {% block content %}
 <section class="kiosk-home" aria-labelledby="kiosk-title">
@@ -13,12 +13,12 @@
         <p class="system-name">{{ settings.site_title }}</p>
     </div>
     <div class="kiosk-content">
-        <p class="label">Event information system</p>
-        <h1 id="kiosk-title">Welcome to the event kiosk</h1>
+        <p class="label">{{ t("kiosk.home_label") }}</p>
+        <h1 id="kiosk-title">{{ t("kiosk.home_heading") }}</h1>
         <p class="kiosk-description">
-            Browse current event information on a large touch screen in a simple local kiosk mode.
+            {{ t("kiosk.home_description") }}
         </p>
-        <a class="primary-action" href="/kiosk/events">Open events</a>
+        <a class="primary-action" href="/kiosk/events">{{ t("kiosk.open_events") }}</a>
     </div>
 </section>
 {% endblock %}

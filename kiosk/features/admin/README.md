@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provides MVP admin authentication, event management, event image upload, tag management, event tag assignment, system settings management, and system icon upload.
+Provides MVP admin authentication, event management, event image upload, tag management, event tag assignment, system settings management, system icon upload, and interface language selection.
 
 ## Related Files
 
@@ -18,8 +18,12 @@ Provides MVP admin authentication, event management, event image upload, tag man
 - `kiosk/templates/admin_event_tags.html`
 - `kiosk/templates/admin_settings.html`
 - `kiosk/core/images.py`
+- `kiosk/core/i18n.py`
 - `kiosk/database.py`
 - `kiosk/app.py`
+- `kiosk/translations/ru.json`
+- `kiosk/translations/en.json`
+- `kiosk/translations/de.json`
 
 ## Related Database Tables
 
@@ -62,16 +66,16 @@ Provides MVP admin authentication, event management, event image upload, tag man
 
 ## How the Feature Updates Content Version
 
-Creating, editing, deleting, hiding, showing, moving, or uploading an image for an event increases `settings.content_version` and inserts a row into `content_versions`. Creating, editing, deleting, assigning, or removing tags also increases content version. Saving system settings also increases content version.
+Creating, editing, deleting, hiding, showing, moving, or uploading an image for an event increases `settings.content_version` and inserts a row into `content_versions`. Creating, editing, deleting, assigning, or removing tags also increases content version. Saving system settings, including the interface language, also increases content version.
 
 ## How the Feature Is Shown in Kiosk Mode
 
-Kiosk mode receives active events, optimized kiosk images, and assigned event tags through the public API after admin changes. The kiosk home screen uses the saved system title.
+Kiosk mode receives active events, optimized kiosk images, and assigned event tags through the public API after admin changes. The kiosk home screen uses the saved system title, system icon, and interface language.
 
 ## How the Feature Is Shown in TV Mode
 
-TV mode receives active events, optimized TV images, and assigned event tags through the public API after admin changes. The TV screen uses the saved system title.
+TV mode receives active events, optimized TV images, and assigned event tags through the public API after admin changes. The TV screen uses the saved system title and interface language.
 
 ## How the Feature Is Managed in Admin Panel
 
-The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. It can upload event images and stores originals outside public static folders while exposing optimized kiosk, TV, and thumb versions. It can also list, create, edit, and delete tags, then assign or remove tags on events. It can edit the system title, interface language setting, and system icon. Translation file management is not implemented yet.
+The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. It can upload event images and stores originals outside public static folders while exposing optimized kiosk, TV, and thumb versions. It can also list, create, edit, and delete tags, then assign or remove tags on events. It can edit the system title, interface language setting, and system icon. Interface translations are loaded from JSON files. Translation file management is not implemented in the admin panel.

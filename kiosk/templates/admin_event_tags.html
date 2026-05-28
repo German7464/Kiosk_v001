@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Event Tags{% endblock %}
+{% block title %}{{ t("admin.tags") }}{% endblock %}
 
 {% block content %}
 <section class="admin-panel admin-panel-wide">
-    <p class="label">Admin event tags</p>
+    <p class="label">{{ t("admin.tags") }}</p>
     <h1>{{ event.title }}</h1>
     <form class="admin-form" method="post" action="{{ url_for('admin.edit_event_tags_post', event_id=event.id) }}">
         {% if tags %}
@@ -17,12 +17,12 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="admin-copy">No tags have been created yet.</p>
+        <p class="admin-copy">{{ t("admin.no_tags") }}</p>
         {% endif %}
         <div class="admin-actions">
-            <button type="submit">Save event tags</button>
-            <a href="{{ url_for('admin.admin_events') }}">Back to events</a>
-            <a href="{{ url_for('admin.admin_tags') }}">Manage tags</a>
+            <button type="submit">{{ t("admin.save_event_tags") }}</button>
+            <a href="{{ url_for('admin.admin_events') }}">{{ t("common.back_to_events") }}</a>
+            <a href="{{ url_for('admin.admin_tags') }}">{{ t("admin.manage_tags") }}</a>
         </div>
     </form>
 </section>

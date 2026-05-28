@@ -1,6 +1,7 @@
 from flask import Flask, render_template
 
 from kiosk.config import Config
+from kiosk.core.i18n import translate
 from kiosk.database import close_database, get_database, initialize_database
 from kiosk.features.admin import admin_blueprint
 from kiosk.features.api import api_blueprint
@@ -30,13 +31,23 @@ def create_app():
             "site_icon": settings.get("site_icon", ""),
         }
 
+    @app.context_processor
+    def i18n_context():
+        settings = system_settings()
+        language = settings["interface_language"]
+
+        def t(key):
+            return translate(key, language)
+
+        return {"t": t, "active_language": language}
+
     @app.get("/kiosk")
     def kiosk_home():
         return render_template("kiosk_home.html", settings=system_settings())
 
     @app.get("/kiosk/events")
     def kiosk_events():
-        return render_template("kiosk_events.html")
+        return render_template("kiosk_events.html", settings=system_settings())
 
     @app.get("/tv")
     def tv():

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Event Form{% endblock %}
+{% block title %}{{ t("admin.events") }}{% endblock %}
 
 {% block content %}
 <section class="admin-panel admin-panel-wide">
-    <p class="label">Admin events</p>
-    <h1>{{ "Edit event" if event else "Create event" }}</h1>
+    <p class="label">{{ t("admin.events") }}</p>
+    <h1>{{ t("admin.edit_event") if event else t("admin.create_event") }}</h1>
     {% if error %}
     <p class="form-error">{{ error }}</p>
     {% endif %}
@@ -16,43 +16,43 @@
         </div>
         {% endif %}
         <label>
-            <span>Title</span>
+            <span>{{ t("admin.title") }}</span>
             <input type="text" name="title" value="{{ event.title if event else '' }}" required>
         </label>
         <label>
-            <span>Short description</span>
+            <span>{{ t("admin.short_description") }}</span>
             <textarea name="short_description" rows="3">{{ event.short_description if event else '' }}</textarea>
         </label>
         <label>
-            <span>Full description</span>
+            <span>{{ t("admin.full_description") }}</span>
             <textarea name="full_description" rows="6">{{ event.full_description if event else '' }}</textarea>
         </label>
         <label>
-            <span>Event date</span>
+            <span>{{ t("admin.event_date") }}</span>
             <input type="text" name="event_date" value="{{ event.event_date if event else '' }}">
         </label>
         <label>
-            <span>Place</span>
+            <span>{{ t("admin.place") }}</span>
             <input type="text" name="place" value="{{ event.place if event else '' }}">
         </label>
         <label>
-            <span>Status</span>
+            <span>{{ t("admin.status") }}</span>
             <select name="status">
-                <option value="hidden" {% if not event or event.status == "hidden" %}selected{% endif %}>hidden</option>
-                <option value="active" {% if event and event.status == "active" %}selected{% endif %}>active</option>
+                <option value="hidden" {% if not event or event.status == "hidden" %}selected{% endif %}>{{ t("common.hidden") }}</option>
+                <option value="active" {% if event and event.status == "active" %}selected{% endif %}>{{ t("common.active") }}</option>
             </select>
         </label>
         <label>
-            <span>Sort order</span>
+            <span>{{ t("admin.sort_order") }}</span>
             <input type="number" name="sort_order" value="{{ event.sort_order if event else 0 }}">
         </label>
         <label>
-            <span>Event image</span>
+            <span>{{ t("admin.event_image") }}</span>
             <input type="file" name="event_image" accept="image/*">
         </label>
         <div class="admin-actions">
-            <button type="submit">Save event</button>
-            <a href="{{ url_for('admin.admin_events') }}">Back to events</a>
+            <button type="submit">{{ t("admin.save_event") }}</button>
+            <a href="{{ url_for('admin.admin_events') }}">{{ t("common.back_to_events") }}</a>
         </div>
     </form>
 </section>

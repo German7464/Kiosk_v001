@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Tags{% endblock %}
+{% block title %}{{ t("admin.tags") }}{% endblock %}
 
 {% block content %}
 <section class="admin-panel admin-panel-wide">
-    <p class="label">Admin tags</p>
-    <h1>Tag management</h1>
+    <p class="label">{{ t("admin.tags") }}</p>
+    <h1>{{ t("admin.tag_management") }}</h1>
     {% if error %}
     <p class="form-error">{{ error }}</p>
     {% endif %}
     <form class="admin-inline-form" method="post" action="{{ url_for('admin.create_tag') }}">
         <label>
-            <span>New tag name</span>
+            <span>{{ t("admin.new_tag_name") }}</span>
             <input type="text" name="name" required>
         </label>
-        <button type="submit">Create tag</button>
-        <a href="{{ url_for('admin.admin_home') }}">Back to admin</a>
+        <button type="submit">{{ t("admin.create_tag") }}</button>
+        <a href="{{ url_for('admin.admin_home') }}">{{ t("common.back_to_admin") }}</a>
     </form>
     {% if tags %}
     <div class="admin-event-list">
@@ -23,19 +23,19 @@
         <article class="admin-event-row">
             <div>
                 <h2>{{ tag.name }}</h2>
-                <p>Assigned events: {{ tag.event_count }}</p>
+                <p>{{ t("admin.assigned_events") }}: {{ tag.event_count }}</p>
             </div>
             <div class="admin-row-actions">
-                <a href="{{ url_for('admin.edit_tag', tag_id=tag.id) }}">Edit</a>
+                <a href="{{ url_for('admin.edit_tag', tag_id=tag.id) }}">{{ t("admin.edit") }}</a>
                 <form method="post" action="{{ url_for('admin.delete_tag', tag_id=tag.id) }}">
-                    <button type="submit">Delete</button>
+                    <button type="submit">{{ t("admin.delete") }}</button>
                 </form>
             </div>
         </article>
         {% endfor %}
     </div>
     {% else %}
-    <p class="admin-copy">No tags have been created yet.</p>
+    <p class="admin-copy">{{ t("admin.no_tags") }}</p>
     {% endif %}
 </section>
 {% endblock %}

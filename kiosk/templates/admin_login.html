@@ -1,24 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Login{% endblock %}
+{% block title %}{{ t("admin.login_label") }}{% endblock %}
 
 {% block content %}
 <section class="admin-panel">
-    <p class="label">Admin login</p>
-    <h1>Sign in</h1>
+    <p class="label">{{ t("admin.login_label") }}</p>
+    <h1>{{ t("admin.sign_in") }}</h1>
     {% if error %}
     <p class="form-error">{{ error }}</p>
     {% endif %}
     <form class="admin-form" method="post" action="{{ url_for('admin.login_post') }}">
         <label>
-            <span>Username</span>
+            <span>{{ t("admin.username") }}</span>
             <input type="text" name="username" autocomplete="username" required>
         </label>
         <label>
-            <span>Password</span>
+            <span>{{ t("admin.password") }}</span>
             <input type="password" name="password" autocomplete="current-password" required>
         </label>
-        <button type="submit">Login</button>
+        <button type="submit">{{ t("admin.login") }}</button>
     </form>
 </section>
 {% endblock %}

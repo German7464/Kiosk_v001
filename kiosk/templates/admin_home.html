@@ -1,19 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}Admin{% endblock %}
+{% block title %}{{ t("admin.home") }}{% endblock %}
 
 {% block content %}
 <section class="admin-panel">
-    <p class="label">Admin panel</p>
-    <h1>Admin placeholder</h1>
-    <p class="admin-copy">Signed in as {{ username }}.</p>
+    <p class="label">{{ t("admin.home") }}</p>
+    <h1>{{ t("admin.home") }}</h1>
+    <p class="admin-copy">{{ t("admin.signed_in_as") }} {{ username }}.</p>
     <div class="admin-actions">
-        <a href="{{ url_for('admin.admin_events') }}">Manage events</a>
-        <a href="{{ url_for('admin.admin_tags') }}">Manage tags</a>
-        <a href="{{ url_for('admin.admin_settings') }}">System settings</a>
-        <a href="{{ url_for('admin.change_password') }}">Change password</a>
+        <a href="{{ url_for('admin.admin_events') }}">{{ t("admin.manage_events") }}</a>
+        <a href="{{ url_for('admin.admin_tags') }}">{{ t("admin.manage_tags") }}</a>
+        <a href="{{ url_for('admin.admin_settings') }}">{{ t("admin.system_settings") }}</a>
+        <a href="{{ url_for('admin.change_password') }}">{{ t("admin.change_password") }}</a>
         <form method="post" action="{{ url_for('admin.logout') }}">
-            <button type="submit">Logout</button>
+            <button type="submit">{{ t("admin.logout") }}</button>
         </form>
     </div>
 </section>

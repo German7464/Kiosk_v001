@@ -1,22 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}Edit Tag{% endblock %}
+{% block title %}{{ t("admin.edit_tag") }}{% endblock %}
 
 {% block content %}
 <section class="admin-panel">
-    <p class="label">Admin tags</p>
-    <h1>Edit tag</h1>
+    <p class="label">{{ t("admin.tags") }}</p>
+    <h1>{{ t("admin.edit_tag") }}</h1>
     {% if error %}
     <p class="form-error">{{ error }}</p>
     {% endif %}
     <form class="admin-form" method="post" action="{{ url_for('admin.edit_tag_post', tag_id=tag.id) }}">
         <label>
-            <span>Tag name</span>
+            <span>{{ t("admin.tag_name") }}</span>
             <input type="text" name="name" value="{{ tag.name }}" required>
         </label>
         <div class="admin-actions">
-            <button type="submit">Save tag</button>
-            <a href="{{ url_for('admin.admin_tags') }}">Back to tags</a>
+            <button type="submit">{{ t("admin.save_tag") }}</button>
+            <a href="{{ url_for('admin.admin_tags') }}">{{ t("common.back_to_tags") }}</a>
         </div>
     </form>
 </section>
