@@ -105,6 +105,6 @@ def private_path_value(path):
 
 
 def public_path_value(path):
-    relative_path = path.relative_to(current_app.static_folder)
+    relative_path = path.relative_to(current_app.config["STATIC_DIR"])
     public_path = str(relative_path).replace("\\", "/")
     return f"/static/{public_path}"

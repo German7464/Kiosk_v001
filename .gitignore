@@ -14,6 +14,7 @@ kiosk/static/uploads/
 dist/
 build/
 *.spec
+!Kiosk_v001.spec
 
 .env
 *.db

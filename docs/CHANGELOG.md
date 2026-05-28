@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Added PyInstaller packaging configuration for a Waitress-based Windows executable with bundled UI assets and external runtime data.
 - Added a Waitress production-style local startup entrypoint while keeping the Flask development startup.
 - Verified final MVP readiness before Waitress and EXE packaging and corrected outdated README status text.
 - Added reusable unittest MVP smoke tests with isolated temporary database and upload storage.

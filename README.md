@@ -56,6 +56,38 @@ The default local kiosk URL is:
 http://127.0.0.1:5000/kiosk
 ```
 
+## Building The Windows EXE
+
+Build the local Waitress server executable with PyInstaller:
+
+```bash
+python -m PyInstaller --clean --noconfirm Kiosk_v001.spec
+```
+
+The output folder is:
+
+```text
+dist/Kiosk_v001/
+```
+
+Start the packaged app with:
+
+```text
+dist/Kiosk_v001/Kiosk_v001.exe
+```
+
+The EXE starts the Waitress server and prints the kiosk URL. Runtime data stays outside the executable in the output folder, including `instance/kiosk.sqlite`, `instance/uploads/`, and `kiosk/static/uploads/`.
+
+Do not commit generated packaging or runtime data:
+
+```text
+build/
+dist/
+instance/
+logs/
+kiosk/static/uploads/
+```
+
 ## Developer Smoke Tests
 
 Run the reusable MVP smoke tests before packaging:

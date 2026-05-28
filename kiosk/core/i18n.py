@@ -28,7 +28,7 @@ def load_language_file(translations_dir, language):
 
 def translate(key, language=None):
     active_language = normalize_language(language)
-    translations_dir = current_app.config["BASE_DIR"] / "kiosk" / "translations"
+    translations_dir = current_app.config["RESOURCE_DIR"] / "kiosk" / "translations"
     active_translations = load_language_file(translations_dir, active_language)
     fallback_translations = load_language_file(translations_dir, FALLBACK_LANGUAGE)
 
