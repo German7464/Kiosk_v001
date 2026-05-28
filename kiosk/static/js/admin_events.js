@@ -30,6 +30,7 @@ function showAdminPreviewPlaceholder() {
     const placeholder = document.createElement("span");
     adminPreviewImage.innerHTML = "";
     adminPreviewImage.style.backgroundImage = "";
+    placeholder.className = "admin-preview__placeholder";
     placeholder.textContent = adminPreviewImage.dataset.placeholder || "Image area";
     adminPreviewImage.appendChild(placeholder);
 }
@@ -42,6 +43,7 @@ function replaceMissingAdminThumb(image) {
         return;
     }
 
+    placeholder.className = "admin-preview__placeholder";
     placeholder.textContent = wrapper.dataset.placeholder || "Image area";
     image.replaceWith(placeholder);
 }

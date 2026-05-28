@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Fixed admin preview image handling so preview images do not tile and broken images fall back to shared placeholders.
 - Improved admin event create and edit form previews with separate kiosk and TV blocks plus a centered large preview modal.
 - Fixed admin event status localization, centered the admin event preview modal in the viewport, and separated kiosk and TV preview layouts.
 - Improved admin tag search and translated auto-hiding admin flash messages.

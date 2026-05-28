@@ -43,6 +43,7 @@ function setPreviewImages(imageUrl) {
 
         if (!currentPreviewImage) {
             const placeholder = document.createElement("span");
+            placeholder.className = "admin-preview__placeholder";
             placeholder.textContent = eventFormPreview.dataset.imagePlaceholder;
             target.appendChild(placeholder);
             return;
@@ -57,6 +58,7 @@ function setPreviewImages(imageUrl) {
             const placeholder = document.createElement("span");
             target.innerHTML = "";
             target.style.backgroundImage = "";
+            placeholder.className = "admin-preview__placeholder";
             placeholder.textContent = eventFormPreview.dataset.imagePlaceholder;
             target.appendChild(placeholder);
         };
@@ -77,6 +79,7 @@ function setModalImage(imageUrl) {
 
     if (!imageUrl) {
         const placeholder = document.createElement("span");
+        placeholder.className = "admin-preview__placeholder";
         placeholder.textContent = formPreviewModalImage.dataset.placeholder;
         formPreviewModalImage.appendChild(placeholder);
         return;
@@ -91,6 +94,7 @@ function setModalImage(imageUrl) {
         const placeholder = document.createElement("span");
         formPreviewModalImage.innerHTML = "";
         formPreviewModalImage.style.backgroundImage = "";
+        placeholder.className = "admin-preview__placeholder";
         placeholder.textContent = formPreviewModalImage.dataset.placeholder;
         formPreviewModalImage.appendChild(placeholder);
     };

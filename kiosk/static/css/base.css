@@ -939,12 +939,19 @@ h1 {
 .admin-form-preview-image {
     display: grid;
     place-items: center;
+    aspect-ratio: 4 / 3;
     min-height: 160px;
     overflow: hidden;
     border-radius: 8px;
     background:
         linear-gradient(135deg, rgba(109, 93, 252, 0.13), rgba(14, 165, 233, 0.12)),
         #edf2ff;
+}
+
+.admin-preview__media {
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
 }
 
 .admin-form-preview-image img {
@@ -959,6 +966,16 @@ h1 {
     color: var(--muted);
     font-weight: 800;
     text-align: center;
+}
+
+.admin-preview__placeholder {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    min-height: 100%;
+    background:
+        linear-gradient(135deg, rgba(109, 93, 252, 0.13), rgba(14, 165, 233, 0.12)),
+        #edf2ff;
 }
 
 .admin-inline-form {
@@ -2023,6 +2040,7 @@ textarea {
 .admin-preview-media {
     display: grid;
     place-items: center;
+    aspect-ratio: 4 / 3;
     min-width: 0;
     min-height: 120px;
     overflow: hidden;
@@ -2226,14 +2244,13 @@ textarea {
 .admin-preview-modal-image {
     display: grid;
     place-items: center;
+    aspect-ratio: 4 / 3;
     min-height: clamp(260px, 44vh, 480px);
     overflow: hidden;
     border-radius: 8px;
     background:
         linear-gradient(135deg, rgba(109, 93, 252, 0.16), rgba(14, 165, 233, 0.14)),
         #edf2ff;
-    background-position: center;
-    background-size: cover;
 }
 
 .admin-preview-modal-card--kiosk .admin-preview-modal-image {

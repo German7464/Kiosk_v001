@@ -19,11 +19,11 @@
         <div class="admin-event-form-preview-grid">
             <article class="admin-event-form-preview-card admin-event-form-preview-card--kiosk">
                 <p class="admin-preview-label">{{ t("admin.kiosk_preview") }}</p>
-                <div class="admin-form-preview-image" data-form-preview-image data-initial-image="{{ event.image_thumb if event and event.image_thumb else '' }}">
+                <div class="admin-form-preview-image admin-preview__media" data-form-preview-image data-initial-image="{{ event.image_thumb if event and event.image_thumb else '' }}">
                     {% if event and event.image_thumb %}
                     <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
                     {% else %}
-                    <span>{{ t("common.image_area") }}</span>
+                    <span class="admin-preview__placeholder">{{ t("common.image_area") }}</span>
                     {% endif %}
                 </div>
                 <div class="admin-event-form-preview-copy">
@@ -36,11 +36,11 @@
             </article>
             <article class="admin-event-form-preview-card admin-event-form-preview-card--tv">
                 <p class="admin-preview-label">{{ t("admin.tv_preview") }}</p>
-                <div class="admin-form-preview-image" data-form-preview-image data-initial-image="{{ event.image_thumb if event and event.image_thumb else '' }}">
+                <div class="admin-form-preview-image admin-preview__media" data-form-preview-image data-initial-image="{{ event.image_thumb if event and event.image_thumb else '' }}">
                     {% if event and event.image_thumb %}
                     <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
                     {% else %}
-                    <span>{{ t("common.image_area") }}</span>
+                    <span class="admin-preview__placeholder">{{ t("common.image_area") }}</span>
                     {% endif %}
                 </div>
                 <div class="admin-event-form-preview-copy">
@@ -104,8 +104,8 @@
             <button class="close-button" type="button" data-close-form-preview>{{ t("common.close") }}</button>
         </div>
         <div class="admin-preview-modal-card" data-form-preview-modal-card>
-            <div class="admin-preview-modal-image" data-form-preview-modal-image data-placeholder="{{ t('common.image_area') }}">
-                <span>{{ t("common.image_area") }}</span>
+            <div class="admin-preview-modal-image admin-preview__media" data-form-preview-modal-image data-placeholder="{{ t('common.image_area') }}">
+                <span class="admin-preview__placeholder">{{ t("common.image_area") }}</span>
             </div>
             <div class="admin-preview-modal-copy">
                 <p class="event-date" data-form-preview-modal-date></p>
