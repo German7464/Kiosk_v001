@@ -68,6 +68,12 @@ body::before {
     background: rgba(255, 255, 255, 0.96);
     box-shadow: var(--shadow-soft);
     font-weight: 800;
+    transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.flash-message.is-hiding {
+    opacity: 0;
+    transform: translateY(-8px);
 }
 
 .placeholder,
@@ -976,6 +982,56 @@ h1 {
     gap: 16px;
 }
 
+.admin-tag-list {
+    display: grid;
+    gap: 14px;
+}
+
+.admin-tag-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+    padding: 20px;
+    border: 1px solid rgba(109, 93, 252, 0.14);
+    border-radius: 8px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 255, 0.95));
+    box-shadow: 0 12px 30px rgba(45, 55, 100, 0.08);
+}
+
+.admin-tag-row[hidden] {
+    display: none;
+}
+
+.admin-tag-row-content {
+    min-width: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.admin-tag-row-content small {
+    width: fit-content;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: rgba(109, 93, 252, 0.1);
+    color: var(--violet-dark);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.admin-tag-row-content h2,
+.admin-tag-row-content p {
+    margin: 0;
+}
+
+.admin-tag-row-content h2 {
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: auto;
+}
+
 .admin-event-row {
     display: grid;
     grid-template-columns: auto 1fr auto;
@@ -1487,6 +1543,7 @@ textarea {
 .admin-form,
 .admin-inline-form,
 .admin-event-list,
+.admin-tag-list,
 .admin-checkbox-list {
     min-width: 0;
 }
@@ -1597,6 +1654,10 @@ textarea {
     }
 
     .admin-event-row {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-tag-row {
         grid-template-columns: 1fr;
     }
 

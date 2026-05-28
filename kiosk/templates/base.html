@@ -12,9 +12,10 @@
         {% if messages %}
         <div class="flash-stack" role="status" aria-live="polite">
             {% for message in messages %}
-            <p class="flash-message">{{ t(message) }}</p>
+            <p class="flash-message" data-flash-message>{{ t(message) }}</p>
             {% endfor %}
         </div>
+        <script src="{{ url_for('static', filename='js/admin_flash.js') }}"></script>
         {% endif %}
         {% endwith %}
         {% block content %}{% endblock %}

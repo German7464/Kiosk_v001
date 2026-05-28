@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-05-29
+
+- Improved admin tag search and translated auto-hiding admin flash messages.
+
 ## 2026-05-28
 
 - Fixed TV display readability with a separate text panel, neutral system badge, and text-length-based slide timing.

@@ -18,10 +18,15 @@
         <a href="{{ url_for('admin.admin_home') }}">{{ t("common.back_to_admin") }}</a>
     </form>
     {% if tags %}
-    <div class="admin-event-list">
+    <label class="admin-tag-search">
+        <span>{{ t("admin.search_tags") }}</span>
+        <input type="search" data-tag-search placeholder="{{ t('admin.search_tags') }}">
+    </label>
+    <div class="admin-tag-list" data-tag-list>
         {% for tag in tags %}
-        <article class="admin-event-row">
-            <div>
+        <article class="admin-tag-row" data-tag-item data-tag-name="{{ tag.name|lower|e }}">
+            <div class="admin-tag-row-content">
+                <small>#{{ tag.id }}</small>
                 <h2>{{ tag.name }}</h2>
                 <p>{{ t("admin.assigned_events") }}: {{ tag.event_count }}</p>
             </div>
@@ -38,4 +43,8 @@
     <p class="admin-copy">{{ t("admin.no_tags") }}</p>
     {% endif %}
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin_event_tags.js') }}"></script>
 {% endblock %}
