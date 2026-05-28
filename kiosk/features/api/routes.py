@@ -6,7 +6,22 @@ from kiosk.database import get_database
 api_blueprint = Blueprint("api", __name__, url_prefix="/api")
 
 
-def row_to_event(row):
+def get_event_tags(database, event_id):
+    rows = database.execute(
+        """
+        SELECT tags.id, tags.name, tags.created_at, tags.updated_at
+        FROM tags
+        INNER JOIN event_tags ON event_tags.tag_id = tags.id
+        WHERE event_tags.event_id = ?
+        ORDER BY tags.name ASC, tags.id ASC
+        """,
+        (event_id,),
+    ).fetchall()
+
+    return [row_to_tag(row) for row in rows]
+
+
+def row_to_event(row, database):
     return {
         "id": row["id"],
         "title": row["title"],
@@ -22,6 +37,7 @@ def row_to_event(row):
         "sort_order": row["sort_order"],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
+        "tags": get_event_tags(database, row["id"]),
     }
 
 
@@ -66,7 +82,7 @@ def get_events():
         ("active",),
     ).fetchall()
 
-    return {"events": [row_to_event(row) for row in rows]}
+    return {"events": [row_to_event(row, database) for row in rows]}
 
 
 @api_blueprint.get("/events/<int:event_id>")
@@ -86,7 +102,7 @@ def get_event(event_id):
     if row is None:
         return {"error": "Event not found"}, 404
 
-    return {"event": row_to_event(row)}
+    return {"event": row_to_event(row, database)}
 
 
 @api_blueprint.get("/tags")

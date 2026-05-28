@@ -1,3 +1,4 @@
+import sqlite3
 from datetime import datetime, timezone
 from functools import wraps
 
@@ -60,6 +61,22 @@ def get_event_by_id(event_id):
     return event
 
 
+def get_tag_by_id(tag_id):
+    tag = get_database().execute(
+        """
+        SELECT id, name, created_at, updated_at
+        FROM tags
+        WHERE id = ?
+        """,
+        (tag_id,),
+    ).fetchone()
+
+    if tag is None:
+        abort(404)
+
+    return tag
+
+
 def event_form_data():
     status = request.form.get("status", "hidden")
 
@@ -89,10 +106,106 @@ def save_event_change(database):
     database.commit()
 
 
+def tag_form_name():
+    return request.form.get("name", "").strip()
+
+
 @admin_blueprint.get("")
 @admin_required
 def admin_home():
     return render_template("admin_home.html", username=session.get("admin_username"))
+
+
+@admin_blueprint.get("/tags")
+@admin_required
+def admin_tags():
+    tags = get_database().execute(
+        """
+        SELECT tags.id, tags.name, tags.created_at, tags.updated_at,
+               COUNT(event_tags.event_id) AS event_count
+        FROM tags
+        LEFT JOIN event_tags ON event_tags.tag_id = tags.id
+        GROUP BY tags.id
+        ORDER BY tags.name ASC, tags.id ASC
+        """
+    ).fetchall()
+
+    return render_template("admin_tags.html", tags=tags)
+
+
+@admin_blueprint.post("/tags/create")
+@admin_required
+def create_tag():
+    name = tag_form_name()
+
+    if not name:
+        return render_template("admin_tags.html", tags=[], error="Tag name is required."), 400
+
+    database = get_database()
+    created_at = datetime.now(timezone.utc).isoformat()
+
+    try:
+        database.execute(
+            """
+            INSERT INTO tags (name, created_at, updated_at)
+            VALUES (?, ?, ?)
+            """,
+            (name, created_at, created_at),
+        )
+    except sqlite3.IntegrityError:
+        return redirect(url_for("admin.admin_tags"))
+
+    save_event_change(database)
+
+    return redirect(url_for("admin.admin_tags"))
+
+
+@admin_blueprint.get("/tags/<int:tag_id>/edit")
+@admin_required
+def edit_tag(tag_id):
+    tag = get_tag_by_id(tag_id)
+    return render_template("admin_tag_form.html", tag=tag)
+
+
+@admin_blueprint.post("/tags/<int:tag_id>/edit")
+@admin_required
+def edit_tag_post(tag_id):
+    get_tag_by_id(tag_id)
+    name = tag_form_name()
+
+    if not name:
+        return render_template("admin_tag_form.html", tag={"id": tag_id, "name": name}, error="Tag name is required."), 400
+
+    database = get_database()
+    updated_at = datetime.now(timezone.utc).isoformat()
+
+    try:
+        database.execute(
+            """
+            UPDATE tags
+            SET name = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (name, updated_at, tag_id),
+        )
+    except sqlite3.IntegrityError:
+        return redirect(url_for("admin.edit_tag", tag_id=tag_id))
+
+    save_event_change(database)
+
+    return redirect(url_for("admin.admin_tags"))
+
+
+@admin_blueprint.post("/tags/<int:tag_id>/delete")
+@admin_required
+def delete_tag(tag_id):
+    get_tag_by_id(tag_id)
+    database = get_database()
+    database.execute("DELETE FROM event_tags WHERE tag_id = ?", (tag_id,))
+    database.execute("DELETE FROM tags WHERE id = ?", (tag_id,))
+    save_event_change(database)
+
+    return redirect(url_for("admin.admin_tags"))
 
 
 @admin_blueprint.get("/events")
@@ -190,6 +303,52 @@ def edit_event_post(event_id):
     save_event_change(database)
 
     return redirect(url_for("admin.edit_event", event_id=event_id))
+
+
+@admin_blueprint.get("/events/<int:event_id>/tags")
+@admin_required
+def edit_event_tags(event_id):
+    event = get_event_by_id(event_id)
+    tags = get_database().execute(
+        """
+        SELECT id, name
+        FROM tags
+        ORDER BY name ASC, id ASC
+        """
+    ).fetchall()
+    assigned_rows = get_database().execute(
+        """
+        SELECT tag_id
+        FROM event_tags
+        WHERE event_id = ?
+        """,
+        (event_id,),
+    ).fetchall()
+    assigned_tag_ids = {row["tag_id"] for row in assigned_rows}
+
+    return render_template("admin_event_tags.html", event=event, tags=tags, assigned_tag_ids=assigned_tag_ids)
+
+
+@admin_blueprint.post("/events/<int:event_id>/tags")
+@admin_required
+def edit_event_tags_post(event_id):
+    get_event_by_id(event_id)
+    selected_tag_ids = request.form.getlist("tag_ids")
+    database = get_database()
+    database.execute("DELETE FROM event_tags WHERE event_id = ?", (event_id,))
+
+    for tag_id in selected_tag_ids:
+        database.execute(
+            """
+            INSERT OR IGNORE INTO event_tags (event_id, tag_id)
+            VALUES (?, ?)
+            """,
+            (event_id, int(tag_id)),
+        )
+
+    save_event_change(database)
+
+    return redirect(url_for("admin.edit_event_tags", event_id=event_id))
 
 
 @admin_blueprint.post("/events/<int:event_id>/delete")

@@ -35,12 +35,12 @@ This feature does not update content version. It only reads the current version 
 
 ## How the Feature Is Shown in Kiosk Mode
 
-Kiosk mode can use these endpoints later to load active events and check content version.
+Kiosk mode can use these endpoints to load active events, assigned event tags, the tag list, and content version.
 
 ## How the Feature Is Shown in TV Mode
 
-TV mode is not implemented yet. It can use these endpoints later to load active events and check content version.
+TV mode can use these endpoints to load active events, assigned event tags, and content version.
 
 ## How the Feature Is Managed in Admin Panel
 
-The admin panel is not implemented yet. This feature does not provide admin management.
+The admin panel manages events and tags through admin routes. This feature only exposes read-only public data.

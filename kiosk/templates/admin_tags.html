@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Tags{% endblock %}
+
+{% block content %}
+<section class="admin-panel admin-panel-wide">
+    <p class="label">Admin tags</p>
+    <h1>Tag management</h1>
+    {% if error %}
+    <p class="form-error">{{ error }}</p>
+    {% endif %}
+    <form class="admin-inline-form" method="post" action="{{ url_for('admin.create_tag') }}">
+        <label>
+            <span>New tag name</span>
+            <input type="text" name="name" required>
+        </label>
+        <button type="submit">Create tag</button>
+        <a href="{{ url_for('admin.admin_home') }}">Back to admin</a>
+    </form>
+    {% if tags %}
+    <div class="admin-event-list">
+        {% for tag in tags %}
+        <article class="admin-event-row">
+            <div>
+                <h2>{{ tag.name }}</h2>
+                <p>Assigned events: {{ tag.event_count }}</p>
+            </div>
+            <div class="admin-row-actions">
+                <a href="{{ url_for('admin.edit_tag', tag_id=tag.id) }}">Edit</a>
+                <form method="post" action="{{ url_for('admin.delete_tag', tag_id=tag.id) }}">
+                    <button type="submit">Delete</button>
+                </form>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="admin-copy">No tags have been created yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -560,6 +560,13 @@ h1 {
     gap: 18px;
 }
 
+.admin-inline-form {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
 .admin-form label {
     display: grid;
     gap: 8px;
@@ -567,7 +574,15 @@ h1 {
     font-weight: 700;
 }
 
-.admin-form input {
+.admin-inline-form label {
+    display: grid;
+    gap: 8px;
+    color: #334155;
+    font-weight: 700;
+}
+
+.admin-form input,
+.admin-inline-form input {
     min-height: 48px;
     padding: 0 14px;
     border: 1px solid #cbd5e1;
@@ -585,7 +600,9 @@ h1 {
 
 .admin-form button,
 .admin-actions button,
-.admin-actions a {
+.admin-actions a,
+.admin-inline-form button,
+.admin-inline-form a {
     min-height: 52px;
     display: inline-flex;
     align-items: center;
@@ -658,6 +675,26 @@ h1 {
     font-weight: 700;
     text-decoration: none;
     cursor: pointer;
+}
+
+.admin-checkbox-list {
+    display: grid;
+    gap: 12px;
+}
+
+.admin-checkbox-list label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.admin-checkbox-list input {
+    width: 22px;
+    height: 22px;
 }
 
 @media (max-width: 820px) {

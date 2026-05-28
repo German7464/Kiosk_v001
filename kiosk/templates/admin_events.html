@@ -23,6 +23,7 @@
             </div>
             <div class="admin-row-actions">
                 <a href="{{ url_for('admin.edit_event', event_id=event.id) }}">Edit</a>
+                <a href="{{ url_for('admin.edit_event_tags', event_id=event.id) }}">Tags</a>
                 <form method="post" action="{{ url_for('admin.toggle_event', event_id=event.id) }}">
                     <button type="submit">{{ "Hide" if event.status == "active" else "Show" }}</button>
                 </form>
