@@ -3,8 +3,18 @@
 {% block title %}Kiosk Home{% endblock %}
 
 {% block content %}
-<section class="placeholder">
-    <p class="label">Kiosk mode</p>
-    <h1>Kiosk home placeholder</h1>
+<section class="kiosk-home" aria-labelledby="kiosk-title">
+    <div class="kiosk-brand">
+        <div class="system-icon" aria-hidden="true">K</div>
+        <p class="system-name">Kiosk_v001</p>
+    </div>
+    <div class="kiosk-content">
+        <p class="label">Event information system</p>
+        <h1 id="kiosk-title">Welcome to the event kiosk</h1>
+        <p class="kiosk-description">
+            Browse current event information on a large touch screen in a simple local kiosk mode.
+        </p>
+        <a class="primary-action" href="/kiosk/events">Open events</a>
+    </div>
 </section>
 {% endblock %}
