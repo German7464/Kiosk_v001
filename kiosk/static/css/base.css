@@ -1039,6 +1039,57 @@ h1 {
     display: none;
 }
 
+.admin-tag-search {
+    max-width: 520px;
+}
+
+.admin-tag-assignment-list {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    align-items: stretch;
+    max-height: min(58vh, 620px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px;
+}
+
+.admin-tag-assignment-list .admin-tag-option {
+    display: grid;
+    grid-template-columns: 24px auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    min-height: 58px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.admin-tag-assignment-list .admin-tag-option input {
+    width: 22px;
+    min-width: 22px;
+    height: 22px;
+    margin: 0;
+}
+
+.admin-tag-assignment-list .admin-tag-option small {
+    margin: 0;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: rgba(109, 93, 252, 0.1);
+    color: var(--violet-dark);
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.admin-tag-assignment-list .admin-tag-option span {
+    min-width: 0;
+    color: var(--ink);
+    line-height: 1.25;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: auto;
+}
+
 @media (max-width: 920px) {
     .admin-event-row {
         grid-template-columns: 1fr;
@@ -1615,6 +1666,15 @@ textarea {
     .admin-row-actions a,
     .admin-row-actions button {
         width: 100%;
+    }
+
+    .admin-tag-search {
+        max-width: 100%;
+    }
+
+    .admin-tag-assignment-list {
+        grid-template-columns: 1fr;
+        max-height: none;
     }
 }
 

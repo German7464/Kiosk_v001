@@ -8,16 +8,16 @@
     <h1>{{ event.title }}</h1>
     <form class="admin-form" method="post" action="{{ url_for('admin.edit_event_tags_post', event_id=event.id) }}">
         {% if tags %}
-        <label>
+        <label class="admin-tag-search">
             <span>{{ t("admin.search_tags") }}</span>
             <input type="search" data-tag-search placeholder="{{ t('admin.search_tags') }}">
         </label>
         <div class="admin-checkbox-list admin-tag-assignment-list" data-tag-list>
             {% for tag in tags %}
-            <label data-tag-item data-tag-name="{{ tag.name|lower|e }}">
+            <label class="admin-tag-option" data-tag-item data-tag-name="{{ tag.name|lower|e }}">
                 <input type="checkbox" name="tag_ids" value="{{ tag.id }}" {% if tag.id in assigned_tag_ids %}checked{% endif %}>
-                <span>{{ tag.name }}</span>
                 <small>#{{ tag.id }}</small>
+                <span>{{ tag.name }}</span>
             </label>
             {% endfor %}
         </div>
