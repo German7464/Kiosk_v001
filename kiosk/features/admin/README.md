@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provides MVP admin authentication and a protected admin placeholder page.
+Provides MVP admin authentication and event management.
 
 ## Related Files
 
@@ -11,12 +11,17 @@ Provides MVP admin authentication and a protected admin placeholder page.
 - `kiosk/templates/admin_home.html`
 - `kiosk/templates/admin_login.html`
 - `kiosk/templates/admin_password_change.html`
+- `kiosk/templates/admin_events.html`
+- `kiosk/templates/admin_event_form.html`
 - `kiosk/database.py`
 - `kiosk/app.py`
 
 ## Related Database Tables
 
 - `users`
+- `events`
+- `settings`
+- `content_versions`
 
 ## Related Routes
 
@@ -26,6 +31,14 @@ Provides MVP admin authentication and a protected admin placeholder page.
 - `POST /admin/logout`
 - `GET /admin/password/change`
 - `POST /admin/password/change`
+- `GET /admin/events`
+- `GET /admin/events/create`
+- `POST /admin/events/create`
+- `GET /admin/events/<id>/edit`
+- `POST /admin/events/<id>/edit`
+- `POST /admin/events/<id>/delete`
+- `POST /admin/events/<id>/toggle`
+- `POST /admin/events/<id>/move`
 
 ## Related API Endpoints
 
@@ -33,16 +46,16 @@ Provides MVP admin authentication and a protected admin placeholder page.
 
 ## How the Feature Updates Content Version
 
-This feature does not update content version.
+Creating, editing, deleting, hiding, showing, or moving an event increases `settings.content_version` and inserts a row into `content_versions`.
 
 ## How the Feature Is Shown in Kiosk Mode
 
-Kiosk mode does not show this feature.
+Kiosk mode receives active events through the public API after admin event changes.
 
 ## How the Feature Is Shown in TV Mode
 
-TV mode does not show this feature.
+TV mode receives active events through the public API after admin event changes.
 
 ## How the Feature Is Managed in Admin Panel
 
-The admin panel is protected by Flask session authentication. Event, tag, image, settings, and translation management are not implemented yet.
+The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. Tag, image, settings, and translation management are not implemented yet.

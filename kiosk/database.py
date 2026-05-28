@@ -129,3 +129,35 @@ def seed_default_admin_user(database):
         """,
         ("admin", generate_password_hash("admin"), created_at, created_at),
     )
+
+
+def increase_content_version(database):
+    updated_at = datetime.now(timezone.utc).isoformat()
+    row = database.execute(
+        """
+        SELECT value
+        FROM settings
+        WHERE key = ?
+        """,
+        ("content_version",),
+    ).fetchone()
+    current_version = int(row["value"]) if row is not None else 1
+    next_version = current_version + 1
+
+    database.execute(
+        """
+        INSERT INTO settings (key, value, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+        """,
+        ("content_version", str(next_version), updated_at),
+    )
+    database.execute(
+        """
+        INSERT INTO content_versions (version, created_at)
+        VALUES (?, ?)
+        """,
+        (next_version, updated_at),
+    )
+
+    return next_version

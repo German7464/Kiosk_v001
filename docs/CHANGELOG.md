@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Added MVP admin event management with event CRUD, visibility toggles, sort order changes, and content version updates.
 - Added MVP admin authentication with protected admin placeholder, login, logout, password change, hashed passwords, and default admin user creation.
 - Updated the preview page with links to kiosk, kiosk events, TV display, and admin routes.
 - Added the MVP TV display mode with automatic event slideshow, large event card layout, image area, smooth transition, and empty state.

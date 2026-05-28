@@ -8,6 +8,7 @@
     <h1>Admin placeholder</h1>
     <p class="admin-copy">Signed in as {{ username }}.</p>
     <div class="admin-actions">
+        <a href="{{ url_for('admin.admin_events') }}">Manage events</a>
         <a href="{{ url_for('admin.change_password') }}">Change password</a>
         <form method="post" action="{{ url_for('admin.logout') }}">
             <button type="submit">Logout</button>

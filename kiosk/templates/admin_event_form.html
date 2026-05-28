@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Event Form{% endblock %}
+
+{% block content %}
+<section class="admin-panel admin-panel-wide">
+    <p class="label">Admin events</p>
+    <h1>{{ "Edit event" if event else "Create event" }}</h1>
+    {% if error %}
+    <p class="form-error">{{ error }}</p>
+    {% endif %}
+    <form class="admin-form" method="post" action="{{ action_url }}">
+        <label>
+            <span>Title</span>
+            <input type="text" name="title" value="{{ event.title if event else '' }}" required>
+        </label>
+        <label>
+            <span>Short description</span>
+            <textarea name="short_description" rows="3">{{ event.short_description if event else '' }}</textarea>
+        </label>
+        <label>
+            <span>Full description</span>
+            <textarea name="full_description" rows="6">{{ event.full_description if event else '' }}</textarea>
+        </label>
+        <label>
+            <span>Event date</span>
+            <input type="text" name="event_date" value="{{ event.event_date if event else '' }}">
+        </label>
+        <label>
+            <span>Place</span>
+            <input type="text" name="place" value="{{ event.place if event else '' }}">
+        </label>
+        <label>
+            <span>Status</span>
+            <select name="status">
+                <option value="hidden" {% if not event or event.status == "hidden" %}selected{% endif %}>hidden</option>
+                <option value="active" {% if event and event.status == "active" %}selected{% endif %}>active</option>
+            </select>
+        </label>
+        <label>
+            <span>Sort order</span>
+            <input type="number" name="sort_order" value="{{ event.sort_order if event else 0 }}">
+        </label>
+        <div class="admin-actions">
+            <button type="submit">Save event</button>
+            <a href="{{ url_for('admin.admin_events') }}">Back to events</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

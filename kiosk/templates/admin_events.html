@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Events{% endblock %}
+
+{% block content %}
+<section class="admin-panel admin-panel-wide">
+    <p class="label">Admin events</p>
+    <h1>Event management</h1>
+    <div class="admin-actions">
+        <a href="{{ url_for('admin.create_event') }}">Create event</a>
+        <a href="{{ url_for('admin.admin_home') }}">Back to admin</a>
+    </div>
+    {% if events %}
+    <div class="admin-event-list">
+        {% for event in events %}
+        <article class="admin-event-row">
+            <div>
+                <p class="event-date">{{ event.event_date or "Date to be announced" }}</p>
+                <h2>{{ event.title }}</h2>
+                <p>{{ event.short_description or "No short description." }}</p>
+                <p>{{ event.place or "Place to be announced" }}</p>
+                <p>Status: {{ event.status }} · Sort order: {{ event.sort_order }}</p>
+            </div>
+            <div class="admin-row-actions">
+                <a href="{{ url_for('admin.edit_event', event_id=event.id) }}">Edit</a>
+                <form method="post" action="{{ url_for('admin.toggle_event', event_id=event.id) }}">
+                    <button type="submit">{{ "Hide" if event.status == "active" else "Show" }}</button>
+                </form>
+                <form method="post" action="{{ url_for('admin.move_event', event_id=event.id) }}">
+                    <input type="hidden" name="direction" value="up">
+                    <button type="submit">Move up</button>
+                </form>
+                <form method="post" action="{{ url_for('admin.move_event', event_id=event.id) }}">
+                    <input type="hidden" name="direction" value="down">
+                    <button type="submit">Move down</button>
+                </form>
+                <form method="post" action="{{ url_for('admin.delete_event', event_id=event.id) }}">
+                    <button type="submit">Delete</button>
+                </form>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="admin-copy">No events have been created yet.</p>
+    {% endif %}
+</section>
+{% endblock %}
