@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Fixed TV display readability with a separate text panel, neutral system badge, and text-length-based slide timing.
 - Fixed kiosk event tag filtering and moved the version display to a compact corner badge.
 - Fixed the admin event tag assignment layout so checkboxes, tag IDs, and tag names stay together in responsive cards.
 - Added small admin usability fixes, admin status messages, CLI-only admin password reset, and expanded Waitress startup URL output.

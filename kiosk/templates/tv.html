@@ -4,7 +4,7 @@
 
 {% block content %}
 <section class="tv-screen"
-    data-slide-duration="10000"
+    data-slide-duration="{{ (settings.tv_slide_duration|int) * 1000 }}"
     data-version-poll-interval="10000"
     data-update-delay-max="10000"
     data-version-label="{{ t('common.version') }}"
@@ -13,7 +13,7 @@
     data-place-placeholder="{{ t('common.place_to_be_announced') }}"
     data-description-placeholder="{{ t('common.no_description') }}"
     data-image-area="{{ t('common.image_area') }}">
-    <div class="tv-system-name">{{ settings.site_title }}</div>
+    <div class="tv-system-name">System: {{ settings.site_title }}</div>
     <div class="tv-version" data-tv-version>{{ t("common.version_loading") }}</div>
     <article class="tv-card" data-tv-card>
         <div class="tv-image-area" data-tv-image>

@@ -7,7 +7,9 @@ const tvPlace = document.querySelector("[data-tv-place]");
 const tvDescription = document.querySelector("[data-tv-description]");
 const tvVersion = document.querySelector("[data-tv-version]");
 const tvEmptyState = document.querySelector("[data-tv-empty-state]");
-const slideDuration = Number(tvScreen.dataset.slideDuration);
+const baseSlideDuration = Number(tvScreen.dataset.slideDuration);
+const minSlideDuration = 8000;
+const maxSlideDuration = 24000;
 const versionPollInterval = Number(tvScreen.dataset.versionPollInterval);
 const updateDelayMax = Number(tvScreen.dataset.updateDelayMax);
 const labels = tvScreen.dataset;
@@ -17,6 +19,29 @@ let tvEventIndex = 0;
 let currentContentVersion = null;
 let updatePending = false;
 let transitionActive = false;
+let slideTimer = null;
+
+function eventTextLength(event) {
+    return [event.title, event.short_description, event.place]
+        .filter(Boolean)
+        .join(" ")
+        .length;
+}
+
+function slideDurationForEvent(event) {
+    const readingTime = eventTextLength(event) * 70;
+    return Math.min(maxSlideDuration, Math.max(minSlideDuration, baseSlideDuration + readingTime));
+}
+
+function scheduleNextTvEvent(event) {
+    window.clearTimeout(slideTimer);
+
+    if (tvEvents.length < 2) {
+        return;
+    }
+
+    slideTimer = window.setTimeout(showNextTvEvent, slideDurationForEvent(event));
+}
 
 function applyTvEvent(event) {
     transitionActive = true;
@@ -32,6 +57,7 @@ function applyTvEvent(event) {
 
         tvCard.classList.add("is-visible");
         transitionActive = false;
+        scheduleNextTvEvent(event);
     }, 220);
 }
 
@@ -76,6 +102,7 @@ function applyTvData(versionData, eventsData, showCurrentEvent) {
     tvVersion.textContent = `${labels.versionLabel} ${currentContentVersion}`;
 
     if (tvEvents.length === 0) {
+        window.clearTimeout(slideTimer);
         tvCard.hidden = true;
         tvEmptyState.hidden = false;
         return;
@@ -139,7 +166,6 @@ async function pollTvVersion() {
 
 async function loadTvDisplay() {
     await loadTvData(true);
-    window.setInterval(showNextTvEvent, slideDuration);
 }
 
 loadTvDisplay().catch(() => {

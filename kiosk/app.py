@@ -37,15 +37,16 @@ def create_app(config_overrides=None):
             """
             SELECT key, value
             FROM settings
-            WHERE key IN (?, ?, ?)
+            WHERE key IN (?, ?, ?, ?)
             """,
-            ("site_title", "interface_language", "site_icon"),
+            ("site_title", "interface_language", "site_icon", "tv_slide_duration"),
         ).fetchall()
         settings = {row["key"]: row["value"] for row in rows}
         return {
             "site_title": settings.get("site_title", "Kiosk_v001"),
             "interface_language": settings.get("interface_language", "en"),
             "site_icon": settings.get("site_icon", ""),
+            "tv_slide_duration": settings.get("tv_slide_duration", "10"),
         }
 
     @app.context_processor

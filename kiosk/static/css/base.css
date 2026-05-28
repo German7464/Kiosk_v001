@@ -627,7 +627,7 @@ h1 {
     width: min(100%, 1320px);
     min-height: min(800px, calc(100vh - 64px));
     overflow: hidden;
-    padding: clamp(26px, 4vw, 52px);
+    padding: clamp(58px, 6vw, 76px) clamp(26px, 4vw, 52px) clamp(42px, 5vw, 64px);
     border-radius: 8px;
     color: #f8fbff;
     background:
@@ -646,30 +646,36 @@ h1 {
 .tv-version,
 .tv-system-name {
     position: absolute;
-    top: 24px;
     z-index: 2;
-    padding: 13px 18px;
+    max-width: min(420px, calc(100% - 56px));
+    padding: 9px 12px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 8px;
     color: #eef4ff;
-    background: rgba(23, 32, 51, 0.44);
+    background: rgba(23, 32, 51, 0.36);
     backdrop-filter: blur(6px);
+    font-size: 13px;
     font-weight: 800;
+    line-height: 1.2;
 }
 
 .tv-version {
+    top: 22px;
     right: 28px;
 }
 
 .tv-system-name {
     left: 28px;
+    bottom: 18px;
+    color: rgba(238, 244, 255, 0.72);
+    font-size: 12px;
 }
 
 .tv-card {
     min-height: calc(min(800px, 100vh - 64px) - 104px);
     display: grid;
     grid-template-columns: minmax(420px, 1.08fr) minmax(420px, 0.92fr);
-    gap: clamp(30px, 4vw, 60px);
+    gap: clamp(28px, 3.2vw, 46px);
     align-items: stretch;
     opacity: 0;
     transform: translateX(18px);
@@ -705,14 +711,21 @@ h1 {
 .tv-card-content {
     display: grid;
     align-content: center;
-    gap: 26px;
+    gap: clamp(16px, 2vw, 24px);
+    min-width: 0;
+    padding: clamp(24px, 3vw, 42px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.58);
+    box-shadow: 0 26px 62px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(6px);
 }
 
 .tv-card-content h1,
 .tv-empty-state h1 {
     margin: 0;
-    font-size: clamp(56px, 6vw, 98px);
-    line-height: 1.02;
+    font-size: clamp(42px, 5vw, 78px);
+    line-height: 1.06;
     color: #ffffff;
 }
 
@@ -721,23 +734,25 @@ h1 {
 .tv-description,
 .tv-empty-state p {
     margin: 0;
-    font-size: clamp(25px, 2.4vw, 36px);
     line-height: 1.35;
 }
 
 .tv-date {
     color: #c4b5fd;
+    font-size: clamp(22px, 2.2vw, 31px);
     font-weight: 800;
 }
 
 .tv-place {
     color: #bae6fd;
+    font-size: clamp(22px, 2.1vw, 30px);
     font-weight: 800;
 }
 
 .tv-description,
 .tv-empty-state p {
     color: #e6edff;
+    font-size: clamp(21px, 2vw, 29px);
 }
 
 .tv-empty-state {
@@ -746,10 +761,29 @@ h1 {
     align-content: center;
     gap: 26px;
     max-width: 900px;
+    padding: clamp(24px, 3vw, 42px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(6px);
 }
 
 .tv-empty-state[hidden] {
     display: none;
+}
+
+@media (min-width: 1280px) {
+    .tv-card {
+        grid-template-columns: minmax(520px, 1.1fr) minmax(420px, 0.9fr);
+    }
+}
+
+.tv-card-content h1,
+.tv-date,
+.tv-place,
+.tv-description {
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .admin-panel {
@@ -1430,14 +1464,14 @@ textarea {
 
 .tv-card-content h1,
 .tv-empty-state h1 {
-    font-size: clamp(44px, 6.4vw, 94px);
+    font-size: clamp(42px, 5vw, 78px);
 }
 
 .tv-date,
 .tv-place,
 .tv-description,
 .tv-empty-state p {
-    font-size: clamp(22px, 3vw, 36px);
+    font-size: clamp(21px, 2vw, 30px);
 }
 
 .admin-panel {
@@ -1535,7 +1569,7 @@ textarea {
 
     .tv-card-content h1,
     .tv-empty-state h1 {
-        font-size: clamp(42px, 7vw, 72px);
+        font-size: clamp(38px, 6vw, 64px);
     }
 }
 
