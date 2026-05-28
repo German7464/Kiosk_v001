@@ -35,7 +35,7 @@ function setAdminPreviewPlaceholder(media) {
     const placeholder = document.createElement("span");
     media.innerHTML = "";
     media.style.backgroundImage = "";
-    placeholder.className = "admin-preview__placeholder";
+    placeholder.className = "admin-event-preview__placeholder";
     placeholder.textContent = adminPreviewPlaceholderText(media);
     media.appendChild(placeholder);
 }
@@ -106,7 +106,7 @@ function setAdminFormPreviewImage(imageUrl) {
         }
 
         item.dataset.previewImage = adminPreviewSelectedImage;
-        setAdminPreviewImage(item.querySelector(".admin-preview__media"), adminPreviewSelectedImage);
+        setAdminPreviewImage(item.querySelector("[data-admin-preview-media]"), adminPreviewSelectedImage);
     });
 }
 
@@ -131,8 +131,8 @@ function openAdminPreview(item) {
     const tvMode = preview.mode === "tv";
 
     adminPreviewModalMode.textContent = preview.label;
-    adminPreviewModalCard.classList.toggle("admin-preview-modal-card--tv", tvMode);
-    adminPreviewModalCard.classList.toggle("admin-preview-modal-card--kiosk", !tvMode);
+    adminPreviewModalCard.classList.toggle("admin-event-preview-modal__card--tv", tvMode);
+    adminPreviewModalCard.classList.toggle("admin-event-preview-modal__card--kiosk", !tvMode);
     adminPreviewModalTitle.textContent = preview.title;
     adminPreviewModalDate.textContent = preview.date;
     adminPreviewModalPlace.textContent = preview.place;
@@ -148,7 +148,7 @@ function closeAdminPreviewModal() {
 }
 
 adminPreviewItems.forEach((item) => {
-    const media = item.querySelector(".admin-preview__media");
+    const media = item.querySelector("[data-admin-preview-media]");
     const image = media ? media.querySelector("img") : null;
     const imageUrl = item.dataset.previewImage || (image ? image.src : "");
 
