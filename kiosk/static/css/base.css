@@ -402,6 +402,7 @@ h1 {
     background: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(109, 93, 252, 0.16);
     box-shadow: 0 10px 26px rgba(79, 70, 229, 0.08);
+    line-height: 1.2;
 }
 
 .tag-button.active,
@@ -413,14 +414,21 @@ h1 {
 }
 
 .version-badge {
-    flex: 0 0 auto;
-    padding: 15px 20px;
-    border: 1px solid rgba(109, 93, 252, 0.14);
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    z-index: 3;
+    max-width: min(260px, calc(100% - 44px));
+    padding: 9px 12px;
+    border: 1px solid rgba(109, 93, 252, 0.12);
     border-radius: 8px;
     color: var(--violet-dark);
-    background: rgba(255, 255, 255, 0.82);
-    box-shadow: var(--shadow-soft);
+    background: rgba(255, 255, 255, 0.76);
+    box-shadow: 0 10px 24px rgba(79, 70, 229, 0.1);
+    backdrop-filter: blur(6px);
+    font-size: 13px;
     font-weight: 800;
+    text-align: center;
 }
 
 .event-card-display {
@@ -594,7 +602,18 @@ h1 {
     border-radius: 8px;
     color: var(--violet-dark);
     background: #f4f6ff;
+    font: inherit;
     font-weight: 800;
+    cursor: pointer;
+    line-height: 1.2;
+    text-align: left;
+}
+
+.modal-tag.active,
+.modal-tag:hover,
+.modal-tag:focus-visible {
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--violet), var(--blue));
 }
 
 .modal-empty {
@@ -1340,7 +1359,7 @@ textarea {
 }
 
 .version-badge {
-    max-width: 100%;
+    max-width: min(260px, calc(100% - 44px));
 }
 
 .event-card {
@@ -1537,10 +1556,6 @@ textarea {
 
     .tag-filter-area {
         justify-content: center;
-    }
-
-    .version-badge {
-        text-align: center;
     }
 
     .admin-event-list {

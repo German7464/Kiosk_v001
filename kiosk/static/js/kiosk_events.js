@@ -10,16 +10,20 @@ const tagsModal = document.querySelector("[data-tags-modal]");
 const openTagsButton = document.querySelector("[data-open-tags]");
 const closeTagsButton = document.querySelector("[data-close-tags]");
 const contentVersion = document.querySelector("[data-content-version]");
+const allEventsButton = document.querySelector("[data-tag-filter='all']");
 const inactivitySeconds = Number(eventsScreen.dataset.inactivitySeconds);
 const versionPollInterval = Number(eventsScreen.dataset.versionPollInterval);
 const updateDelayMax = Number(eventsScreen.dataset.updateDelayMax);
 const labels = eventsScreen.dataset;
 
+let allEvents = [];
 let events = [];
+let tags = [];
 let currentEventIndex = 0;
 let inactivityTimer = null;
 let currentContentVersion = null;
 let updatePending = false;
+let selectedTagId = "all";
 
 function resetInactivityTimer() {
     window.clearTimeout(inactivityTimer);
@@ -77,26 +81,77 @@ function renderEvent() {
     cardCounter.textContent = `${currentEventIndex + 1} / ${events.length}`;
 }
 
-function renderTags(tags) {
+function eventHasTag(event, tagId) {
+    return (event.tags || []).some((tag) => String(tag.id) === String(tagId));
+}
+
+function tagExists(tagId) {
+    return tagId === "all" || tags.some((tag) => String(tag.id) === String(tagId));
+}
+
+function filteredEvents() {
+    if (selectedTagId === "all") {
+        return allEvents;
+    }
+
+    return allEvents.filter((event) => eventHasTag(event, selectedTagId));
+}
+
+function updateActiveTagButtons() {
+    document.querySelectorAll("[data-tag-filter]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.tagFilter === String(selectedTagId));
+    });
+}
+
+function applySelectedFilter(resetIndex) {
+    const currentEvent = events[currentEventIndex];
+    events = filteredEvents();
+
+    if (resetIndex) {
+        currentEventIndex = 0;
+    } else if (currentEvent) {
+        const nextIndex = events.findIndex((event) => event.id === currentEvent.id);
+        currentEventIndex = nextIndex >= 0 ? nextIndex : 0;
+    } else {
+        currentEventIndex = 0;
+    }
+
+    updateActiveTagButtons();
+    renderEvent();
+}
+
+function selectTag(tagId) {
+    selectedTagId = String(tagId);
+    applySelectedFilter(true);
+    tagsModal.hidden = true;
+    resetInactivityTimer();
+}
+
+function createTagButton(tag, className) {
+    const button = document.createElement("button");
+    button.className = className;
+    button.type = "button";
+    button.dataset.tagFilter = String(tag.id);
+    button.textContent = tag.name;
+    button.addEventListener("click", () => selectTag(tag.id));
+    return button;
+}
+
+function renderTags(nextTags) {
     tagList.innerHTML = "";
     allTags.innerHTML = "";
 
-    if (tags.length === 0) {
+    if (nextTags.length === 0) {
         allTags.appendChild(createTextElement("p", "modal-empty", labels.noTags));
         return;
     }
 
-    tags.slice(0, 4).forEach((tag) => {
-        const button = document.createElement("button");
-        button.className = "tag-button";
-        button.type = "button";
-        button.textContent = tag.name;
-        tagList.appendChild(button);
+    nextTags.slice(0, 4).forEach((tag) => {
+        tagList.appendChild(createTagButton(tag, "tag-button"));
     });
 
-    tags.forEach((tag) => {
-        const tagItem = createTextElement("span", "modal-tag", tag.name);
-        allTags.appendChild(tagItem);
+    nextTags.forEach((tag) => {
+        allTags.appendChild(createTagButton(tag, "modal-tag"));
     });
 }
 
@@ -115,20 +170,17 @@ function randomUpdateDelay() {
 }
 
 function applyEventsData(versionData, eventsData, tagsData) {
-    const currentEvent = events[currentEventIndex];
-    events = eventsData.events || [];
+    allEvents = eventsData.events || [];
+    tags = tagsData.tags || [];
     currentContentVersion = versionData.content_version;
     contentVersion.textContent = `${labels.versionLabel} ${currentContentVersion}`;
 
-    if (currentEvent) {
-        const nextIndex = events.findIndex((event) => event.id === currentEvent.id);
-        currentEventIndex = nextIndex >= 0 ? nextIndex : 0;
-    } else {
-        currentEventIndex = 0;
+    if (!tagExists(selectedTagId)) {
+        selectedTagId = "all";
     }
 
-    renderTags(tagsData.tags || []);
-    renderEvent();
+    renderTags(tags);
+    applySelectedFilter(false);
 }
 
 async function loadKioskEventsPage() {
@@ -169,6 +221,7 @@ async function pollKioskVersion() {
 
 previousButton.addEventListener("click", () => moveEvent(-1));
 nextButton.addEventListener("click", () => moveEvent(1));
+allEventsButton.addEventListener("click", () => selectTag("all"));
 openTagsButton.addEventListener("click", () => {
     tagsModal.hidden = false;
     resetInactivityTimer();

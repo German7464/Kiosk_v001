@@ -14,6 +14,7 @@
     data-description-placeholder="{{ t('common.no_description') }}"
     data-image-area="{{ t('common.image_area') }}"
     data-no-tags="{{ t('common.no_tags_available') }}">
+    <div class="version-badge" data-content-version>{{ t("common.version_loading") }}</div>
     <header class="events-header">
         <a class="back-action" href="{{ url_for('kiosk_home') }}">{{ t("common.back_to_home") }}</a>
         <div>
@@ -29,7 +30,6 @@
             <div class="tag-list" data-tag-list></div>
             <button class="tag-button" type="button" data-open-tags>{{ t("common.all_tags") }}</button>
         </div>
-        <div class="version-badge" data-content-version>{{ t("common.version_loading") }}</div>
     </div>
 
     <section class="event-card-display" aria-live="polite">

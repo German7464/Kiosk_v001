@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Fixed kiosk event tag filtering and moved the version display to a compact corner badge.
 - Fixed the admin event tag assignment layout so checkboxes, tag IDs, and tag names stay together in responsive cards.
 - Added small admin usability fixes, admin status messages, CLI-only admin password reset, and expanded Waitress startup URL output.
 - Added PyInstaller packaging configuration for a Waitress-based Windows executable with bundled UI assets and external runtime data.
