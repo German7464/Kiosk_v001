@@ -35,11 +35,15 @@ This feature does not update content version. It only reads the current version 
 
 ## How the Feature Is Shown in Kiosk Mode
 
-Kiosk mode can use these endpoints to load active events, optimized kiosk image paths, assigned event tags, the tag list, and content version.
+Kiosk mode uses `/api/version` every 5 seconds to detect content changes. When a new version is found, the client waits a random 0 to 10 second delay, then refreshes active events and tags through `/api/events` and `/api/tags` without a full page reload.
 
 ## How the Feature Is Shown in TV Mode
 
-TV mode can use these endpoints to load active events, optimized TV image paths, assigned event tags, and content version.
+TV mode uses `/api/version` every 10 seconds to detect content changes. When a new version is found, the client waits a random 0 to 10 second delay, waits until the slide transition is safe, then refreshes active events through `/api/events` without a full page reload.
+
+## How the Feature Is Shown in Preview Mode
+
+Preview mode uses `/api/version` every 5 seconds to show the current content version with the same random 0 to 10 second staggered update delay.
 
 ## How the Feature Is Managed in Admin Panel
 

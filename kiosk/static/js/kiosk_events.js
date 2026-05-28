@@ -11,11 +11,15 @@ const openTagsButton = document.querySelector("[data-open-tags]");
 const closeTagsButton = document.querySelector("[data-close-tags]");
 const contentVersion = document.querySelector("[data-content-version]");
 const inactivitySeconds = Number(eventsScreen.dataset.inactivitySeconds);
+const versionPollInterval = Number(eventsScreen.dataset.versionPollInterval);
+const updateDelayMax = Number(eventsScreen.dataset.updateDelayMax);
 const labels = eventsScreen.dataset;
 
 let events = [];
 let currentEventIndex = 0;
 let inactivityTimer = null;
+let currentContentVersion = null;
+let updatePending = false;
 
 function resetInactivityTimer() {
     window.clearTimeout(inactivityTimer);
@@ -98,6 +102,27 @@ function moveEvent(direction) {
     resetInactivityTimer();
 }
 
+function randomUpdateDelay() {
+    return Math.floor(Math.random() * (updateDelayMax + 1));
+}
+
+function applyEventsData(versionData, eventsData, tagsData) {
+    const currentEvent = events[currentEventIndex];
+    events = eventsData.events || [];
+    currentContentVersion = versionData.content_version;
+    contentVersion.textContent = `${labels.versionLabel} ${currentContentVersion}`;
+
+    if (currentEvent) {
+        const nextIndex = events.findIndex((event) => event.id === currentEvent.id);
+        currentEventIndex = nextIndex >= 0 ? nextIndex : 0;
+    } else {
+        currentEventIndex = 0;
+    }
+
+    renderTags(tagsData.tags || []);
+    renderEvent();
+}
+
 async function loadKioskEventsPage() {
     const [versionResponse, eventsResponse, tagsResponse] = await Promise.all([
         fetch("/api/version"),
@@ -109,11 +134,29 @@ async function loadKioskEventsPage() {
     const eventsData = await eventsResponse.json();
     const tagsData = await tagsResponse.json();
 
-    contentVersion.textContent = `${labels.versionLabel} ${versionData.content_version}`;
-    events = eventsData.events || [];
-    currentEventIndex = 0;
-    renderTags(tagsData.tags || []);
-    renderEvent();
+    applyEventsData(versionData, eventsData, tagsData);
+}
+
+async function pollKioskVersion() {
+    if (updatePending) {
+        return;
+    }
+
+    const versionResponse = await fetch("/api/version");
+    const versionData = await versionResponse.json();
+
+    if (currentContentVersion !== null && versionData.content_version !== currentContentVersion) {
+        updatePending = true;
+        window.setTimeout(() => {
+            loadKioskEventsPage()
+                .catch(() => {
+                    contentVersion.textContent = labels.versionUnavailable;
+                })
+                .finally(() => {
+                    updatePending = false;
+                });
+        }, randomUpdateDelay());
+    }
 }
 
 previousButton.addEventListener("click", () => moveEvent(-1));
@@ -135,4 +178,9 @@ loadKioskEventsPage().catch(() => {
     contentVersion.textContent = labels.versionUnavailable;
     renderEvent();
 });
+window.setInterval(() => {
+    pollKioskVersion().catch(() => {
+        contentVersion.textContent = labels.versionUnavailable;
+    });
+}, versionPollInterval);
 resetInactivityTimer();
