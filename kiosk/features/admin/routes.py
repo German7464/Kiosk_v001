@@ -2,7 +2,7 @@ import sqlite3
 from datetime import datetime, timezone
 from functools import wraps
 
-from flask import Blueprint, abort, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from kiosk.core.images import process_event_image, process_system_icon
@@ -200,6 +200,7 @@ def save_admin_settings():
 
     increase_content_version(database)
     database.commit()
+    flash("flash.settings_saved")
 
     return redirect(url_for("admin.admin_settings"))
 
@@ -244,6 +245,7 @@ def create_tag():
         return redirect(url_for("admin.admin_tags"))
 
     save_event_change(database)
+    flash("flash.tag_created")
 
     return redirect(url_for("admin.admin_tags"))
 
@@ -280,6 +282,7 @@ def edit_tag_post(tag_id):
         return redirect(url_for("admin.edit_tag", tag_id=tag_id))
 
     save_event_change(database)
+    flash("flash.tag_saved")
 
     return redirect(url_for("admin.admin_tags"))
 
@@ -292,6 +295,7 @@ def delete_tag(tag_id):
     database.execute("DELETE FROM event_tags WHERE tag_id = ?", (tag_id,))
     database.execute("DELETE FROM tags WHERE id = ?", (tag_id,))
     save_event_change(database)
+    flash("flash.tag_deleted")
 
     return redirect(url_for("admin.admin_tags"))
 
@@ -354,6 +358,7 @@ def create_event_post():
     )
     update_event_images(database, cursor.lastrowid, image_paths)
     save_event_change(database)
+    flash("flash.event_created")
 
     return redirect(url_for("admin.edit_event", event_id=cursor.lastrowid))
 
@@ -403,6 +408,7 @@ def edit_event_post(event_id):
     )
     update_event_images(database, event_id, image_paths)
     save_event_change(database)
+    flash("flash.event_saved")
 
     return redirect(url_for("admin.edit_event", event_id=event_id))
 
@@ -449,6 +455,7 @@ def edit_event_tags_post(event_id):
         )
 
     save_event_change(database)
+    flash("flash.tags_updated")
 
     return redirect(url_for("admin.edit_event_tags", event_id=event_id))
 
@@ -460,6 +467,7 @@ def delete_event(event_id):
     database = get_database()
     database.execute("DELETE FROM events WHERE id = ?", (event_id,))
     save_event_change(database)
+    flash("flash.event_deleted")
 
     return redirect(url_for("admin.admin_events"))
 
@@ -480,6 +488,7 @@ def toggle_event(event_id):
         (next_status, updated_at, event_id),
     )
     save_event_change(database)
+    flash("flash.event_status_changed")
 
     return redirect(url_for("admin.admin_events"))
 
@@ -511,6 +520,7 @@ def move_event(event_id):
         (next_sort_order, updated_at, event_id),
     )
     save_event_change(database)
+    flash("flash.event_order_changed")
 
     return redirect(url_for("admin.admin_events"))
 
@@ -576,5 +586,6 @@ def change_password_post():
         (generate_password_hash(new_password), updated_at, user["id"]),
     )
     get_database().commit()
+    flash("flash.password_changed")
 
     return redirect(url_for("admin.admin_home"))

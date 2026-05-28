@@ -2,6 +2,7 @@
 
 ## 2026-05-28
 
+- Added small admin usability fixes, admin status messages, CLI-only admin password reset, and expanded Waitress startup URL output.
 - Added PyInstaller packaging configuration for a Waitress-based Windows executable with bundled UI assets and external runtime data.
 - Added a Waitress production-style local startup entrypoint while keeping the Flask development startup.
 - Verified final MVP readiness before Waitress and EXE packaging and corrected outdated README status text.

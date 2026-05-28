@@ -8,6 +8,15 @@
 </head>
 <body>
     <main class="page">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="flash-stack" role="status" aria-live="polite">
+            {% for message in messages %}
+            <p class="flash-message">{{ t(message) }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
     </main>
     {% block scripts %}{% endblock %}

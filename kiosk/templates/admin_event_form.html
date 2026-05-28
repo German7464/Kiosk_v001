@@ -9,51 +9,64 @@
     {% if error %}
     <p class="form-error">{{ error }}</p>
     {% endif %}
-    <form class="admin-form" method="post" action="{{ action_url }}" enctype="multipart/form-data">
-        {% if event and event.image_thumb %}
-        <div class="admin-image-preview">
-            <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
-        </div>
-        {% endif %}
-        <label>
-            <span>{{ t("admin.title") }}</span>
-            <input type="text" name="title" value="{{ event.title if event else '' }}" required>
-        </label>
-        <label>
-            <span>{{ t("admin.short_description") }}</span>
-            <textarea name="short_description" rows="3">{{ event.short_description if event else '' }}</textarea>
-        </label>
-        <label>
-            <span>{{ t("admin.full_description") }}</span>
-            <textarea name="full_description" rows="6">{{ event.full_description if event else '' }}</textarea>
-        </label>
-        <label>
-            <span>{{ t("admin.event_date") }}</span>
-            <input type="text" name="event_date" value="{{ event.event_date if event else '' }}">
-        </label>
-        <label>
-            <span>{{ t("admin.place") }}</span>
-            <input type="text" name="place" value="{{ event.place if event else '' }}">
-        </label>
-        <label>
-            <span>{{ t("admin.status") }}</span>
-            <select name="status">
-                <option value="hidden" {% if not event or event.status == "hidden" %}selected{% endif %}>{{ t("common.hidden") }}</option>
-                <option value="active" {% if event and event.status == "active" %}selected{% endif %}>{{ t("common.active") }}</option>
-            </select>
-        </label>
-        <label>
-            <span>{{ t("admin.sort_order") }}</span>
-            <input type="number" name="sort_order" value="{{ event.sort_order if event else 0 }}">
-        </label>
-        <label>
-            <span>{{ t("admin.event_image") }}</span>
-            <input type="file" name="event_image" accept="image/*">
-        </label>
-        <div class="admin-actions">
-            <button type="submit">{{ t("admin.save_event") }}</button>
-            <a href="{{ url_for('admin.admin_events') }}">{{ t("common.back_to_events") }}</a>
-        </div>
-    </form>
+    <div class="admin-form-layout">
+        <form class="admin-form" method="post" action="{{ action_url }}" enctype="multipart/form-data">
+            <label>
+                <span>{{ t("admin.title") }}</span>
+                <input type="text" name="title" value="{{ event.title if event else '' }}" required>
+            </label>
+            <label>
+                <span>{{ t("admin.short_description") }}</span>
+                <textarea name="short_description" rows="3">{{ event.short_description if event else '' }}</textarea>
+            </label>
+            <label>
+                <span>{{ t("admin.full_description") }}</span>
+                <textarea name="full_description" rows="6">{{ event.full_description if event else '' }}</textarea>
+            </label>
+            <label>
+                <span>{{ t("admin.event_date") }}</span>
+                <input type="date" name="event_date" value="{{ event.event_date if event else '' }}">
+            </label>
+            <label>
+                <span>{{ t("admin.place") }}</span>
+                <input type="text" name="place" value="{{ event.place if event else '' }}">
+            </label>
+            <label>
+                <span>{{ t("admin.status") }}</span>
+                <select name="status">
+                    <option value="hidden" {% if not event or event.status == "hidden" %}selected{% endif %}>{{ t("common.hidden") }}</option>
+                    <option value="active" {% if event and event.status == "active" %}selected{% endif %}>{{ t("common.active") }}</option>
+                </select>
+            </label>
+            <label>
+                <span>{{ t("admin.sort_order") }}</span>
+                <input type="number" name="sort_order" value="{{ event.sort_order if event else 0 }}">
+            </label>
+            <label>
+                <span>{{ t("admin.event_image") }}</span>
+                <input type="file" name="event_image" accept="image/*">
+            </label>
+            <div class="admin-actions">
+                <button type="submit">{{ t("admin.save_event") }}</button>
+                <a href="{{ url_for('admin.admin_events') }}">{{ t("common.back_to_events") }}</a>
+            </div>
+        </form>
+        <aside class="admin-form-preview" aria-label="{{ t('admin.event_preview') }}">
+            <p class="label">{{ t("admin.event_preview") }}</p>
+            <div class="admin-form-preview-card">
+                <div class="admin-form-preview-image">
+                    {% if event and event.image_thumb %}
+                    <img src="{{ event.image_thumb }}" alt="{{ event.title }}">
+                    {% else %}
+                    <span>{{ t("common.image_area") }}</span>
+                    {% endif %}
+                </div>
+                <p class="event-date">{{ event.event_date if event and event.event_date else t("common.date_to_be_announced") }}</p>
+                <h2>{{ event.title if event and event.title else t("admin.title") }}</h2>
+                <p>{{ event.short_description if event and event.short_description else t("common.no_short_description") }}</p>
+                <p class="event-place">{{ event.place if event and event.place else t("common.place_to_be_announced") }}</p>
+            </div>
+        </aside>
+    </div>
 </section>
 {% endblock %}

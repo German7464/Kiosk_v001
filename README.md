@@ -50,11 +50,30 @@ Waitress mode for local production-style testing:
 python serve.py
 ```
 
-The default local kiosk URL is:
+Waitress mode prints active local URLs for:
 
 ```text
 http://127.0.0.1:5000/kiosk
+http://127.0.0.1:5000/kiosk/events
+http://127.0.0.1:5000/tv
+http://127.0.0.1:5000/preview
+http://127.0.0.1:5000/admin/login
+http://127.0.0.1:5000/api/version
 ```
+
+To reset the local admin password from the command line:
+
+```bash
+python serve.py --reset-admin-password
+```
+
+The packaged EXE supports the same reset mode:
+
+```text
+Kiosk_v001.exe --reset-admin-password
+```
+
+The reset command updates only the stored password hash for `admin`, prints the temporary password once, and then exits. Log in with the temporary password and change it immediately in the admin panel.
 
 ## Building The Windows EXE
 

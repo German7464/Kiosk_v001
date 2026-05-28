@@ -1,12 +1,15 @@
 import io
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 from PIL import Image
+from werkzeug.security import check_password_hash
 
 from kiosk.app import create_app
 from kiosk.database import get_database
+from kiosk.server import reset_admin_password, reset_admin_password_command, startup_message
 
 
 class MvpSmokeTests(unittest.TestCase):
@@ -132,6 +135,29 @@ class MvpSmokeTests(unittest.TestCase):
 
         self.assertEqual(settings["site_title"], "Smoke Test Kiosk")
         self.assertEqual(settings["interface_language"], "ru")
+
+    def test_admin_password_reset_uses_temporary_database(self):
+        temporary_password = reset_admin_password(self.app)
+
+        with self.app.app_context():
+            row = get_database().execute(
+                "SELECT password_hash FROM users WHERE username = ?",
+                ("admin",),
+            ).fetchone()
+
+        self.assertIsNotNone(row)
+        self.assertNotEqual(row["password_hash"], temporary_password)
+        self.assertTrue(check_password_hash(row["password_hash"], temporary_password))
+        self.assertFalse((Path.cwd() / "instance" / "kiosk.sqlite").samefile(self.instance_dir / "kiosk.sqlite") if (Path.cwd() / "instance" / "kiosk.sqlite").exists() else False)
+
+        normal_output = startup_message(self.app)
+        self.assertNotIn("Temporary password:", normal_output)
+
+        reset_output = io.StringIO()
+        with redirect_stdout(reset_output):
+            reset_admin_password_command(self.app)
+
+        self.assertIn("Temporary password:", reset_output.getvalue())
 
     def login(self):
         return self.client.post(
