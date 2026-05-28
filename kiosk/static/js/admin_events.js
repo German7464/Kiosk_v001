@@ -1,6 +1,7 @@
 const adminPreviewModal = document.querySelector("[data-admin-preview-modal]");
 const adminPreviewMode = document.querySelector("[data-admin-preview-mode]");
 const adminPreviewImage = document.querySelector("[data-admin-preview-image]");
+const adminPreviewCard = document.querySelector("[data-admin-preview-card]");
 const adminPreviewTitle = document.querySelector("[data-admin-preview-title]");
 const adminPreviewDate = document.querySelector("[data-admin-preview-date]");
 const adminPreviewPlace = document.querySelector("[data-admin-preview-place]");
@@ -46,7 +47,11 @@ function replaceMissingAdminThumb(image) {
 }
 
 function openAdminPreview(button) {
-    adminPreviewMode.textContent = button.dataset.previewMode === "tv" ? adminPreviewModal.dataset.tvPreviewLabel : adminPreviewModal.dataset.kioskPreviewLabel;
+    const tvMode = button.dataset.previewMode === "tv";
+
+    adminPreviewMode.textContent = tvMode ? adminPreviewModal.dataset.tvPreviewLabel : adminPreviewModal.dataset.kioskPreviewLabel;
+    adminPreviewCard.classList.toggle("admin-preview-modal-card--tv", tvMode);
+    adminPreviewCard.classList.toggle("admin-preview-modal-card--kiosk", !tvMode);
     adminPreviewTitle.textContent = button.dataset.previewTitle;
     adminPreviewDate.textContent = button.dataset.previewDate;
     adminPreviewPlace.textContent = button.dataset.previewPlace;

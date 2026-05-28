@@ -2,7 +2,7 @@
 
 ## 2026-05-29
 
-- Fixed admin event status localization and centered the admin event preview modal in the viewport.
+- Fixed admin event status localization, centered the admin event preview modal in the viewport, and separated kiosk and TV preview layouts.
 - Improved admin tag search and translated auto-hiding admin flash messages.
 
 ## 2026-05-28

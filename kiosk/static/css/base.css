@@ -1901,6 +1901,12 @@ textarea {
     font: inherit;
 }
 
+.admin-event-preview-kiosk {
+    grid-template-rows: auto minmax(150px, 1fr) auto auto;
+    background:
+        linear-gradient(180deg, #ffffff, #f8faff);
+}
+
 .admin-event-preview:hover,
 .admin-event-preview:focus-visible {
     outline: 3px solid rgba(109, 93, 252, 0.18);
@@ -1908,6 +1914,10 @@ textarea {
 }
 
 .admin-event-preview-tv {
+    grid-template-columns: minmax(130px, 0.9fr) minmax(0, 1.1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-items: stretch;
+    min-height: 230px;
     color: #f8fbff;
     background:
         linear-gradient(135deg, rgba(32, 25, 84, 0.96), rgba(37, 99, 235, 0.88));
@@ -1926,6 +1936,7 @@ textarea {
 }
 
 .admin-event-preview-tv .admin-preview-label {
+    grid-column: 1 / -1;
     color: #ffffff;
     background: rgba(255, 255, 255, 0.16);
 }
@@ -1943,6 +1954,8 @@ textarea {
 }
 
 .admin-event-preview-tv .admin-preview-media {
+    grid-row: 2 / 4;
+    min-height: 160px;
     background:
         linear-gradient(135deg, rgba(109, 93, 252, 0.38), rgba(14, 165, 233, 0.28)),
         #202b4a;
@@ -1964,6 +1977,16 @@ textarea {
 
 .admin-event-preview-tv .admin-preview-media span {
     color: rgba(248, 251, 255, 0.8);
+}
+
+.admin-event-preview-tv .admin-preview-title,
+.admin-event-preview-tv .admin-preview-meta {
+    align-self: center;
+    padding: 8px 0;
+}
+
+.admin-event-preview-tv .admin-preview-title {
+    font-size: clamp(20px, 2.2vw, 28px);
 }
 
 .admin-preview-title,
@@ -2099,6 +2122,28 @@ textarea {
     min-width: 0;
 }
 
+.admin-preview-modal-card--kiosk {
+    max-width: 680px;
+    margin: 0 auto;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: clamp(18px, 3vw, 28px);
+    border: 1px solid rgba(109, 93, 252, 0.16);
+    border-radius: 8px;
+    background:
+        linear-gradient(180deg, #ffffff, #f8faff);
+}
+
+.admin-preview-modal-card--tv {
+    grid-template-columns: minmax(320px, 1.05fr) minmax(0, 0.95fr);
+    align-items: stretch;
+    padding: clamp(18px, 3vw, 32px);
+    border-radius: 8px;
+    color: #f8fbff;
+    background:
+        linear-gradient(135deg, rgba(20, 26, 50, 0.98), rgba(37, 99, 235, 0.88));
+}
+
 .admin-preview-modal-image {
     display: grid;
     place-items: center;
@@ -2110,6 +2155,17 @@ textarea {
         #edf2ff;
     background-position: center;
     background-size: cover;
+}
+
+.admin-preview-modal-card--kiosk .admin-preview-modal-image {
+    min-height: clamp(260px, 42vh, 420px);
+}
+
+.admin-preview-modal-card--tv .admin-preview-modal-image {
+    min-height: clamp(300px, 48vh, 520px);
+    background:
+        linear-gradient(135deg, rgba(109, 93, 252, 0.34), rgba(14, 165, 233, 0.24)),
+        #202b4a;
 }
 
 .admin-preview-modal-image span {
@@ -2127,6 +2183,14 @@ textarea {
     min-width: 0;
 }
 
+.admin-preview-modal-card--tv .admin-preview-modal-copy {
+    align-content: center;
+    padding: clamp(18px, 3vw, 28px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.56);
+}
+
 .admin-preview-modal-copy h2,
 .admin-preview-modal-copy p {
     margin: 0;
@@ -2138,15 +2202,35 @@ textarea {
     line-height: 1.08;
 }
 
+.admin-preview-modal-card--kiosk .admin-preview-modal-copy h2 {
+    font-size: clamp(28px, 4vw, 46px);
+}
+
+.admin-preview-modal-card--tv .admin-preview-modal-copy h2 {
+    color: #ffffff;
+    font-size: clamp(38px, 5vw, 72px);
+}
+
 .admin-preview-modal-copy p {
     font-size: clamp(18px, 2vw, 24px);
     line-height: 1.35;
     color: var(--muted);
 }
 
+.admin-preview-modal-card--tv .admin-preview-modal-copy p {
+    color: #e6edff;
+}
+
+.admin-preview-modal-card--tv .admin-preview-modal-copy .event-date,
+.admin-preview-modal-card--tv .admin-preview-modal-copy .event-place {
+    color: #bae6fd;
+    font-weight: 800;
+}
+
 @media (max-width: 980px) {
     .admin-events-header,
     .admin-event-card-body,
+    .admin-preview-modal-card--tv,
     .admin-preview-modal-card {
         grid-template-columns: 1fr;
     }
