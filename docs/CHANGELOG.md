@@ -2,6 +2,7 @@
 
 ## 2026-05-30
 
+- Added the first coursework draft for the introduction and problem statement chapter.
 - Added coursework planning documents for the Kiosk_v001 coursework preparation stage.
 
 ## 2026-05-29
