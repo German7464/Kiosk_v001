@@ -10,6 +10,7 @@ from werkzeug.security import check_password_hash
 from kiosk.app import create_app
 from kiosk.database import get_database
 from kiosk.server import reset_admin_password, reset_admin_password_command, startup_message
+from serve import parse_args
 
 
 class MvpSmokeTests(unittest.TestCase):
@@ -66,6 +67,75 @@ class MvpSmokeTests(unittest.TestCase):
         logout = self.client.post("/admin/logout")
         self.assertEqual(logout.status_code, 302)
         self.assertEqual(self.client.get("/admin").status_code, 302)
+
+    def test_serve_cli_arguments_and_startup_message(self):
+        default_args = parse_args([])
+        loopback_args = parse_args(["--host", "127.0.0.1"])
+        lan_args = parse_args(["--host", "0.0.0.0"])
+        specific_args = parse_args(["--host", "192.168.1.117", "--port", "5000"])
+        reset_args = parse_args(["--reset-admin-password"])
+
+        self.assertEqual(default_args.host, "127.0.0.1")
+        self.assertEqual(default_args.port, 5000)
+        self.assertFalse(default_args.reset_admin_password)
+        self.assertEqual(loopback_args.host, "127.0.0.1")
+        self.assertEqual(lan_args.host, "0.0.0.0")
+        self.assertEqual(specific_args.host, "192.168.1.117")
+        self.assertEqual(specific_args.port, 5000)
+        self.assertTrue(reset_args.reset_admin_password)
+
+        loopback_app = create_app(
+            {
+                "TESTING": True,
+                "BASE_DIR": self.test_root,
+                "INSTANCE_DIR": self.instance_dir,
+                "DATABASE_PATH": self.instance_dir / "kiosk.sqlite",
+                "PRIVATE_UPLOAD_DIR": self.instance_dir / "uploads",
+                "PUBLIC_UPLOAD_DIR": self.static_dir / "uploads",
+                "STATIC_FOLDER": self.static_dir,
+                "SECRET_KEY": "test",
+                "SERVER_HOST": "127.0.0.1",
+                "SERVER_PORT": 5000,
+            }
+        )
+        lan_app = create_app(
+            {
+                "TESTING": True,
+                "BASE_DIR": self.test_root,
+                "INSTANCE_DIR": self.instance_dir,
+                "DATABASE_PATH": self.instance_dir / "kiosk.sqlite",
+                "PRIVATE_UPLOAD_DIR": self.instance_dir / "uploads",
+                "PUBLIC_UPLOAD_DIR": self.static_dir / "uploads",
+                "STATIC_FOLDER": self.static_dir,
+                "SECRET_KEY": "test",
+                "SERVER_HOST": "0.0.0.0",
+                "SERVER_PORT": 5000,
+            }
+        )
+        specific_host_app = create_app(
+            {
+                "TESTING": True,
+                "BASE_DIR": self.test_root,
+                "INSTANCE_DIR": self.instance_dir,
+                "DATABASE_PATH": self.instance_dir / "kiosk.sqlite",
+                "PRIVATE_UPLOAD_DIR": self.instance_dir / "uploads",
+                "PUBLIC_UPLOAD_DIR": self.static_dir / "uploads",
+                "STATIC_FOLDER": self.static_dir,
+                "SECRET_KEY": "test",
+                "SERVER_HOST": "192.168.1.117",
+                "SERVER_PORT": 5000,
+            }
+        )
+
+        self.assertIn("Other devices cannot connect to 127.0.0.1.", startup_message(loopback_app))
+
+        lan_message = startup_message(lan_app)
+        self.assertIn("Local URLs (127.0.0.1):", lan_message)
+        self.assertIn("Other devices should use the computer LAN IP address.", lan_message)
+        self.assertIn("If another device cannot connect, disable VPN, check that both devices are on the same Wi-Fi, and allow TCP port 5000 in Windows Firewall.", lan_message)
+
+        specific_message = startup_message(specific_host_app)
+        self.assertIn("Other devices should use http://192.168.1.117:5000.", specific_message)
 
     def test_event_tag_and_image_flow(self):
         self.login()

@@ -50,6 +50,21 @@ Waitress mode for local production-style testing:
 python serve.py
 ```
 
+LAN startup for phones, tablets, kiosks, and Smart TV browsers:
+
+```bash
+python serve.py --host 0.0.0.0
+```
+
+You can also bind to a specific host or port:
+
+```bash
+python serve.py --host 127.0.0.1
+python serve.py --host 192.168.1.117
+python serve.py --port 5000
+python serve.py --host 0.0.0.0 --port 5000
+```
+
 Waitress mode prints active local URLs for:
 
 ```text
@@ -60,6 +75,14 @@ http://127.0.0.1:5000/preview
 http://127.0.0.1:5000/admin/login
 http://127.0.0.1:5000/api/version
 ```
+
+When you start with `--host 0.0.0.0`, use the computer LAN IP address from another device, for example:
+
+```text
+http://192.168.1.117:5000/tv
+```
+
+If another device cannot connect, disable VPN, check that both devices are on the same Wi-Fi, and allow TCP port 5000 in Windows Firewall.
 
 To reset the local admin password from the command line:
 

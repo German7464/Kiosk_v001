@@ -31,29 +31,63 @@ def active_urls(host, port):
     ]
 
 
+def detected_lan_addresses():
+    addresses = []
+
+    try:
+        hostnames = {socket.gethostname(), socket.getfqdn()}
+    except OSError:
+        hostnames = set()
+
+    for hostname in hostnames:
+        if not hostname:
+            continue
+
+        try:
+            infos = socket.getaddrinfo(hostname, None, family=socket.AF_INET)
+        except OSError:
+            infos = []
+
+        for info in infos:
+            address = info[4][0]
+            if address.startswith("127.") or address in addresses:
+                continue
+            addresses.append(address)
+
+    try:
+        _, _, hostname_addresses = socket.gethostbyname_ex(socket.gethostname())
+    except OSError:
+        hostname_addresses = []
+
+    for address in hostname_addresses:
+        if address.startswith("127.") or address in addresses:
+            continue
+        addresses.append(address)
+
+    return sorted(addresses)
+
+
 def connection_urls(host, port):
     urls = []
 
-    if host not in {"0.0.0.0", ""}:
+    if host in {"0.0.0.0", ""}:
+        addresses = detected_lan_addresses()
+    elif host.startswith("127.") or host == "localhost":
+        addresses = []
+    else:
+        addresses = [host]
+
+    if not addresses:
         return urls
 
-    try:
-        addresses = socket.gethostbyname_ex(socket.gethostname())[2]
-    except OSError:
-        return urls
-
-    for address in sorted(set(addresses)):
-        if not address.startswith("127."):
-            urls.append(f"http://{address}:{port}/kiosk")
+    for address in addresses:
+        urls.extend(active_urls(address, port))
 
     return urls
 
 
 def lan_urls(host, port):
-    if host not in {"0.0.0.0", ""}:
-        return []
-
-    return [f"{url}/kiosk" for url in connection_urls(host, port)]
+    return connection_urls(host, port)
 
 
 def startup_message(app):
@@ -61,18 +95,27 @@ def startup_message(app):
     port = app.config["SERVER_PORT"]
     lines = [
         "Starting Kiosk_v001 with Waitress",
-        f"Server: http://{host}:{port}",
-        "Local URLs:",
-        *active_urls(host, port),
+        f"Bound server: http://{host}:{port}",
+        "Local URLs (127.0.0.1):",
+        *active_urls("127.0.0.1", port),
         "Manual stop: Ctrl+C",
     ]
 
     extra_urls = lan_urls(host, port)
     if extra_urls:
-        lines.append("LAN kiosk URLs:")
+        lines.append("LAN URLs:")
         lines.extend(extra_urls)
-    elif host == "127.0.0.1":
-        lines.append("Listening on 127.0.0.1 for local testing.")
+
+    if host == "127.0.0.1":
+        lines.append("Other devices cannot connect to 127.0.0.1.")
+    elif host in {"0.0.0.0", ""}:
+        lines.append("Other devices should use the computer LAN IP address.")
+    else:
+        lines.append(f"Other devices should use http://{host}:{port}.")
+
+    lines.append(
+        f"If another device cannot connect, disable VPN, check that both devices are on the same Wi-Fi, and allow TCP port {port} in Windows Firewall."
+    )
 
     return "\n".join(lines)
 
@@ -106,8 +149,16 @@ def reset_admin_password_command(app=None):
     print("Log in as admin and change this password immediately.", flush=True)
 
 
-def run_waitress():
-    app = create_app()
+def run_waitress(host=None, port=None):
+    overrides = {}
+
+    if host is not None:
+        overrides["SERVER_HOST"] = host
+
+    if port is not None:
+        overrides["SERVER_PORT"] = port
+
+    app = create_app(overrides or None)
     host = app.config["SERVER_HOST"]
     port = app.config["SERVER_PORT"]
     print(startup_message(app), flush=True)
