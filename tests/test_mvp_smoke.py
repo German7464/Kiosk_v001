@@ -300,6 +300,8 @@ class MvpSmokeTests(unittest.TestCase):
         kiosk_events_response = self.client.get("/kiosk/events")
         self.assertEqual(kiosk_events_response.status_code, 200)
         self.assertIn("data-inactivity-warning", kiosk_events_response.get_data(as_text=True))
+        self.assertNotIn("kiosk.inactivity_warning_title", kiosk_events_response.get_data(as_text=True))
+        self.assertNotIn("KIOSK.INACTIVITY_WARNING_LABEL", kiosk_events_response.get_data(as_text=True))
 
         kiosk_events_js = Path("kiosk/static/js/kiosk_events.js").read_text(encoding="utf-8")
         self.assertIn("const inactivityWarningDelaySeconds = 120;", kiosk_events_js)
@@ -307,6 +309,13 @@ class MvpSmokeTests(unittest.TestCase):
         self.assertIn('window.location.href = "/kiosk";', kiosk_events_js)
         self.assertIn("hideInactivityWarning", kiosk_events_js)
         self.assertIn("resetInactivityTimer", kiosk_events_js)
+        self.assertIn("data-inactivity-warning-countdown", Path("kiosk/templates/kiosk_events.html").read_text(encoding="utf-8"))
+
+        for language in ("ru", "en", "de"):
+            translation_text = Path(f"kiosk/translations/{language}.json").read_text(encoding="utf-8")
+            self.assertIn("kiosk.inactivity_warning_text", translation_text)
+            self.assertNotIn("kiosk.inactivity_warning_message", translation_text)
+            self.assertNotIn("kiosk.inactivity_warning_touch", translation_text)
 
     def test_settings_flow_increases_content_version(self):
         self.login()

@@ -106,10 +106,6 @@
     "kiosk.fullscreen_return": "Return back",
     "kiosk.fullscreen_exit": "Exit fullscreen",
     "kiosk.open_events": "Open events",
-    "kiosk.inactivity_warning_label": "Return to main screen",
-    "kiosk.inactivity_warning_title": "Return to main screen",
-    "kiosk.inactivity_warning_message": "If the screen is not touched, the main screen will open in {seconds} sec.",
-    "kiosk.inactivity_warning_touch": "Touch the screen to continue viewing.",
     "preview.admin": "Open admin",
     "preview.kiosk": "Open kiosk",
     "preview.kiosk_events": "Open kiosk events",
@@ -122,5 +118,6 @@
     "tv.empty_title": "No events are published yet.",
     "tv.no_active_events": "No active events",
     "tv.ready_description": "The TV display is ready and waiting for active event cards.",
-    "tv.ready_title": "Events will appear here"
+    "tv.ready_title": "Events will appear here",
+    "kiosk.inactivity_warning_text": "Touch the screen, otherwise you will return to the main screen when the timer ends."
 }

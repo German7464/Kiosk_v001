@@ -12,6 +12,7 @@ const closeTagsButton = document.querySelector("[data-close-tags]");
 const contentVersion = document.querySelector("[data-content-version]");
 const allEventsButton = document.querySelector("[data-tag-filter='all']");
 const inactivityWarning = document.querySelector("[data-inactivity-warning]");
+const inactivityWarningCountdown = document.querySelector("[data-inactivity-warning-countdown]");
 const inactivityWarningMessage = document.querySelector("[data-inactivity-warning-message]");
 const inactivityWarningDelaySeconds = 120;
 const inactivityWarningCountdownSeconds = 30;
@@ -43,12 +44,18 @@ function hideInactivityWarning() {
 }
 
 function updateInactivityWarningCountdown() {
-    if (!inactivityWarningMessage || inactivityWarningDeadline === null) {
+    if (inactivityWarningDeadline === null) {
         return;
     }
 
     const secondsLeft = Math.max(0, Math.ceil((inactivityWarningDeadline - Date.now()) / 1000));
-    inactivityWarningMessage.textContent = inactivityWarningMessage.dataset.warningTemplate.replace("{seconds}", String(secondsLeft));
+    if (inactivityWarningCountdown) {
+        inactivityWarningCountdown.textContent = String(secondsLeft);
+    }
+
+    if (inactivityWarningMessage) {
+        inactivityWarningMessage.textContent = inactivityWarningMessage.dataset.warningTemplate;
+    }
 
     if (secondsLeft <= 0) {
         window.location.href = "/kiosk";
@@ -56,12 +63,15 @@ function updateInactivityWarningCountdown() {
 }
 
 function showInactivityWarning() {
-    if (!inactivityWarning || !inactivityWarningMessage) {
+    if (!inactivityWarning) {
         return;
     }
 
     inactivityWarning.hidden = false;
     inactivityWarningDeadline = Date.now() + (inactivityWarningCountdownSeconds * 1000);
+    if (inactivityWarningCountdown) {
+        inactivityWarningCountdown.textContent = String(inactivityWarningCountdownSeconds);
+    }
     updateInactivityWarningCountdown();
     window.clearInterval(inactivityCountdownTimer);
     inactivityCountdownTimer = window.setInterval(updateInactivityWarningCountdown, 1000);

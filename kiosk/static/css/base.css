@@ -627,25 +627,17 @@ h1 {
     text-align: center;
 }
 
-.kiosk-inactivity-warning__panel h2 {
-    margin: 0;
-    font-size: clamp(30px, 4vw, 54px);
-    line-height: 1.08;
+.kiosk-inactivity-warning__countdown {
+    font-size: clamp(58px, 9vw, 132px);
+    line-height: 1;
+    font-weight: 900;
+    color: var(--violet-dark);
 }
 
-.kiosk-inactivity-warning__message,
-.kiosk-inactivity-warning__touch {
-    margin: 14px 0 0;
+.kiosk-inactivity-warning__text {
+    margin: 16px 0 0;
     font-size: clamp(20px, 2.4vw, 28px);
     line-height: 1.35;
-}
-
-.kiosk-inactivity-warning__message {
-    color: var(--violet-dark);
-    font-weight: 800;
-}
-
-.kiosk-inactivity-warning__touch {
     color: var(--muted);
 }
 

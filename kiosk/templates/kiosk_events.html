@@ -50,10 +50,8 @@
 
     <div class="kiosk-inactivity-warning" data-inactivity-warning hidden>
         <div class="kiosk-inactivity-warning__panel" role="status" aria-live="polite">
-            <p class="label">{{ t("kiosk.inactivity_warning_label") }}</p>
-            <h2>{{ t("kiosk.inactivity_warning_title") }}</h2>
-            <p class="kiosk-inactivity-warning__message" data-inactivity-warning-message data-warning-template="{{ t('kiosk.inactivity_warning_message') }}"></p>
-            <p class="kiosk-inactivity-warning__touch">{{ t("kiosk.inactivity_warning_touch") }}</p>
+            <div class="kiosk-inactivity-warning__countdown" data-inactivity-warning-countdown>30</div>
+            <p class="kiosk-inactivity-warning__text" data-inactivity-warning-message data-warning-template="{{ t('kiosk.inactivity_warning_text') }}"></p>
         </div>
     </div>
 

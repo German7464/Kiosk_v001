@@ -119,8 +119,5 @@
     "tv.ready_description": "Die TV-Anzeige ist bereit und wartet auf aktive Veranstaltungskarten.",
     "tv.ready_title": "Veranstaltungen erscheinen hier",
     "admin.preview": "Vorschau",
-    "kiosk.inactivity_warning_label": "Zur Hauptseite zur?ck",
-    "kiosk.inactivity_warning_title": "Zur Hauptseite zur?ck",
-    "kiosk.inactivity_warning_message": "Wenn der Bildschirm nicht ber?hrt wird, ?ffnet sich in {seconds} Sek. die Hauptseite.",
-    "kiosk.inactivity_warning_touch": "Ber?hren Sie den Bildschirm, um weiterzusehen."
+    "kiosk.inactivity_warning_text": "Berühren Sie den Bildschirm, sonst kehren Sie nach Ablauf des Timers zum Startbildschirm zurück."
 }
