@@ -2,6 +2,7 @@
 
 ## 2026-05-30
 
+- Added the practical chapter draft for the coursework.
 - Added the theoretical chapter draft for the coursework.
 - Added the first coursework draft for the introduction and problem statement chapter.
 - Added coursework planning documents for the Kiosk_v001 coursework preparation stage.
