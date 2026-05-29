@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Added editable kiosk home text settings and `/kiosk` version polling with staggered reloads after settings changes.
 - Stabilized admin event preview thumbnails with fixed internal kiosk and TV compositions across responsive admin layouts.
 - Unified admin event previews around one semantic preview partial, one modal partial, and shared compact/full styling.
 - Refactored admin event previews into a shared Jinja preview partial used by the event list and create/edit forms.

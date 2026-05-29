@@ -1,9 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}{{ t("kiosk.home_heading") }}{% endblock %}
+{% block title %}{{ settings.kiosk_heading or t("kiosk.home_heading") }}{% endblock %}
 
 {% block content %}
-<section class="kiosk-home" aria-labelledby="kiosk-title">
+<section class="kiosk-home"
+    aria-labelledby="kiosk-title"
+    data-kiosk-home
+    data-version-poll-interval="5000"
+    data-update-delay-max="10000">
     <div class="kiosk-brand">
         {% if settings.site_icon %}
         <img class="system-icon-image" src="{{ settings.site_icon }}" alt="{{ settings.site_title }}">
@@ -13,12 +17,16 @@
         <p class="system-name">{{ settings.site_title }}</p>
     </div>
     <div class="kiosk-content">
-        <p class="label">{{ t("kiosk.home_label") }}</p>
-        <h1 id="kiosk-title">{{ t("kiosk.home_heading") }}</h1>
+        <p class="label">{{ settings.kiosk_label or t("kiosk.home_label") }}</p>
+        <h1 id="kiosk-title">{{ settings.kiosk_heading or t("kiosk.home_heading") }}</h1>
         <p class="kiosk-description">
-            {{ t("kiosk.home_description") }}
+            {{ settings.kiosk_description or t("kiosk.home_description") }}
         </p>
         <a class="primary-action" href="/kiosk/events">{{ t("kiosk.open_events") }}</a>
     </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/kiosk_home.js') }}"></script>
 {% endblock %}

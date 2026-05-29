@@ -141,15 +141,18 @@ def get_admin_settings():
         """
         SELECT key, value
         FROM settings
-        WHERE key IN (?, ?, ?)
+        WHERE key IN (?, ?, ?, ?, ?, ?)
         """,
-        ("site_title", "interface_language", "site_icon"),
+        ("site_title", "interface_language", "site_icon", "kiosk_label", "kiosk_heading", "kiosk_description"),
     ).fetchall()
     settings = {row["key"]: row["value"] for row in rows}
     return {
         "site_title": settings.get("site_title", "Kiosk_v001"),
         "interface_language": settings.get("interface_language", "en"),
         "site_icon": settings.get("site_icon", ""),
+        "kiosk_label": settings.get("kiosk_label", ""),
+        "kiosk_heading": settings.get("kiosk_heading", ""),
+        "kiosk_description": settings.get("kiosk_description", ""),
     }
 
 
@@ -181,6 +184,9 @@ def admin_settings():
 def save_admin_settings():
     site_title = request.form.get("site_title", "").strip() or "Kiosk_v001"
     interface_language = request.form.get("interface_language", "en")
+    kiosk_label = request.form.get("kiosk_label", "").strip()
+    kiosk_heading = request.form.get("kiosk_heading", "").strip()
+    kiosk_description = request.form.get("kiosk_description", "").strip()
 
     if interface_language not in {"ru", "en", "de"}:
         interface_language = "en"
@@ -194,6 +200,9 @@ def save_admin_settings():
     updated_at = datetime.now(timezone.utc).isoformat()
     save_setting(database, "site_title", site_title, updated_at)
     save_setting(database, "interface_language", interface_language, updated_at)
+    save_setting(database, "kiosk_label", kiosk_label, updated_at)
+    save_setting(database, "kiosk_heading", kiosk_heading, updated_at)
+    save_setting(database, "kiosk_description", kiosk_description, updated_at)
 
     if icon_paths is not None:
         save_setting(database, "site_icon", icon_paths["site_icon"], updated_at)

@@ -20,6 +20,18 @@
             <input type="text" name="site_title" value="{{ settings.site_title }}" required>
         </label>
         <label>
+            <span>{{ t("admin.kiosk_home_label") }}</span>
+            <input type="text" name="kiosk_label" value="{{ settings.kiosk_label }}" placeholder="{{ t('kiosk.home_label') }}">
+        </label>
+        <label>
+            <span>{{ t("admin.kiosk_home_heading") }}</span>
+            <input type="text" name="kiosk_heading" value="{{ settings.kiosk_heading }}" placeholder="{{ t('kiosk.home_heading') }}">
+        </label>
+        <label>
+            <span>{{ t("admin.kiosk_home_description") }}</span>
+            <textarea name="kiosk_description" rows="3" placeholder="{{ t('kiosk.home_description') }}">{{ settings.kiosk_description }}</textarea>
+        </label>
+        <label>
             <span>{{ t("admin.interface_language") }}</span>
             <select name="interface_language">
                 <option value="ru" {% if settings.interface_language == "ru" %}selected{% endif %}>ru</option>

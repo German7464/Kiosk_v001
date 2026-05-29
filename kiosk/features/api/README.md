@@ -35,7 +35,7 @@ This feature does not update content version. It only reads the current version 
 
 ## How the Feature Is Shown in Kiosk Mode
 
-Kiosk mode uses `/api/version` every 5 seconds to detect content changes. When a new version is found, the client waits a random 0 to 10 second delay, then refreshes active events and tags through `/api/events` and `/api/tags` without a full page reload.
+Kiosk mode uses `/api/version` every 5 seconds to detect content changes. The kiosk home screen waits a random 0 to 10 second delay, then reloads so editable system text is refreshed. The kiosk events screen waits the same random delay, then refreshes active events and tags through `/api/events` and `/api/tags` without a full page reload.
 
 ## How the Feature Is Shown in TV Mode
 

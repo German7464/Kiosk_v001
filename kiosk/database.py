@@ -93,6 +93,9 @@ def seed_settings(database):
         "site_title": "Kiosk_v001",
         "site_icon": "",
         "tv_slide_duration": "10",
+        "kiosk_label": "",
+        "kiosk_heading": "",
+        "kiosk_description": "",
         "content_version": "1",
     }
 
