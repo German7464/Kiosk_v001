@@ -31,6 +31,14 @@
         <h1>{{ t("tv.empty_title") }}</h1>
         <p>{{ t("tv.empty_description") }}</p>
     </div>
+    <button
+        class="tv-fullscreen-button"
+        type="button"
+        data-tv-fullscreen
+        data-fullscreen-enter="{{ t('tv.fullscreen_enter') }}"
+        data-fullscreen-exit="{{ t('tv.fullscreen_exit') }}"
+        aria-label="{{ t('tv.fullscreen_enter') }}"
+        title="{{ t('tv.fullscreen_enter') }}">⛶</button>
 </section>
 {% endblock %}
 

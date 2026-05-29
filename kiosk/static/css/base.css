@@ -677,6 +677,41 @@ h1 {
     font-size: 12px;
 }
 
+.tv-fullscreen-button {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    z-index: 4;
+    width: 42px;
+    height: 42px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: rgba(248, 250, 252, 0.68);
+    background: rgba(15, 23, 42, 0.24);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+    backdrop-filter: blur(6px);
+    font: inherit;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.32;
+    transition: opacity 180ms ease, background 180ms ease, color 180ms ease;
+}
+
+.tv-fullscreen-button:hover,
+.tv-fullscreen-button:focus-visible {
+    color: #ffffff;
+    background: rgba(15, 23, 42, 0.48);
+    opacity: 0.88;
+}
+
+.tv-fullscreen-button[hidden] {
+    display: none;
+}
+
 .tv-card {
     min-height: calc(min(800px, 100vh - 64px) - 104px);
     display: grid;

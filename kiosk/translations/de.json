@@ -104,6 +104,8 @@
     "preview.label": "Vorschaumodus",
     "preview.title_suffix": "Vorschau",
     "preview.tv": "TV-Anzeige öffnen",
+    "tv.fullscreen_enter": "TV im Vollbild öffnen",
+    "tv.fullscreen_exit": "Vollbildmodus beenden",
     "tv.empty_description": "Aktive Veranstaltungskarten erscheinen hier automatisch.",
     "tv.empty_title": "Es sind noch keine Veranstaltungen veröffentlicht.",
     "tv.no_active_events": "Keine aktiven Veranstaltungen",

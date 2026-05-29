@@ -104,6 +104,8 @@
     "preview.label": "Режим предпросмотра",
     "preview.title_suffix": "предпросмотр",
     "preview.tv": "Открыть TV-экран",
+    "tv.fullscreen_enter": "Открыть TV на весь экран",
+    "tv.fullscreen_exit": "Выйти из полноэкранного режима",
     "tv.empty_description": "Активные карточки событий появятся здесь автоматически.",
     "tv.empty_title": "Опубликованных событий пока нет.",
     "tv.no_active_events": "Нет активных событий",

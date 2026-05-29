@@ -104,6 +104,8 @@
     "preview.label": "Preview mode",
     "preview.title_suffix": "preview",
     "preview.tv": "Open TV display",
+    "tv.fullscreen_enter": "Open TV fullscreen",
+    "tv.fullscreen_exit": "Exit fullscreen",
     "tv.empty_description": "Active event cards will appear here automatically.",
     "tv.empty_title": "No events are published yet.",
     "tv.no_active_events": "No active events",

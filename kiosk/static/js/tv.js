@@ -7,6 +7,7 @@ const tvPlace = document.querySelector("[data-tv-place]");
 const tvDescription = document.querySelector("[data-tv-description]");
 const tvVersion = document.querySelector("[data-tv-version]");
 const tvEmptyState = document.querySelector("[data-tv-empty-state]");
+const tvFullscreenButton = document.querySelector("[data-tv-fullscreen]");
 const baseSlideDuration = Number(tvScreen.dataset.slideDuration);
 const minSlideDuration = 8000;
 const maxSlideDuration = 24000;
@@ -20,6 +21,79 @@ let currentContentVersion = null;
 let updatePending = false;
 let transitionActive = false;
 let slideTimer = null;
+
+function fullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+}
+
+function fullscreenTarget() {
+    return document.documentElement;
+}
+
+function fullscreenRequestHandler() {
+    const target = fullscreenTarget();
+    return target.requestFullscreen || target.webkitRequestFullscreen || target.msRequestFullscreen;
+}
+
+function fullscreenExitHandler() {
+    return document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+}
+
+function fullscreenSupported() {
+    return Boolean(fullscreenRequestHandler() && fullscreenExitHandler());
+}
+
+function updateFullscreenButtonState() {
+    if (!tvFullscreenButton) {
+        return;
+    }
+
+    const isFullscreen = Boolean(fullscreenElement());
+    const label = isFullscreen
+        ? tvFullscreenButton.dataset.fullscreenExit
+        : tvFullscreenButton.dataset.fullscreenEnter;
+
+    tvFullscreenButton.setAttribute("aria-label", label);
+    tvFullscreenButton.setAttribute("title", label);
+    tvFullscreenButton.setAttribute("aria-pressed", String(isFullscreen));
+}
+
+function handleFullscreenResult(result) {
+    if (result && typeof result.catch === "function") {
+        result.catch(() => {});
+    }
+}
+
+function toggleTvFullscreen() {
+    if (!fullscreenSupported()) {
+        return;
+    }
+
+    if (fullscreenElement()) {
+        handleFullscreenResult(fullscreenExitHandler().call(document));
+        return;
+    }
+
+    const target = fullscreenTarget();
+    handleFullscreenResult(fullscreenRequestHandler().call(target));
+}
+
+function setupTvFullscreenButton() {
+    if (!tvFullscreenButton) {
+        return;
+    }
+
+    if (!fullscreenSupported()) {
+        tvFullscreenButton.hidden = true;
+        return;
+    }
+
+    tvFullscreenButton.addEventListener("click", toggleTvFullscreen);
+    document.addEventListener("fullscreenchange", updateFullscreenButtonState);
+    document.addEventListener("webkitfullscreenchange", updateFullscreenButtonState);
+    document.addEventListener("msfullscreenchange", updateFullscreenButtonState);
+    updateFullscreenButtonState();
+}
 
 function eventTextLength(event) {
     return [event.title, event.short_description, event.place]
@@ -167,6 +241,8 @@ async function pollTvVersion() {
 async function loadTvDisplay() {
     await loadTvData(true);
 }
+
+setupTvFullscreenButton();
 
 loadTvDisplay().catch(() => {
     tvVersion.textContent = labels.versionUnavailable;
