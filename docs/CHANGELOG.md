@@ -2,6 +2,7 @@
 
 ## 2026-05-30
 
+- Added the conclusion and preliminary references draft for the coursework.
 - Added the practical chapter draft for the coursework.
 - Added the theoretical chapter draft for the coursework.
 - Added the first coursework draft for the introduction and problem statement chapter.
