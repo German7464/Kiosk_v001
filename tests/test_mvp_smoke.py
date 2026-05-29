@@ -80,7 +80,7 @@ class MvpSmokeTests(unittest.TestCase):
         no_client_args = parse_args(["--no-client"])
         reset_args = parse_args(["--reset-admin-password"])
 
-        self.assertEqual(default_args.host, "127.0.0.1")
+        self.assertEqual(default_args.host, "0.0.0.0")
         self.assertEqual(default_args.port, 5000)
         self.assertFalse(default_args.reset_admin_password)
         self.assertFalse(default_args.no_client)
