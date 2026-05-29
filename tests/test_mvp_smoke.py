@@ -1,4 +1,5 @@
 import io
+import json
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -151,6 +152,59 @@ class MvpSmokeTests(unittest.TestCase):
             serve_mock.assert_not_called()
             launch_browser.assert_called_once_with("http://127.0.0.1:5000/tv", kiosk_mode=True)
             self.assertIn("Existing local server detected", output.getvalue())
+
+    def test_kiosk_fullscreen_unlock_uses_current_admin_credentials(self):
+        self.login()
+
+        wrong_response = self.client.post(
+            "/admin/fullscreen/validate",
+            data=json.dumps({"username": "admin", "password": "wrong"}),
+            content_type="application/json",
+        )
+        self.assertEqual(wrong_response.status_code, 200)
+        self.assertEqual(wrong_response.get_json(), {"success": False})
+        self.assertNotIn("password_hash", wrong_response.get_data(as_text=True))
+        self.assertEqual(set(wrong_response.get_json().keys()), {"success"})
+
+        correct_response = self.client.post(
+            "/admin/fullscreen/validate",
+            data=json.dumps({"username": "admin", "password": "admin"}),
+            content_type="application/json",
+        )
+        self.assertEqual(correct_response.status_code, 200)
+        self.assertEqual(correct_response.get_json(), {"success": True})
+        self.assertNotIn("password_hash", correct_response.get_data(as_text=True))
+        self.assertEqual(set(correct_response.get_json().keys()), {"success"})
+
+        change_response = self.client.post(
+            "/admin/password/change",
+            data={
+                "current_password": "admin",
+                "new_password": "changed-admin-password",
+                "confirm_password": "changed-admin-password",
+            },
+        )
+        self.assertEqual(change_response.status_code, 302)
+
+        old_password_response = self.client.post(
+            "/admin/fullscreen/validate",
+            data=json.dumps({"username": "admin", "password": "admin"}),
+            content_type="application/json",
+        )
+        self.assertEqual(old_password_response.get_json(), {"success": False})
+
+        new_password_response = self.client.post(
+            "/admin/fullscreen/validate",
+            data=json.dumps({"username": "admin", "password": "changed-admin-password"}),
+            content_type="application/json",
+        )
+        self.assertEqual(new_password_response.get_json(), {"success": True})
+
+        kiosk_home_js = Path("kiosk/static/js/kiosk_home.js").read_text(encoding="utf-8")
+        self.assertIn("requestFullscreen", kiosk_home_js)
+        self.assertIn("requestKioskFullscreenExit", kiosk_home_js)
+        self.assertNotIn("admin/admin", kiosk_home_js)
+        self.assertNotIn("exitFullscreen().call(document)", kiosk_home_js)
 
     def test_event_tag_and_image_flow(self):
         self.login()

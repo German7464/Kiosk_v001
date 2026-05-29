@@ -31,6 +31,28 @@
         data-fullscreen-enter="{{ t('kiosk.fullscreen_enter') }}"
         aria-label="{{ t('kiosk.fullscreen_enter') }}"
         title="{{ t('kiosk.fullscreen_enter') }}">&#x26F6;</button>
+    <div class="kiosk-unlock-modal" data-kiosk-unlock-modal hidden>
+        <div class="kiosk-unlock-modal__panel" role="dialog" aria-modal="true" aria-labelledby="kiosk-unlock-title">
+            <p class="label">{{ t("kiosk.fullscreen_unlock_label") }}</p>
+            <h2 id="kiosk-unlock-title">{{ t("kiosk.fullscreen_unlock_title") }}</h2>
+            <p class="kiosk-unlock-modal__copy">{{ t("kiosk.fullscreen_unlock_description") }}</p>
+            <p class="form-error" data-kiosk-unlock-error data-invalid-message="{{ t('kiosk.fullscreen_unlock_error') }}" hidden></p>
+            <form class="kiosk-unlock-form" data-kiosk-unlock-form>
+                <label>
+                    <span>{{ t("admin.username") }}</span>
+                    <input type="text" name="username" autocomplete="username" required data-kiosk-unlock-username>
+                </label>
+                <label>
+                    <span>{{ t("admin.password") }}</span>
+                    <input type="password" name="password" autocomplete="current-password" required data-kiosk-unlock-password>
+                </label>
+                <div class="kiosk-unlock-actions">
+                    <button type="button" class="kiosk-unlock-secondary" data-kiosk-unlock-return>{{ t("kiosk.fullscreen_return") }}</button>
+                    <button type="submit" class="kiosk-unlock-primary">{{ t("kiosk.fullscreen_exit") }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </section>
 {% endblock %}
 

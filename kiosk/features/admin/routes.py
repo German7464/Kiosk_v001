@@ -2,7 +2,7 @@ import sqlite3
 from datetime import datetime, timezone
 from functools import wraps
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from kiosk.core.images import process_event_image, process_system_icon
@@ -43,6 +43,15 @@ def find_user_by_id(user_id):
         """,
         (user_id,),
     ).fetchone()
+
+
+def authenticate_admin_credentials(username, password):
+    user = find_user_by_username(username)
+
+    if user is None or not check_password_hash(user["password_hash"], password):
+        return None
+
+    return user
 
 
 def get_event_by_id(event_id):
@@ -543,9 +552,9 @@ def login():
 def login_post():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
-    user = find_user_by_username(username)
+    user = authenticate_admin_credentials(username, password)
 
-    if user is None or not check_password_hash(user["password_hash"], password):
+    if user is None:
         return render_template("admin_login.html", error="Invalid username or password."), 401
 
     session.clear()
@@ -553,6 +562,16 @@ def login_post():
     session["admin_username"] = user["username"]
 
     return redirect(url_for("admin.admin_home"))
+
+
+@admin_blueprint.post("/fullscreen/validate")
+def fullscreen_validate():
+    payload = request.get_json(silent=True) or request.form
+    username = str(payload.get("username", "")).strip()
+    password = str(payload.get("password", ""))
+    user = authenticate_admin_credentials(username, password)
+
+    return jsonify({"success": user is not None})
 
 
 @admin_blueprint.post("/logout")

@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Protected kiosk fullscreen exit with a current-admin credential modal.
 - Added a subtle fullscreen button to the kiosk home screen.
 - Added local fullscreen launcher modes for kiosk and TV with duplicate-server reuse on the configured local port.
 - Added LAN startup support for `serve.py` and packaged EXE startup arguments with local and LAN URL output.

@@ -1,5 +1,11 @@
 const kioskHome = document.querySelector("[data-kiosk-home]");
 const kioskFullscreenButton = document.querySelector("[data-kiosk-fullscreen]");
+const kioskUnlockModal = document.querySelector("[data-kiosk-unlock-modal]");
+const kioskUnlockForm = document.querySelector("[data-kiosk-unlock-form]");
+const kioskUnlockError = document.querySelector("[data-kiosk-unlock-error]");
+const kioskUnlockUsername = document.querySelector("[data-kiosk-unlock-username]");
+const kioskUnlockPassword = document.querySelector("[data-kiosk-unlock-password]");
+const kioskUnlockReturn = document.querySelector("[data-kiosk-unlock-return]");
 const kioskHomeVersionPollInterval = Number(kioskHome.dataset.versionPollInterval);
 const kioskHomeUpdateDelayMax = Number(kioskHome.dataset.updateDelayMax);
 
@@ -41,21 +47,93 @@ function handleFullscreenResult(result) {
     }
 }
 
+function updateKioskFullscreenButtonState() {
+    if (!kioskFullscreenButton) {
+        return;
+    }
+
+    kioskFullscreenButton.setAttribute("aria-pressed", String(Boolean(fullscreenElement())));
+}
+
+function hideKioskUnlockModal() {
+    if (!kioskUnlockModal) {
+        return;
+    }
+
+    kioskUnlockModal.hidden = true;
+    kioskUnlockError.hidden = true;
+    kioskUnlockError.textContent = "";
+    kioskUnlockForm.reset();
+}
+
+function showKioskUnlockModal() {
+    if (!kioskUnlockModal) {
+        return;
+    }
+
+    kioskUnlockModal.hidden = false;
+    kioskUnlockError.hidden = true;
+    kioskUnlockError.textContent = "";
+    window.setTimeout(() => {
+        kioskUnlockUsername.focus();
+        kioskUnlockUsername.select();
+    }, 0);
+}
+
+function kioskFullscreenExitAllowed() {
+    if (!fullscreenElement()) {
+        return false;
+    }
+
+    return fullscreenCanExit();
+}
+
+function enterKioskFullscreen() {
+    if (!fullscreenSupported()) {
+        return;
+    }
+
+    handleFullscreenResult(fullscreenRequestHandler().call(fullscreenTarget()));
+}
+
+async function requestKioskFullscreenExit() {
+    const response = await fetch("/admin/fullscreen/validate", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            username: kioskUnlockUsername.value,
+            password: kioskUnlockPassword.value,
+        }),
+    });
+
+    const data = await response.json();
+
+    if (data.success && kioskFullscreenExitAllowed()) {
+        hideKioskUnlockModal();
+        handleFullscreenResult(fullscreenExitHandler().call(document));
+        return true;
+    }
+
+    kioskUnlockError.textContent = kioskUnlockError.dataset.invalidMessage;
+    kioskUnlockError.hidden = false;
+    kioskUnlockPassword.value = "";
+    kioskUnlockPassword.focus();
+    return false;
+}
+
 function toggleKioskFullscreen() {
     if (!fullscreenSupported()) {
         return;
     }
 
     if (fullscreenElement()) {
-        if (!fullscreenCanExit()) {
-            return;
-        }
-
-        handleFullscreenResult(fullscreenExitHandler().call(document));
+        showKioskUnlockModal();
         return;
     }
 
-    handleFullscreenResult(fullscreenRequestHandler().call(fullscreenTarget()));
+    enterKioskFullscreen();
 }
 
 function setupKioskFullscreenButton() {
@@ -69,6 +147,31 @@ function setupKioskFullscreenButton() {
     }
 
     kioskFullscreenButton.addEventListener("click", toggleKioskFullscreen);
+    document.addEventListener("fullscreenchange", updateKioskFullscreenButtonState);
+    document.addEventListener("webkitfullscreenchange", updateKioskFullscreenButtonState);
+    document.addEventListener("msfullscreenchange", updateKioskFullscreenButtonState);
+    updateKioskFullscreenButtonState();
+}
+
+function setupKioskUnlockModal() {
+    if (!kioskUnlockModal) {
+        return;
+    }
+
+    kioskUnlockReturn.addEventListener("click", hideKioskUnlockModal);
+    kioskUnlockForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        requestKioskFullscreenExit().catch(() => {
+            kioskUnlockError.textContent = kioskUnlockError.dataset.invalidMessage;
+            kioskUnlockError.hidden = false;
+        });
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+        if (!fullscreenElement()) {
+            hideKioskUnlockModal();
+        }
+    });
 }
 
 async function loadKioskHomeVersion() {
@@ -94,6 +197,7 @@ async function pollKioskHomeVersion() {
 }
 
 setupKioskFullscreenButton();
+setupKioskUnlockModal();
 
 loadKioskHomeVersion().catch(() => {});
 window.setInterval(() => {
