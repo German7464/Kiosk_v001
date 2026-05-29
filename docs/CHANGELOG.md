@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Stabilized admin event preview thumbnails with fixed internal kiosk and TV compositions across responsive admin layouts.
 - Unified admin event previews around one semantic preview partial, one modal partial, and shared compact/full styling.
 - Refactored admin event previews into a shared Jinja preview partial used by the event list and create/edit forms.
 - Unified admin event preview markup, styles, image handling, and modal behavior across event list and create/edit forms.

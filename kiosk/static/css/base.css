@@ -867,6 +867,7 @@ h1 {
     display: grid;
     gap: 12px;
     min-width: 0;
+    overflow: hidden;
     padding: 16px;
     border: 1px solid rgba(109, 93, 252, 0.16);
     border-radius: 8px;
@@ -886,6 +887,7 @@ h1 {
     font-size: clamp(22px, 2.4vw, 32px);
     line-height: 1.14;
     font-weight: 800;
+    min-width: 0;
 }
 
 .admin-event-preview__open {
@@ -914,22 +916,35 @@ h1 {
 }
 
 .admin-event-preview--kiosk {
+    grid-template-areas:
+        "label"
+        "media"
+        "text"
+        "open";
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
     background:
         linear-gradient(180deg, #ffffff, #f8faff);
 }
 
 .admin-event-preview--tv {
     align-items: stretch;
+    grid-template-areas:
+        "label label"
+        "media text"
+        "media open";
+    grid-template-columns: minmax(132px, 42%) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
     color: #f8fbff;
     background:
         linear-gradient(135deg, rgba(32, 25, 84, 0.96), rgba(37, 99, 235, 0.88));
 }
 
 .admin-event-preview--full.admin-event-preview--tv {
-    grid-template-columns: minmax(160px, 0.95fr) minmax(0, 1.05fr);
+    grid-template-columns: minmax(180px, 42%) minmax(0, 1fr);
 }
 
 .admin-event-preview--compact {
+    gap: 10px;
     min-height: 260px;
     cursor: pointer;
     text-align: left;
@@ -937,13 +952,11 @@ h1 {
 }
 
 .admin-event-preview--compact.admin-event-preview--kiosk {
-    grid-template-rows: auto minmax(150px, 1fr) auto auto;
+    min-height: 300px;
 }
 
 .admin-event-preview--compact.admin-event-preview--tv {
-    grid-template-columns: minmax(130px, 0.9fr) minmax(0, 1.1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    min-height: 230px;
+    min-height: 240px;
 }
 
 .admin-event-preview--tv .admin-event-preview__label,
@@ -953,10 +966,16 @@ h1 {
     background: rgba(255, 255, 255, 0.16);
 }
 
+.admin-event-preview__label {
+    grid-area: label;
+}
+
 .admin-event-preview__text {
     display: grid;
     gap: 8px;
+    grid-area: text;
     min-width: 0;
+    overflow: hidden;
 }
 
 .admin-event-preview--tv .admin-event-preview__text {
@@ -989,6 +1008,26 @@ h1 {
     font-size: clamp(20px, 2.2vw, 28px);
 }
 
+.admin-event-preview--compact .admin-event-preview__title,
+.admin-event-preview--compact .admin-event-preview__description,
+.admin-event-preview--compact .admin-event-preview__place {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+}
+
+.admin-event-preview--compact .admin-event-preview__title {
+    -webkit-line-clamp: 2;
+}
+
+.admin-event-preview--compact .admin-event-preview__description {
+    -webkit-line-clamp: 3;
+}
+
+.admin-event-preview--compact .admin-event-preview__place {
+    -webkit-line-clamp: 2;
+}
+
 .admin-event-preview--tv p {
     color: #e6edff;
 }
@@ -1002,6 +1041,7 @@ h1 {
 .admin-event-preview__media {
     display: grid;
     place-items: center;
+    grid-area: media;
     aspect-ratio: 4 / 3;
     min-width: 0;
     min-height: 160px;
@@ -1016,11 +1056,12 @@ h1 {
 }
 
 .admin-event-preview--compact .admin-event-preview__media {
+    width: 100%;
     min-height: 120px;
 }
 
 .admin-event-preview--compact.admin-event-preview--tv .admin-event-preview__media {
-    grid-row: 2 / 4;
+    aspect-ratio: 16 / 9;
     min-height: 160px;
     background:
         linear-gradient(135deg, rgba(109, 93, 252, 0.38), rgba(14, 165, 233, 0.28)),
@@ -1028,6 +1069,11 @@ h1 {
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
+}
+
+.admin-event-preview--full.admin-event-preview--tv .admin-event-preview__media {
+    aspect-ratio: 16 / 9;
+    min-height: 180px;
 }
 
 .admin-event-preview__media img {
@@ -1050,6 +1096,10 @@ h1 {
 
 .admin-event-preview--tv .admin-event-preview__media span {
     color: rgba(248, 251, 255, 0.8);
+}
+
+.admin-event-preview__open {
+    grid-area: open;
 }
 
 .admin-event-preview__placeholder {
@@ -2287,7 +2337,6 @@ textarea {
     .admin-events-header,
     .admin-event-card-body,
     .admin-event-form-preview-grid,
-    .admin-event-preview--full.admin-event-preview--tv,
     .admin-event-preview-modal__card--tv,
     .admin-event-preview-modal__card {
         grid-template-columns: 1fr;
