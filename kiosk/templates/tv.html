@@ -3,7 +3,7 @@
 {% block title %}{{ t("preview.tv") }}{% endblock %}
 
 {% block content %}
-<section class="tv-screen"
+<section class="tv-screen{% if not has_active_events %} tv-screen--empty{% endif %}"
     data-slide-duration="{{ (settings.tv_slide_duration|int) * 1000 }}"
     data-version-poll-interval="10000"
     data-update-delay-max="10000"
@@ -13,9 +13,9 @@
     data-place-placeholder="{{ t('common.place_to_be_announced') }}"
     data-description-placeholder="{{ t('common.no_description') }}"
     data-image-area="{{ t('common.image_area') }}">
-    <div class="tv-system-name">System: {{ settings.site_title }}</div>
+    <div class="tv-system-name">{{ settings.site_title }}</div>
     <div class="tv-version" data-tv-version>{{ t("common.version_loading") }}</div>
-    <article class="tv-card" data-tv-card>
+    <article class="tv-card" data-tv-card {% if not has_active_events %}hidden{% endif %}>
         <div class="tv-image-area" data-tv-image>
             <span>{{ t("common.image_area") }}</span>
         </div>
@@ -26,7 +26,7 @@
             <p class="tv-description" data-tv-description>{{ t("tv.ready_description") }}</p>
         </div>
     </article>
-    <div class="tv-empty-state" data-tv-empty-state hidden>
+    <div class="tv-empty-state" data-tv-empty-state {% if has_active_events %}hidden{% endif %}>
         <p class="label">{{ t("tv.no_active_events") }}</p>
         <h1>{{ t("tv.empty_title") }}</h1>
         <p>{{ t("tv.empty_description") }}</p>

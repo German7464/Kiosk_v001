@@ -80,7 +80,17 @@ def create_app(config_overrides=None):
 
     @app.get("/tv")
     def tv():
-        return render_template("tv.html", settings=system_settings())
+        database = get_database()
+        row = database.execute(
+            """
+            SELECT 1
+            FROM events
+            WHERE status = ?
+            LIMIT 1
+            """,
+            ("active",),
+        ).fetchone()
+        return render_template("tv.html", settings=system_settings(), has_active_events=row is not None)
 
     @app.get("/preview")
     def preview():

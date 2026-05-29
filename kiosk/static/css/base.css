@@ -677,6 +677,22 @@ h1 {
     font-size: 12px;
 }
 
+.tv-screen--empty {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+}
+
+.tv-screen--empty .tv-card {
+    display: none;
+}
+
+.tv-screen--empty .tv-empty-state {
+    width: min(100%, 900px);
+    min-height: auto;
+    margin: 0;
+}
+
 .tv-fullscreen-button {
     position: absolute;
     right: 18px;
@@ -926,16 +942,18 @@ h1 {
 }
 
 .admin-event-preview__open {
-    min-height: 44px;
+    min-height: 40px;
     justify-self: start;
-    padding: 0 16px;
-    border: 0;
+    padding: 0 14px;
+    border: 1px solid rgba(109, 93, 252, 0.24);
     border-radius: 8px;
-    color: #ffffff;
-    background: linear-gradient(135deg, var(--violet), var(--blue));
+    color: var(--violet-dark);
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 4px 12px rgba(45, 55, 100, 0.06);
     font: inherit;
     font-weight: 800;
     cursor: pointer;
+    transition: background 180ms ease, border-color 180ms ease, color 180ms ease, opacity 180ms ease;
 }
 
 .admin-event-preview__label {
@@ -994,8 +1012,7 @@ h1 {
     min-height: 240px;
 }
 
-.admin-event-preview--tv .admin-event-preview__label,
-.admin-event-preview--full.admin-event-preview--tv .admin-event-preview__open {
+.admin-event-preview--tv .admin-event-preview__label {
     grid-column: 1 / -1;
     color: #ffffff;
     background: rgba(255, 255, 255, 0.16);
@@ -1135,6 +1152,13 @@ h1 {
 
 .admin-event-preview__open {
     grid-area: open;
+}
+
+.admin-event-preview__open:hover,
+.admin-event-preview__open:focus-visible {
+    border-color: rgba(109, 93, 252, 0.38);
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--violet);
 }
 
 .admin-event-preview__placeholder {

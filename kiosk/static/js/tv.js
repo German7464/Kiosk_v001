@@ -103,6 +103,10 @@ function setupTvFullscreenButton() {
     updateFullscreenButtonState();
 }
 
+function setTvEmptyMode(isEmpty) {
+    tvScreen.classList.toggle("tv-screen--empty", isEmpty);
+}
+
 function eventTextLength(event) {
     return [event.title, event.short_description, event.place]
         .filter(Boolean)
@@ -187,11 +191,13 @@ function applyTvData(versionData, eventsData, showCurrentEvent) {
         window.clearTimeout(slideTimer);
         tvCard.hidden = true;
         tvEmptyState.hidden = false;
+        setTvEmptyMode(true);
         return;
     }
 
     tvCard.hidden = false;
     tvEmptyState.hidden = true;
+    setTvEmptyMode(false);
 
     if (currentEvent) {
         const nextIndex = tvEvents.findIndex((event) => event.id === currentEvent.id);
@@ -256,6 +262,7 @@ loadTvDisplay().catch(() => {
     tvVersion.textContent = labels.versionUnavailable;
     tvCard.hidden = true;
     tvEmptyState.hidden = false;
+    setTvEmptyMode(true);
 });
 window.setInterval(() => {
     pollTvVersion().catch(() => {
