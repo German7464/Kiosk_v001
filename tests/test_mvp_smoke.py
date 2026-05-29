@@ -1,5 +1,6 @@
 import io
 import json
+import os
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -10,6 +11,7 @@ from PIL import Image
 from werkzeug.security import check_password_hash
 
 from kiosk.app import create_app
+from kiosk.config import load_or_create_secret_key
 from kiosk.database import get_database
 from kiosk.server import find_clientkiosk_executable, launch_clientkiosk, local_server_is_ready, reset_admin_password, reset_admin_password_command, startup_launch_lines, startup_message, run_waitress_with_launcher
 from serve import parse_args
@@ -196,6 +198,54 @@ class MvpSmokeTests(unittest.TestCase):
         self.assertIn("ClientKiosk.exe was not found.", joined_lines)
         self.assertIn("Default browser could not be opened.", joined_lines)
         self.assertIn("Open this URL manually: http://127.0.0.1:5000/kiosk", joined_lines)
+
+    def test_runtime_secret_key_is_persistent_and_overridable(self):
+        runtime_root = self.test_root / "runtime-secret"
+        runtime_instance = runtime_root / "instance"
+        runtime_static = runtime_root / "static"
+        runtime_config = {
+            "TESTING": True,
+            "BASE_DIR": runtime_root,
+            "INSTANCE_DIR": runtime_instance,
+            "DATABASE_PATH": runtime_instance / "kiosk.sqlite",
+            "PRIVATE_UPLOAD_DIR": runtime_instance / "uploads",
+            "PUBLIC_UPLOAD_DIR": runtime_static / "uploads",
+            "STATIC_FOLDER": runtime_static,
+        }
+
+        runtime_app = create_app(runtime_config)
+        secret_path = runtime_instance / "secret_key.txt"
+        self.assertTrue(runtime_app.config["SECRET_KEY"])
+        self.assertNotEqual(runtime_app.config["SECRET_KEY"], "dev")
+        self.assertTrue(secret_path.is_file())
+        self.assertEqual(secret_path.read_text(encoding="utf-8").strip(), runtime_app.config["SECRET_KEY"])
+
+        restarted_app = create_app(runtime_config)
+        self.assertEqual(restarted_app.config["SECRET_KEY"], runtime_app.config["SECRET_KEY"])
+
+        with patch.dict(os.environ, {"KIOSK_SECRET_KEY": "environment-test-secret"}):
+            self.assertEqual(load_or_create_secret_key(runtime_instance), "environment-test-secret")
+            environment_app = create_app(runtime_config)
+
+        self.assertEqual(environment_app.config["SECRET_KEY"], "environment-test-secret")
+        self.assertEqual(secret_path.read_text(encoding="utf-8").strip(), runtime_app.config["SECRET_KEY"])
+
+        explicit_secret_root = self.test_root / "explicit-secret"
+        explicit_instance = explicit_secret_root / "instance"
+        explicit_app = create_app(
+            {
+                "TESTING": True,
+                "BASE_DIR": explicit_secret_root,
+                "INSTANCE_DIR": explicit_instance,
+                "DATABASE_PATH": explicit_instance / "kiosk.sqlite",
+                "PRIVATE_UPLOAD_DIR": explicit_instance / "uploads",
+                "PUBLIC_UPLOAD_DIR": explicit_secret_root / "static" / "uploads",
+                "STATIC_FOLDER": explicit_secret_root / "static",
+                "SECRET_KEY": "test",
+            }
+        )
+        self.assertEqual(explicit_app.config["SECRET_KEY"], "test")
+        self.assertFalse((explicit_instance / "secret_key.txt").exists())
 
     def test_kiosk_fullscreen_unlock_uses_current_admin_credentials(self):
         self.login()

@@ -31,7 +31,7 @@ run.py
 - `templates` contains HTML templates only.
 - `static` contains CSS, JavaScript, uploaded public assets, and interface assets.
 - `database.py` contains database connection and initialization helpers when SQLite work begins.
-- `instance` contains local runtime data such as the SQLite database when database work begins.
+- `instance` contains local runtime data such as the SQLite database, private uploaded originals, and the persistent Flask session secret.
 - `logs` contains local application logs when logging work begins.
 - `translations` contains interface translation files.
 - Business logic must not be placed inside templates.

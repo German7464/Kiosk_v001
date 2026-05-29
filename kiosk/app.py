@@ -1,6 +1,6 @@
 from flask import Flask, render_template, send_from_directory
 
-from kiosk.config import Config
+from kiosk.config import Config, load_or_create_secret_key
 from kiosk.core.i18n import translate
 from kiosk.database import close_database, get_database, initialize_database
 from kiosk.features.admin import admin_blueprint
@@ -20,6 +20,8 @@ def create_app(config_overrides=None):
             app.config["STATIC_DIR"] = config_overrides["STATIC_FOLDER"]
         if "RESOURCE_STATIC_DIR" not in config_overrides:
             app.config["RESOURCE_STATIC_DIR"] = Config.RESOURCE_STATIC_DIR
+    if not app.config.get("SECRET_KEY"):
+        app.config["SECRET_KEY"] = load_or_create_secret_key(app.config["INSTANCE_DIR"])
     app.teardown_appcontext(close_database)
     initialize_database(app)
     app.register_blueprint(admin_blueprint)

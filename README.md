@@ -144,6 +144,7 @@ dist/Kiosk_v001/Kiosk_v001.exe
 ```
 
 The EXE starts the Waitress server and prints the kiosk URL. Runtime data stays outside the executable in the output folder, including `instance/kiosk.sqlite`, `instance/uploads/`, and `kiosk/static/uploads/`.
+The Flask session secret is also stored as external runtime data in `instance/secret_key.txt` unless `KIOSK_SECRET_KEY` is set in the environment.
 
 Do not commit generated packaging or runtime data:
 
