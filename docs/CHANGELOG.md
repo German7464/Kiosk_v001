@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Fixed the kiosk-events inactivity warning so it renders translated text from the current interface language instead of the raw translation key.
 - Simplified the kiosk-events inactivity warning to show a large countdown and translated touch-to-continue text without raw translation keys.
 - Added an admin home link to the preview page and a 2-minute kiosk-events inactivity warning with a 30-second countdown.
 - Added automatic ClientKiosk.exe startup support with browser fallback and a `--no-client` disable switch for production startup.
