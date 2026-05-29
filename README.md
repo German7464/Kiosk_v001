@@ -50,7 +50,7 @@ Waitress mode for local production-style testing:
 python serve.py
 ```
 
-By default, `python serve.py` and the packaged `Kiosk_v001.exe` start the server and then try to launch `ClientKiosk.exe` from the same folder. If `ClientKiosk.exe` is missing or fails, the launcher falls back to the default browser and still keeps the server running.
+By default, `python serve.py` and the packaged `Kiosk_v001.exe` bind to `0.0.0.0`, start the server, and then try to launch `ClientKiosk.exe` from the same folder. If `ClientKiosk.exe` is missing or fails, the launcher falls back to the default browser and still keeps the server running.
 
 Disable automatic client and browser launching when you only want the server:
 
@@ -85,6 +85,8 @@ python serve.py --host 192.168.1.117
 python serve.py --port 5000
 python serve.py --host 0.0.0.0 --port 5000
 ```
+
+Use `python serve.py --host 127.0.0.1` when you need local-only startup.
 
 Waitress mode prints active local URLs for:
 

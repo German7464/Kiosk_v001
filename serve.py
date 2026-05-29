@@ -6,7 +6,7 @@ from kiosk.server import reset_admin_password_command, run_waitress_with_launche
 
 def build_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default=Config.SERVER_HOST)
+    parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=Config.SERVER_PORT)
     parser.add_argument("--no-client", action="store_true")
     open_group = parser.add_mutually_exclusive_group()
