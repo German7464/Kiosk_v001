@@ -97,6 +97,7 @@
     "kiosk.home_description": "Browse current event information on a large touch screen in a simple local kiosk mode.",
     "kiosk.home_heading": "Welcome to the event kiosk",
     "kiosk.home_label": "Event information system",
+    "kiosk.fullscreen_enter": "Open kiosk fullscreen",
     "kiosk.open_events": "Open events",
     "preview.admin": "Open admin",
     "preview.kiosk": "Open kiosk",

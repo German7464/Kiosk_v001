@@ -97,6 +97,7 @@
     "kiosk.home_description": "Durchsuchen Sie aktuelle Veranstaltungsinformationen auf einem großen Touchscreen im lokalen Kioskmodus.",
     "kiosk.home_heading": "Willkommen am Veranstaltungskiosk",
     "kiosk.home_label": "Informationssystem für Veranstaltungen",
+    "kiosk.fullscreen_enter": "Kiosk im Vollbild öffnen",
     "kiosk.open_events": "Veranstaltungen öffnen",
     "preview.admin": "Admin öffnen",
     "preview.kiosk": "Kiosk öffnen",

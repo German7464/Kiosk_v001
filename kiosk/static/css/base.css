@@ -693,6 +693,7 @@ h1 {
     margin: 0;
 }
 
+.kiosk-fullscreen-button,
 .tv-fullscreen-button {
     position: absolute;
     right: 18px;
@@ -717,6 +718,8 @@ h1 {
     transition: opacity 180ms ease, background 180ms ease, color 180ms ease;
 }
 
+.kiosk-fullscreen-button:hover,
+.kiosk-fullscreen-button:focus-visible,
 .tv-fullscreen-button:hover,
 .tv-fullscreen-button:focus-visible {
     color: #ffffff;
@@ -724,6 +727,7 @@ h1 {
     opacity: 0.88;
 }
 
+.kiosk-fullscreen-button[hidden],
 .tv-fullscreen-button[hidden] {
     display: none;
 }

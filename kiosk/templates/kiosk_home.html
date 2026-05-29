@@ -24,6 +24,13 @@
         </p>
         <a class="primary-action" href="/kiosk/events">{{ t("kiosk.open_events") }}</a>
     </div>
+    <button
+        class="kiosk-fullscreen-button"
+        type="button"
+        data-kiosk-fullscreen
+        data-fullscreen-enter="{{ t('kiosk.fullscreen_enter') }}"
+        aria-label="{{ t('kiosk.fullscreen_enter') }}"
+        title="{{ t('kiosk.fullscreen_enter') }}">&#x26F6;</button>
 </section>
 {% endblock %}
 

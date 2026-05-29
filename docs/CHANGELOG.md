@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Added a subtle fullscreen button to the kiosk home screen.
 - Added local fullscreen launcher modes for kiosk and TV with duplicate-server reuse on the configured local port.
 - Added LAN startup support for `serve.py` and packaged EXE startup arguments with local and LAN URL output.
 - Fixed the TV empty state so it renders cleanly without a stretched hidden event card and removed the visible system badge prefix.
