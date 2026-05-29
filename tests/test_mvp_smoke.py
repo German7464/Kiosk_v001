@@ -316,6 +316,7 @@ class MvpSmokeTests(unittest.TestCase):
             self.assertIn("kiosk.inactivity_warning_text", translation_text)
             self.assertNotIn("kiosk.inactivity_warning_message", translation_text)
             self.assertNotIn("kiosk.inactivity_warning_touch", translation_text)
+            self.assertNotIn("kiosk.inactivity_warning_title", translation_text)
 
     def test_settings_flow_increases_content_version(self):
         self.login()
@@ -341,6 +342,114 @@ class MvpSmokeTests(unittest.TestCase):
 
         self.assertEqual(settings["site_title"], "Smoke Test Kiosk")
         self.assertEqual(settings["interface_language"], "ru")
+
+    def test_admin_preview_link_translations_and_no_raw_keys(self):
+        self.login()
+        response = self.client.get("/admin")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('href="/preview"', html)
+        self.assertIn(">Preview<", html)
+        self.assertNotIn("admin.preview", html)
+        self.assertNotIn("???", html)
+
+        save_ru = self.client.post(
+            "/admin/settings",
+            data={
+                "site_title": "Smoke Test Kiosk",
+                "interface_language": "ru",
+                "kiosk_label": "",
+                "kiosk_heading": "",
+                "kiosk_description": "",
+            },
+        )
+        self.assertEqual(save_ru.status_code, 302)
+        ru_html = self.client.get("/admin").get_data(as_text=True)
+        self.assertIn('href="/preview"', ru_html)
+        self.assertIn("Предпросмотр", ru_html)
+        self.assertNotIn("admin.preview", ru_html)
+        self.assertNotIn("???", ru_html)
+
+    def test_kiosk_settings_texts_and_language_switch(self):
+        self.login()
+        saved = self.client.post(
+            "/admin/settings",
+            data={
+                "site_title": "Smoke Site",
+                "interface_language": "ru",
+                "kiosk_label": "Тестовая метка",
+                "kiosk_heading": "Тестовый заголовок",
+                "kiosk_description": "Тестовое описание",
+            },
+        )
+        self.assertEqual(saved.status_code, 302)
+
+        kiosk_html = self.client.get("/kiosk").get_data(as_text=True)
+        self.assertIn("Тестовая метка", kiosk_html)
+        self.assertIn("Тестовый заголовок", kiosk_html)
+        self.assertIn("Тестовое описание", kiosk_html)
+
+        with self.app.app_context():
+            rows = get_database().execute(
+                "SELECT key, value FROM settings WHERE key IN (?, ?, ?, ?)",
+                ("interface_language", "kiosk_label", "kiosk_heading", "kiosk_description"),
+            ).fetchall()
+            values = {row["key"]: row["value"] for row in rows}
+
+        self.assertEqual(values["interface_language"], "ru")
+        self.assertEqual(values["kiosk_label"], "Тестовая метка")
+        self.assertEqual(values["kiosk_heading"], "Тестовый заголовок")
+        self.assertEqual(values["kiosk_description"], "Тестовое описание")
+
+        self.assertEqual(
+            self.client.post(
+                "/admin/settings",
+                data={"site_title": "Smoke Site", "interface_language": "en", "kiosk_label": "", "kiosk_heading": "", "kiosk_description": ""},
+            ).status_code,
+            302,
+        )
+        self.assertEqual(
+            self.client.post(
+                "/admin/settings",
+                data={"site_title": "Smoke Site", "interface_language": "de", "kiosk_label": "", "kiosk_heading": "", "kiosk_description": ""},
+            ).status_code,
+            302,
+        )
+
+        with self.app.app_context():
+            language = get_database().execute(
+                "SELECT value FROM settings WHERE key = ?",
+                ("interface_language",),
+            ).fetchone()["value"]
+        self.assertEqual(language, "de")
+
+    def test_system_icon_upload_saves_setting_and_public_icon(self):
+        self.login()
+        response = self.client.post(
+            "/admin/settings",
+            data={
+                "site_title": "Icon Smoke",
+                "interface_language": "en",
+                "kiosk_label": "",
+                "kiosk_heading": "",
+                "kiosk_description": "",
+                "site_icon": (self.create_image_file(), "icon.png"),
+            },
+            content_type="multipart/form-data",
+        )
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            row = get_database().execute(
+                "SELECT value FROM settings WHERE key = ?",
+                ("site_icon",),
+            ).fetchone()
+
+        self.assertIsNotNone(row)
+        self.assertTrue(row["value"].startswith("/static/uploads/icons/"))
+        icon_relative_path = row["value"].removeprefix("/static/")
+        self.assertTrue((self.static_dir / icon_relative_path).is_file())
 
     def test_admin_password_reset_uses_temporary_database(self):
         temporary_password = reset_admin_password(self.app)
@@ -442,6 +551,8 @@ class MvpSmokeTests(unittest.TestCase):
 
     def assert_image_outputs_exist(self, event):
         self.assertTrue((self.test_root / event["image_original"]).is_file())
+        original_name = Path(event["image_original"]).name
+        self.assertEqual(self.client.get(f"/static/uploads/events/original/{original_name}").status_code, 404)
 
         for key in ("image_kiosk", "image_tv", "image_thumb"):
             image_path = event[key].removeprefix("/static/")

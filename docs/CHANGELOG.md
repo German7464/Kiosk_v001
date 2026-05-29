@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Strengthened MVP regression smoke tests for admin preview localization, kiosk fullscreen unlock validation, kiosk settings text persistence, language switching, startup launcher safeguards, API visibility, and icon/image output checks.
 - Changed the default production startup host to `0.0.0.0` so `python serve.py` and the packaged EXE are LAN-accessible by default.
 - Simplified the kiosk-events inactivity warning to show a large countdown and translated touch-to-continue text without raw translation keys.
 - Added an admin home link to the preview page and a 2-minute kiosk-events inactivity warning with a 30-second countdown.
