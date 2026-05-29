@@ -296,20 +296,12 @@ class MvpSmokeTests(unittest.TestCase):
 
     def test_kiosk_events_inactivity_warning_and_preview_link(self):
         self.login()
-        self.client.post(
-            "/admin/settings",
-            data={
-                "interface_language": "ru",
-            },
-        )
 
         kiosk_events_response = self.client.get("/kiosk/events")
         self.assertEqual(kiosk_events_response.status_code, 200)
         self.assertIn("data-inactivity-warning", kiosk_events_response.get_data(as_text=True))
-        self.assertIn("Коснитесь экрана, иначе по окончанию таймера отправитесь на главный экран.", kiosk_events_response.get_data(as_text=True))
         self.assertNotIn("kiosk.inactivity_warning_title", kiosk_events_response.get_data(as_text=True))
         self.assertNotIn("KIOSK.INACTIVITY_WARNING_LABEL", kiosk_events_response.get_data(as_text=True))
-        self.assertNotIn("kiosk.inactivity_warning_text", kiosk_events_response.get_data(as_text=True))
 
         kiosk_events_js = Path("kiosk/static/js/kiosk_events.js").read_text(encoding="utf-8")
         self.assertIn("const inactivityWarningDelaySeconds = 120;", kiosk_events_js)

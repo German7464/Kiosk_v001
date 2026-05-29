@@ -54,7 +54,7 @@ function updateInactivityWarningCountdown() {
     }
 
     if (inactivityWarningMessage) {
-        inactivityWarningMessage.textContent = inactivityWarningMessage.dataset.warningText || inactivityWarningMessage.textContent;
+        inactivityWarningMessage.textContent = inactivityWarningMessage.dataset.warningTemplate;
     }
 
     if (secondsLeft <= 0) {
