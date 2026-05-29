@@ -602,6 +602,53 @@ h1 {
     gap: 12px;
 }
 
+.kiosk-inactivity-warning {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(22, 28, 50, 0.46);
+    backdrop-filter: blur(6px);
+}
+
+.kiosk-inactivity-warning[hidden] {
+    display: none;
+}
+
+.kiosk-inactivity-warning__panel {
+    width: min(100%, 760px);
+    padding: clamp(24px, 4vw, 38px);
+    border: 1px solid rgba(109, 93, 252, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+.kiosk-inactivity-warning__panel h2 {
+    margin: 0;
+    font-size: clamp(30px, 4vw, 54px);
+    line-height: 1.08;
+}
+
+.kiosk-inactivity-warning__message,
+.kiosk-inactivity-warning__touch {
+    margin: 14px 0 0;
+    font-size: clamp(20px, 2.4vw, 28px);
+    line-height: 1.35;
+}
+
+.kiosk-inactivity-warning__message {
+    color: var(--violet-dark);
+    font-weight: 800;
+}
+
+.kiosk-inactivity-warning__touch {
+    color: var(--muted);
+}
+
 .modal-tag {
     padding: 15px 19px;
     border: 1px solid rgba(109, 93, 252, 0.16);

@@ -64,7 +64,9 @@ class MvpSmokeTests(unittest.TestCase):
 
         login = self.login()
         self.assertEqual(login.status_code, 302)
-        self.assertEqual(self.client.get("/admin").status_code, 200)
+        admin_response = self.client.get("/admin")
+        self.assertEqual(admin_response.status_code, 200)
+        self.assertIn('href="/preview"', admin_response.get_data(as_text=True))
 
         logout = self.client.post("/admin/logout")
         self.assertEqual(logout.status_code, 302)
@@ -291,6 +293,20 @@ class MvpSmokeTests(unittest.TestCase):
 
         self.assertEqual(self.client.post(f"/admin/events/{event_id}/delete").status_code, 302)
         self.assertEqual(self.client.get(f"/api/events/{event_id}").status_code, 404)
+
+    def test_kiosk_events_inactivity_warning_and_preview_link(self):
+        self.login()
+
+        kiosk_events_response = self.client.get("/kiosk/events")
+        self.assertEqual(kiosk_events_response.status_code, 200)
+        self.assertIn("data-inactivity-warning", kiosk_events_response.get_data(as_text=True))
+
+        kiosk_events_js = Path("kiosk/static/js/kiosk_events.js").read_text(encoding="utf-8")
+        self.assertIn("const inactivityWarningDelaySeconds = 120;", kiosk_events_js)
+        self.assertIn("const inactivityWarningCountdownSeconds = 30;", kiosk_events_js)
+        self.assertIn('window.location.href = "/kiosk";', kiosk_events_js)
+        self.assertIn("hideInactivityWarning", kiosk_events_js)
+        self.assertIn("resetInactivityTimer", kiosk_events_js)
 
     def test_settings_flow_increases_content_version(self):
         self.login()

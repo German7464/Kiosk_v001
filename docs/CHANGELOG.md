@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Added an admin home link to the preview page and a 2-minute kiosk-events inactivity warning with a 30-second countdown.
 - Added automatic ClientKiosk.exe startup support with browser fallback and a `--no-client` disable switch for production startup.
 - Protected kiosk fullscreen exit with a current-admin credential modal.
 - Added a subtle fullscreen button to the kiosk home screen.

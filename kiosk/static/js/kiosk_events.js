@@ -11,7 +11,10 @@ const openTagsButton = document.querySelector("[data-open-tags]");
 const closeTagsButton = document.querySelector("[data-close-tags]");
 const contentVersion = document.querySelector("[data-content-version]");
 const allEventsButton = document.querySelector("[data-tag-filter='all']");
-const inactivitySeconds = Number(eventsScreen.dataset.inactivitySeconds);
+const inactivityWarning = document.querySelector("[data-inactivity-warning]");
+const inactivityWarningMessage = document.querySelector("[data-inactivity-warning-message]");
+const inactivityWarningDelaySeconds = 120;
+const inactivityWarningCountdownSeconds = 30;
 const versionPollInterval = Number(eventsScreen.dataset.versionPollInterval);
 const updateDelayMax = Number(eventsScreen.dataset.updateDelayMax);
 const labels = eventsScreen.dataset;
@@ -21,15 +24,59 @@ let events = [];
 let tags = [];
 let currentEventIndex = 0;
 let inactivityTimer = null;
+let inactivityWarningTimer = null;
+let inactivityCountdownTimer = null;
+let inactivityWarningDeadline = null;
 let currentContentVersion = null;
 let updatePending = false;
 let selectedTagId = "all";
 
+function hideInactivityWarning() {
+    if (!inactivityWarning) {
+        return;
+    }
+
+    inactivityWarning.hidden = true;
+    inactivityWarningDeadline = null;
+    window.clearInterval(inactivityCountdownTimer);
+    inactivityCountdownTimer = null;
+}
+
+function updateInactivityWarningCountdown() {
+    if (!inactivityWarningMessage || inactivityWarningDeadline === null) {
+        return;
+    }
+
+    const secondsLeft = Math.max(0, Math.ceil((inactivityWarningDeadline - Date.now()) / 1000));
+    inactivityWarningMessage.textContent = inactivityWarningMessage.dataset.warningTemplate.replace("{seconds}", String(secondsLeft));
+
+    if (secondsLeft <= 0) {
+        window.location.href = "/kiosk";
+    }
+}
+
+function showInactivityWarning() {
+    if (!inactivityWarning || !inactivityWarningMessage) {
+        return;
+    }
+
+    inactivityWarning.hidden = false;
+    inactivityWarningDeadline = Date.now() + (inactivityWarningCountdownSeconds * 1000);
+    updateInactivityWarningCountdown();
+    window.clearInterval(inactivityCountdownTimer);
+    inactivityCountdownTimer = window.setInterval(updateInactivityWarningCountdown, 1000);
+}
+
 function resetInactivityTimer() {
     window.clearTimeout(inactivityTimer);
+    window.clearTimeout(inactivityWarningTimer);
+    hideInactivityWarning();
     inactivityTimer = window.setTimeout(() => {
-        window.location.href = "/kiosk";
-    }, inactivitySeconds * 1000);
+        showInactivityWarning();
+        inactivityWarningTimer = window.setTimeout(() => {
+            window.location.href = "/kiosk";
+        }, inactivityWarningCountdownSeconds * 1000);
+    }, inactivityWarningDelaySeconds * 1000);
 }
 
 function createTextElement(tagName, className, text) {

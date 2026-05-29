@@ -11,6 +11,7 @@
         <a href="{{ url_for('admin.admin_events') }}">{{ t("admin.manage_events") }}</a>
         <a href="{{ url_for('admin.admin_tags') }}">{{ t("admin.manage_tags") }}</a>
         <a href="{{ url_for('admin.admin_settings') }}">{{ t("admin.system_settings") }}</a>
+        <a href="{{ url_for('preview') }}">{{ t("admin.preview") }}</a>
         <a href="{{ url_for('admin.change_password') }}">{{ t("admin.change_password") }}</a>
         <form method="post" action="{{ url_for('admin.logout') }}">
             <button type="submit">{{ t("admin.logout") }}</button>

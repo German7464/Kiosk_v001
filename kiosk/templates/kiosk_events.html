@@ -4,7 +4,7 @@
 
 {% block content %}
 <section class="events-screen"
-    data-inactivity-seconds="60"
+    data-inactivity-seconds="120"
     data-version-poll-interval="5000"
     data-update-delay-max="10000"
     data-version-label="{{ t('common.version') }}"
@@ -47,6 +47,15 @@
         <div class="card-counter" data-card-counter>0 / 0</div>
         <button class="nav-button" type="button" data-next-event>{{ t("common.next") }}</button>
     </footer>
+
+    <div class="kiosk-inactivity-warning" data-inactivity-warning hidden>
+        <div class="kiosk-inactivity-warning__panel" role="status" aria-live="polite">
+            <p class="label">{{ t("kiosk.inactivity_warning_label") }}</p>
+            <h2>{{ t("kiosk.inactivity_warning_title") }}</h2>
+            <p class="kiosk-inactivity-warning__message" data-inactivity-warning-message data-warning-template="{{ t('kiosk.inactivity_warning_message') }}"></p>
+            <p class="kiosk-inactivity-warning__touch">{{ t("kiosk.inactivity_warning_touch") }}</p>
+        </div>
+    </div>
 
     <div class="tags-modal" data-tags-modal hidden>
         <div class="tags-modal-panel" role="dialog" aria-modal="true" aria-labelledby="tags-modal-title">
