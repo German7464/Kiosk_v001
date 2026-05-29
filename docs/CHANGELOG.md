@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Removed verified unused legacy admin event CSS blocks from the shared stylesheet.
 - Added persistent runtime Flask secret key handling with `KIOSK_SECRET_KEY` override support and temporary-runtime regression coverage.
 - Strengthened MVP regression smoke tests for admin preview localization, kiosk fullscreen unlock validation, kiosk settings text persistence, language switching, startup launcher safeguards, API visibility, and icon/image output checks.
 - Changed the default production startup host to `0.0.0.0` so `python serve.py` and the packaged EXE are LAN-accessible by default.

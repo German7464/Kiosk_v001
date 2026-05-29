@@ -1427,11 +1427,6 @@ h1 {
     font-weight: 800;
 }
 
-.admin-event-list {
-    display: grid;
-    gap: 16px;
-}
-
 .admin-tag-list {
     display: grid;
     gap: 14px;
@@ -1482,39 +1477,6 @@ h1 {
     hyphens: auto;
 }
 
-.admin-event-row {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 20px;
-    padding: 22px;
-    border: 1px solid rgba(109, 93, 252, 0.14);
-    border-radius: 8px;
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 255, 0.95));
-    box-shadow: 0 12px 30px rgba(45, 55, 100, 0.08);
-}
-
-.admin-event-thumb,
-.admin-event-thumb-placeholder {
-    width: 148px;
-    height: 96px;
-    border-radius: 8px;
-    background:
-        linear-gradient(135deg, rgba(109, 93, 252, 0.16), rgba(14, 165, 233, 0.12)),
-        #edf2ff;
-}
-
-.admin-event-thumb {
-    object-fit: cover;
-}
-
-.admin-image-preview img {
-    width: min(100%, 340px);
-    border-radius: 8px;
-    background: #edf2ff;
-    box-shadow: var(--shadow-soft);
-}
-
 .admin-icon-preview img {
     width: 104px;
     height: 104px;
@@ -1523,11 +1485,6 @@ h1 {
     border-radius: 8px;
     background: #ffffff;
     box-shadow: var(--shadow-soft);
-}
-
-.admin-event-row h2,
-.admin-event-row p {
-    margin: 0 0 8px;
 }
 
 .admin-row-actions {
@@ -1650,10 +1607,6 @@ h1 {
 }
 
 @media (max-width: 920px) {
-    .admin-event-row {
-        grid-template-columns: 1fr;
-    }
-
     .admin-row-actions {
         justify-content: flex-start;
     }
@@ -1992,7 +1945,6 @@ textarea {
 
 .admin-form,
 .admin-inline-form,
-.admin-event-list,
 .admin-tag-list,
 .admin-checkbox-list {
     min-width: 0;
@@ -2008,28 +1960,6 @@ textarea {
 
 .admin-form textarea {
     resize: vertical;
-}
-
-.admin-event-list {
-    overflow-x: auto;
-    padding-bottom: 4px;
-}
-
-.admin-event-row {
-    width: 100%;
-    min-width: 0;
-    grid-template-columns: minmax(120px, auto) minmax(0, 1fr) minmax(180px, auto);
-}
-
-.admin-event-row > div {
-    min-width: 0;
-}
-
-.admin-event-thumb,
-.admin-event-thumb-placeholder {
-    aspect-ratio: 3 / 2;
-    height: auto;
-    max-width: 148px;
 }
 
 .admin-row-actions form {
@@ -2050,8 +1980,7 @@ textarea {
     min-width: 0;
 }
 
-.admin-icon-preview img,
-.admin-image-preview img {
+.admin-icon-preview img {
     max-width: 100%;
 }
 
@@ -2099,22 +2028,8 @@ textarea {
         justify-content: center;
     }
 
-    .admin-event-list {
-        overflow-x: visible;
-    }
-
-    .admin-event-row {
-        grid-template-columns: 1fr;
-    }
-
     .admin-tag-row {
         grid-template-columns: 1fr;
-    }
-
-    .admin-event-thumb,
-    .admin-event-thumb-placeholder {
-        width: min(100%, 260px);
-        max-width: none;
     }
 }
 
