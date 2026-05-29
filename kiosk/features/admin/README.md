@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provides MVP admin authentication, event management, event image upload, tag management, event tag assignment, system settings management, system icon upload, and interface language selection.
+Provides MVP admin authentication, event management, event image upload, tag management, event tag assignment, system settings management, system icon upload, interface language selection, preview navigation, and current-admin credential validation for protected kiosk fullscreen exit.
 
 ## Related Files
 
@@ -70,7 +70,9 @@ Provides MVP admin authentication, event management, event image upload, tag man
 
 ## Related API Endpoints
 
-- No API endpoints.
+- `POST /admin/fullscreen/validate`
+
+This endpoint is an admin feature JSON validation endpoint, not part of the public read-only display API. It returns only `{"success": true}` or `{"success": false}`.
 
 ## How the Feature Updates Content Version
 
@@ -86,4 +88,4 @@ TV mode receives active events, optimized TV images, and assigned event tags thr
 
 ## How the Feature Is Managed in Admin Panel
 
-The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. Admin actions show translated status messages after successful saves and changes, then hide them automatically after a short delay. Admin event previews use one shared Jinja preview partial, one shared modal partial, and one shared JavaScript modal mechanism for the event list and the create/edit form, with kiosk and TV thumbnail modes, compact and full sizes, stable internal compositions, stable media areas, clean placeholders for missing or broken images, live form text updates, and selected image preview when available. The admin home page includes a direct preview link to `/preview`. It can upload event images and stores originals outside public static folders while exposing optimized kiosk, TV, and thumb versions. It can also list, create, edit, and delete tags with a local search field, then assign or remove tags on events; the event tag assignment page includes a local search field and wraps long tag names safely. It can edit the system title, kiosk home label, kiosk home heading, kiosk home description, interface language setting, and system icon. Interface translations are loaded from JSON files. Translation file management is not implemented in the admin panel. Password recovery is available only from the local command line through `python serve.py --reset-admin-password`; no web reset route is exposed. The kiosk home fullscreen exit prompt validates the current admin username and password through the same password hash logic used by admin login, and it does not use a separate kiosk password.
+The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. Admin actions show translated status messages after successful saves and changes, then hide them automatically after a short delay. Admin event previews use one shared Jinja preview partial, one shared modal partial, and one shared JavaScript modal mechanism for the event list and the create/edit form, with kiosk and TV thumbnail modes, compact and full sizes, stable internal compositions, stable media areas, clean placeholders for missing or broken images, live form text updates, and selected image preview when available. The admin home page includes a direct preview link to `/preview`. It can upload event images and stores originals outside public static folders while exposing optimized kiosk, TV, and thumb versions. It can also list, create, edit, and delete tags with a local search field, then assign or remove tags on events; the event tag assignment page includes a local search field and wraps long tag names safely. It can edit the system title, kiosk home label, kiosk home heading, kiosk home description, interface language setting, and system icon. Interface translations are loaded from JSON files. Translation file management is not implemented in the admin panel. Password recovery is available only from the local command line through `python serve.py --reset-admin-password`; no web reset route is exposed. The kiosk home fullscreen exit prompt validates the current admin username and password through the same password hash logic used by admin login, and it does not create or store a separate fullscreen password.

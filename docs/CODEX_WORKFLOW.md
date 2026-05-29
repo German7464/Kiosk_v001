@@ -20,6 +20,27 @@
 9. Update the related feature `README.md` only for major feature module changes.
 10. Update `docs/CHANGELOG.md` after completed work.
 
+## Audit And Cleanup Work
+
+- Read-only audit stages mean no file changes, no commits, no generated builds, and no formatting commands that edit files.
+- Cleanup stages should handle one small problem type per stage.
+- Do not combine unrelated cleanup items into one commit.
+- If a cleanup candidate is not verified as unused or safe, leave it in place and report it.
+
+## Packaging Work
+
+- Packaging-only stages must not edit source files.
+- If a critical packaging bug is found, stop and report it unless the user explicitly allows a fix.
+- Do not rebuild the EXE unless the stage asks for a PyInstaller build.
+- Do not commit generated `build/`, `dist/`, runtime `instance/`, logs, or uploaded files.
+
+## Checks
+
+- Use Flask test client checks and command-line checks.
+- Do not use in-app browser checks.
+- Do not try to open pages through iab.
+- Keep tests on temporary database and upload folders when possible.
+
 ## Git Rules
 
 Local commits are allowed when requested or when they are part of the task.

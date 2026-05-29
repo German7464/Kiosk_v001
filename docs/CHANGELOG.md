@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Updated project documentation after audit-cleanup work to match the current implemented architecture, startup behavior, tests, and post-MVP additions.
 - Removed verified unused legacy admin event CSS blocks from the shared stylesheet.
 - Added persistent runtime Flask secret key handling with `KIOSK_SECRET_KEY` override support and temporary-runtime regression coverage.
 - Strengthened MVP regression smoke tests for admin preview localization, kiosk fullscreen unlock validation, kiosk settings text persistence, language switching, startup launcher safeguards, API visibility, and icon/image output checks.

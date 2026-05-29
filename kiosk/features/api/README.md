@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provides read-only public JSON endpoints for MVP display clients.
+Provides read-only public JSON endpoints for MVP display clients. Admin changes are handled by admin routes, while display clients consume these endpoints for current content and update polling.
 
 ## Related Files
 
@@ -35,7 +35,7 @@ This feature does not update content version. It only reads the current version 
 
 ## How the Feature Is Shown in Kiosk Mode
 
-Kiosk mode uses `/api/version` every 5 seconds to detect content changes. The kiosk home screen waits a random 0 to 10 second delay, then reloads so editable system text is refreshed. The kiosk events screen waits the same random delay, then refreshes active events and tags through `/api/events` and `/api/tags` without a full page reload.
+Kiosk mode uses `/api/version` every 5 seconds to detect content changes. The kiosk home screen waits a random 0 to 10 second delay, then reloads so editable system text is refreshed. The kiosk events screen waits the same random delay, then refreshes active events and tags through `/api/events` and `/api/tags` without a full page reload. Event responses include optimized image paths for display clients and assigned tag data for kiosk filtering.
 
 ## How the Feature Is Shown in TV Mode
 
@@ -47,4 +47,4 @@ Preview mode uses `/api/version` every 5 seconds to show the current content ver
 
 ## How the Feature Is Managed in Admin Panel
 
-The admin panel manages events and tags through admin routes. This feature only exposes read-only public data.
+The admin panel manages events and tags through admin routes. This feature only exposes read-only public data and does not mutate content version.

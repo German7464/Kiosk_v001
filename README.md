@@ -24,7 +24,7 @@ Only the MVP scope defined in [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md) is allowed.
 
 ## Development Status
 
-The MVP Flask application is implemented with SQLite storage, admin management flows, public display routes, public API endpoints, image processing, translations, responsive layouts, and reusable developer smoke tests.
+The MVP Flask application is implemented with SQLite storage, admin management flows, public display routes, public API endpoints, image processing, translations, responsive layouts, production startup helpers, EXE packaging, and reusable regression smoke tests.
 
 ## Working With This Project
 
@@ -164,4 +164,4 @@ Run the reusable MVP smoke tests before packaging:
 python -m unittest discover -s tests
 ```
 
-The tests use an isolated temporary SQLite database and temporary upload folders. They do not use `instance/kiosk.sqlite`.
+The tests use an isolated temporary SQLite database and temporary upload folders. They do not use `instance/kiosk.sqlite`. Current smoke tests cover core routes plus regression checks for admin preview links, kiosk fullscreen unlock validation, startup helpers, API visibility, settings/content version behavior, runtime secret handling, and image/icon output.
