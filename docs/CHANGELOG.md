@@ -2,6 +2,7 @@
 
 ## 2026-05-29
 
+- Added automatic ClientKiosk.exe startup support with browser fallback and a `--no-client` disable switch for production startup.
 - Protected kiosk fullscreen exit with a current-admin credential modal.
 - Added a subtle fullscreen button to the kiosk home screen.
 - Added local fullscreen launcher modes for kiosk and TV with duplicate-server reuse on the configured local port.

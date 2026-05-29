@@ -50,6 +50,15 @@ Waitress mode for local production-style testing:
 python serve.py
 ```
 
+By default, `python serve.py` and the packaged `Kiosk_v001.exe` start the server and then try to launch `ClientKiosk.exe` from the same folder. If `ClientKiosk.exe` is missing or fails, the launcher falls back to the default browser and still keeps the server running.
+
+Disable automatic client and browser launching when you only want the server:
+
+```bash
+python serve.py --no-client
+Kiosk_v001.exe --no-client
+```
+
 Launcher mode for opening kiosk or TV after startup:
 
 ```bash
@@ -109,6 +118,8 @@ Kiosk_v001.exe --reset-admin-password
 ```
 
 The reset command updates only the stored password hash for `admin`, prints the temporary password once, and then exits. Log in with the temporary password and change it immediately in the admin panel.
+
+To launch the packaged kiosk client automatically, place `ClientKiosk.exe` next to `Kiosk_v001.exe`. If it is not present, the launcher falls back to the default browser. If both launch attempts fail, the server still starts and prints the manual URLs.
 
 ## Building The Windows EXE
 

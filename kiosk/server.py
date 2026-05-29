@@ -5,6 +5,7 @@ import secrets
 import subprocess
 import threading
 import time
+import sys
 import urllib.error
 import urllib.request
 import webbrowser
@@ -28,6 +29,13 @@ def base_url(host, port):
     return f"http://{display_host}:{port}"
 
 
+def runtime_base_directory():
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+
+    return Path(__file__).resolve().parent.parent
+
+
 def active_urls(host, port):
     root = base_url(host, port)
     return [
@@ -44,8 +52,32 @@ def local_api_version_url(port):
     return f"http://127.0.0.1:{port}/api/version"
 
 
-def display_url(port, path):
-    return f"http://127.0.0.1:{port}{path}"
+def display_url(port, path, host="127.0.0.1"):
+    display_host = "127.0.0.1" if host in {"0.0.0.0", ""} else host
+    return f"http://{display_host}:{port}{path}"
+
+
+def launch_host(host):
+    return "127.0.0.1" if host in {"0.0.0.0", ""} else host
+
+
+def clientkiosk_search_directories(base_dir=None):
+    directories = []
+    for directory in (base_dir or runtime_base_directory(), Path.cwd()):
+        resolved = Path(directory).resolve()
+        if resolved not in directories:
+            directories.append(resolved)
+
+    return directories
+
+
+def find_clientkiosk_executable(base_dir=None):
+    for directory in clientkiosk_search_directories(base_dir):
+        candidate = directory / "ClientKiosk.exe"
+        if candidate.is_file():
+            return candidate
+
+    return None
 
 
 def detected_lan_addresses():
@@ -192,15 +224,11 @@ def launch_browser(url, kiosk_mode=False):
     except webbrowser.Error:
         pass
 
-    print(f"Open this URL manually: {url}", flush=True)
     return False
 
 
-def startup_message(app):
-    host = app.config["SERVER_HOST"]
-    port = app.config["SERVER_PORT"]
+def server_information_lines(host, port):
     lines = [
-        "Starting Kiosk_v001 with Waitress",
         f"Bound server: http://{host}:{port}",
         "Local URLs (127.0.0.1):",
         *active_urls("127.0.0.1", port),
@@ -223,29 +251,66 @@ def startup_message(app):
         f"If another device cannot connect, disable VPN, check that both devices are on the same Wi-Fi, and allow TCP port {port} in Windows Firewall."
     )
 
+    return lines
+
+
+def startup_message(app):
+    host = app.config["SERVER_HOST"]
+    port = app.config["SERVER_PORT"]
+    lines = ["Starting Kiosk_v001 with Waitress", *server_information_lines(host, port)]
     return "\n".join(lines)
 
 
-def launch_mode_message(host, port, path, reused):
-    display_name = "kiosk" if path == "/kiosk" else "tv"
-    url = display_url(port, path)
-    lines = []
+def launch_clientkiosk(client_path, host, port, path):
+    client_host = launch_host(host)
+    client_mode = "tv" if path == "/tv" else "kiosk"
+    command = [
+        str(client_path),
+        "--url",
+        display_url(port, path, client_host),
+        "--host",
+        client_host,
+        "--port",
+        str(port),
+        "--mode",
+        client_mode,
+    ]
 
-    if reused:
-        lines.extend(
-            [
-                f"Existing local server detected at {local_api_version_url(port)}",
-                f"Opening {display_name} display at {url}",
-            ]
-        )
+    try:
+        subprocess.Popen(command, close_fds=False, cwd=str(client_path.parent))
+        return True
+    except OSError:
+        return False
+
+
+def startup_launch_lines(host, port, path="/kiosk", auto_launch=True, base_dir=None):
+    url = display_url(port, path, launch_host(host))
+    lines = [
+        f"Automatic kiosk client/browser launch: {'enabled' if auto_launch else 'disabled'}",
+    ]
+
+    if not auto_launch:
+        lines.append("Automatic client/browser launch disabled with --no-client.")
+        lines.append(f"Open this URL manually: {url}")
+        return lines
+
+    client_path = find_clientkiosk_executable(base_dir)
+
+    if client_path is not None:
+        lines.append(f"ClientKiosk.exe found: {client_path}")
+        if launch_clientkiosk(client_path, host, port, path):
+            lines.append(f"ClientKiosk.exe launched: {client_path}")
+            return lines
+        lines.append("ClientKiosk.exe failed to launch.")
     else:
-        lines.append(f"Opening {display_name} display at {url}")
+        lines.append("ClientKiosk.exe was not found.")
 
-    extra_urls = lan_urls(host, port)
-    if extra_urls:
-        lines.append("LAN URLs:")
-        lines.extend(extra_urls)
+    if launch_browser(url, kiosk_mode=True):
+        lines.append("Default browser fallback launched.")
+        return lines
 
+    lines.append("Default browser could not be opened.")
+    lines.append(f"Open this URL manually: {url}")
     return lines
 
 
@@ -294,11 +359,13 @@ def run_waitress(host=None, port=None):
     serve(app, host=host, port=port)
 
 
-def run_waitress_with_launcher(host=None, port=None, path="/kiosk"):
+def run_waitress_with_launcher(host=None, port=None, path="/kiosk", auto_launch=True):
     if local_server_is_ready(port):
-        for line in launch_mode_message(host, port, path, reused=True):
+        print(f"Existing local server detected at {local_api_version_url(port)}", flush=True)
+        for line in server_information_lines(host, port):
             print(line, flush=True)
-        launch_browser(display_url(port, path), kiosk_mode=True)
+        for line in startup_launch_lines(host, port, path=path, auto_launch=auto_launch):
+            print(line, flush=True)
         return
 
     overrides = {}
@@ -312,7 +379,6 @@ def run_waitress_with_launcher(host=None, port=None, path="/kiosk"):
     app = create_app(overrides or None)
     host = app.config["SERVER_HOST"]
     port = app.config["SERVER_PORT"]
-    local_url = display_url(port, path)
 
     print(startup_message(app), flush=True)
 
@@ -325,9 +391,8 @@ def run_waitress_with_launcher(host=None, port=None, path="/kiosk"):
     server_thread.start()
 
     if not wait_for_local_server(port):
-        print(f"Server startup is taking longer than expected. Opening {local_url}.", flush=True)
+        print(f"Server startup is taking longer than expected. Opening {display_url(port, path, launch_host(host))}.", flush=True)
 
-    for line in launch_mode_message(host, port, path, reused=False):
+    for line in startup_launch_lines(host, port, path=path, auto_launch=auto_launch, base_dir=app.config["BASE_DIR"]):
         print(line, flush=True)
-    launch_browser(local_url, kiosk_mode=True)
     server_thread.join()

@@ -1,13 +1,14 @@
 import argparse
 
 from kiosk.config import Config
-from kiosk.server import reset_admin_password_command, run_waitress, run_waitress_with_launcher
+from kiosk.server import reset_admin_password_command, run_waitress_with_launcher
 
 
 def build_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default=Config.SERVER_HOST)
     parser.add_argument("--port", type=int, default=Config.SERVER_PORT)
+    parser.add_argument("--no-client", action="store_true")
     open_group = parser.add_mutually_exclusive_group()
     open_group.add_argument("--open-kiosk", action="store_true")
     open_group.add_argument("--open-tv", action="store_true")
@@ -27,14 +28,14 @@ def main(argv=None):
         return
 
     if args.open_kiosk:
-        run_waitress_with_launcher(host=args.host, port=args.port, path="/kiosk")
+        run_waitress_with_launcher(host=args.host, port=args.port, path="/kiosk", auto_launch=not args.no_client)
         return
 
     if args.open_tv:
-        run_waitress_with_launcher(host=args.host, port=args.port, path="/tv")
+        run_waitress_with_launcher(host=args.host, port=args.port, path="/tv", auto_launch=not args.no_client)
         return
 
-    run_waitress(host=args.host, port=args.port)
+    run_waitress_with_launcher(host=args.host, port=args.port, path="/kiosk", auto_launch=not args.no_client)
 
 
 if __name__ == "__main__":

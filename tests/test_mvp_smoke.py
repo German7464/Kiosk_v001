@@ -11,7 +11,7 @@ from werkzeug.security import check_password_hash
 
 from kiosk.app import create_app
 from kiosk.database import get_database
-from kiosk.server import local_server_is_ready, reset_admin_password, reset_admin_password_command, startup_message, run_waitress_with_launcher
+from kiosk.server import find_clientkiosk_executable, launch_clientkiosk, local_server_is_ready, reset_admin_password, reset_admin_password_command, startup_launch_lines, startup_message, run_waitress_with_launcher
 from serve import parse_args
 
 
@@ -75,15 +75,18 @@ class MvpSmokeTests(unittest.TestCase):
         loopback_args = parse_args(["--host", "127.0.0.1"])
         lan_args = parse_args(["--host", "0.0.0.0"])
         specific_args = parse_args(["--host", "192.168.1.117", "--port", "5000"])
+        no_client_args = parse_args(["--no-client"])
         reset_args = parse_args(["--reset-admin-password"])
 
         self.assertEqual(default_args.host, "127.0.0.1")
         self.assertEqual(default_args.port, 5000)
         self.assertFalse(default_args.reset_admin_password)
+        self.assertFalse(default_args.no_client)
         self.assertEqual(loopback_args.host, "127.0.0.1")
         self.assertEqual(lan_args.host, "0.0.0.0")
         self.assertEqual(specific_args.host, "192.168.1.117")
         self.assertEqual(specific_args.port, 5000)
+        self.assertTrue(no_client_args.no_client)
         self.assertTrue(reset_args.reset_admin_password)
 
         loopback_app = create_app(
@@ -138,11 +141,19 @@ class MvpSmokeTests(unittest.TestCase):
 
         specific_message = startup_message(specific_host_app)
         self.assertIn("Other devices should use http://192.168.1.117:5000.", specific_message)
+        with patch("kiosk.server.find_clientkiosk_executable") as find_client_mock, patch("kiosk.server.launch_browser") as launch_browser_mock:
+            no_client_message = startup_launch_lines("0.0.0.0", 5000, path="/kiosk", auto_launch=False)
+
+        find_client_mock.assert_not_called()
+        launch_browser_mock.assert_not_called()
+        self.assertIn("Automatic kiosk client/browser launch: disabled", "\n".join(no_client_message))
+        self.assertIn("Automatic client/browser launch disabled with --no-client.", "\n".join(no_client_message))
+        self.assertIn("Open this URL manually: http://127.0.0.1:5000/kiosk", "\n".join(no_client_message))
 
         self.assertTrue(local_server_is_ready(5000, opener=lambda url, timeout=0.5: type("Response", (), {"status": 200})()))
         self.assertFalse(local_server_is_ready(5000, opener=lambda url, timeout=0.5: (_ for _ in ()).throw(OSError())))
 
-        with patch("kiosk.server.launch_browser") as launch_browser, patch("kiosk.server.create_app") as create_app_mock, patch("kiosk.server.serve") as serve_mock:
+        with patch("kiosk.server.find_clientkiosk_executable", return_value=None), patch("kiosk.server.launch_browser") as launch_browser, patch("kiosk.server.create_app") as create_app_mock, patch("kiosk.server.serve") as serve_mock:
             output = io.StringIO()
             with redirect_stdout(output):
                 with patch("kiosk.server.local_server_is_ready", return_value=True):
@@ -152,6 +163,37 @@ class MvpSmokeTests(unittest.TestCase):
             serve_mock.assert_not_called()
             launch_browser.assert_called_once_with("http://127.0.0.1:5000/tv", kiosk_mode=True)
             self.assertIn("Existing local server detected", output.getvalue())
+
+    def test_clientkiosk_detection_and_launch_fallback(self):
+        with tempfile.TemporaryDirectory() as client_directory_name:
+            client_directory = Path(client_directory_name)
+            client_executable = client_directory / "ClientKiosk.exe"
+            client_executable.write_text("stub", encoding="utf-8")
+
+            self.assertEqual(find_clientkiosk_executable(base_dir=client_directory), client_executable)
+            with patch("kiosk.server.clientkiosk_search_directories", return_value=[client_directory / "missing"]):
+                self.assertIsNone(find_clientkiosk_executable())
+
+        client_path = Path("C:/ClientKiosk.exe")
+
+        with patch("kiosk.server.subprocess.Popen") as popen_mock:
+            launched = launch_clientkiosk(client_path, "0.0.0.0", 5000, "/tv")
+
+        self.assertTrue(launched)
+        popen_mock.assert_called_once()
+        command = popen_mock.call_args.args[0]
+        self.assertEqual(command[0], str(client_path))
+        self.assertEqual(command[1:], ["--url", "http://127.0.0.1:5000/tv", "--host", "127.0.0.1", "--port", "5000", "--mode", "tv"])
+
+        with patch("kiosk.server.find_clientkiosk_executable", return_value=None), patch("kiosk.server.launch_browser", return_value=False) as launch_browser:
+            output_lines = startup_launch_lines("0.0.0.0", 5000, path="/kiosk", auto_launch=True)
+
+        launch_browser.assert_called_once_with("http://127.0.0.1:5000/kiosk", kiosk_mode=True)
+        joined_lines = "\n".join(output_lines)
+        self.assertIn("Automatic kiosk client/browser launch: enabled", joined_lines)
+        self.assertIn("ClientKiosk.exe was not found.", joined_lines)
+        self.assertIn("Default browser could not be opened.", joined_lines)
+        self.assertIn("Open this URL manually: http://127.0.0.1:5000/kiosk", joined_lines)
 
     def test_kiosk_fullscreen_unlock_uses_current_admin_credentials(self):
         self.login()
