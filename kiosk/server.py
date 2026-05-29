@@ -1,6 +1,15 @@
+import os
+import shutil
 import socket
 import secrets
+import subprocess
+import threading
+import time
+import urllib.error
+import urllib.request
+import webbrowser
 from datetime import datetime, timezone
+from pathlib import Path
 
 from waitress import serve
 from werkzeug.security import generate_password_hash
@@ -29,6 +38,14 @@ def active_urls(host, port):
         f"{root}/admin/login",
         f"{root}/api/version",
     ]
+
+
+def local_api_version_url(port):
+    return f"http://127.0.0.1:{port}/api/version"
+
+
+def display_url(port, path):
+    return f"http://127.0.0.1:{port}{path}"
 
 
 def detected_lan_addresses():
@@ -90,6 +107,95 @@ def lan_urls(host, port):
     return connection_urls(host, port)
 
 
+def local_server_is_ready(port, opener=None, timeout=0.5):
+    probe = opener or urllib.request.urlopen
+
+    try:
+        response = probe(local_api_version_url(port), timeout=timeout)
+    except (urllib.error.URLError, OSError, TimeoutError, ValueError):
+        return False
+
+    status = getattr(response, "status", None)
+    if status is None and hasattr(response, "getcode"):
+        status = response.getcode()
+
+    return status == 200
+
+
+def wait_for_local_server(port, timeout=10.0, interval=0.25, opener=None):
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        if local_server_is_ready(port, opener=opener):
+            return True
+
+        time.sleep(interval)
+
+    return False
+
+
+def browser_candidates():
+    candidates = [
+        shutil.which("msedge"),
+        shutil.which("chrome"),
+        shutil.which("google-chrome"),
+        shutil.which("msedge.exe"),
+        shutil.which("chrome.exe"),
+    ]
+
+    program_files = os.environ.get("PROGRAMFILES", "")
+    program_files_x86 = os.environ.get("PROGRAMFILES(X86)", "")
+    local_appdata = os.environ.get("LOCALAPPDATA", "")
+
+    candidates.extend(
+        [
+            Path(program_files) / "Microsoft/Edge/Application/msedge.exe" if program_files else None,
+            Path(program_files_x86) / "Microsoft/Edge/Application/msedge.exe" if program_files_x86 else None,
+            Path(program_files) / "Google/Chrome/Application/chrome.exe" if program_files else None,
+            Path(program_files_x86) / "Google/Chrome/Application/chrome.exe" if program_files_x86 else None,
+            Path(local_appdata) / "Google/Chrome/Application/chrome.exe" if local_appdata else None,
+        ]
+    )
+
+    return [str(candidate) for candidate in candidates if candidate]
+
+
+def launch_browser(url, kiosk_mode=False):
+    browser_path = None
+    browser_arguments = []
+
+    for candidate in browser_candidates():
+        browser_name = Path(candidate).name.lower()
+        if "msedge" in browser_name:
+            browser_path = candidate
+            browser_arguments = ["--new-window", url]
+            if kiosk_mode:
+                browser_arguments = ["--kiosk", "--edge-kiosk-type=fullscreen", "--no-first-run", "--new-window", url]
+            break
+        if "chrome" in browser_name:
+            browser_path = candidate
+            browser_arguments = ["--new-window", url]
+            if kiosk_mode:
+                browser_arguments = ["--start-fullscreen", "--new-window", url]
+            break
+
+    if browser_path is not None:
+        try:
+            subprocess.Popen([browser_path, *browser_arguments], close_fds=False)
+            return True
+        except OSError:
+            pass
+
+    try:
+        if webbrowser.open(url, new=1):
+            return True
+    except webbrowser.Error:
+        pass
+
+    print(f"Open this URL manually: {url}", flush=True)
+    return False
+
+
 def startup_message(app):
     host = app.config["SERVER_HOST"]
     port = app.config["SERVER_PORT"]
@@ -118,6 +224,29 @@ def startup_message(app):
     )
 
     return "\n".join(lines)
+
+
+def launch_mode_message(host, port, path, reused):
+    display_name = "kiosk" if path == "/kiosk" else "tv"
+    url = display_url(port, path)
+    lines = []
+
+    if reused:
+        lines.extend(
+            [
+                f"Existing local server detected at {local_api_version_url(port)}",
+                f"Opening {display_name} display at {url}",
+            ]
+        )
+    else:
+        lines.append(f"Opening {display_name} display at {url}")
+
+    extra_urls = lan_urls(host, port)
+    if extra_urls:
+        lines.append("LAN URLs:")
+        lines.extend(extra_urls)
+
+    return lines
 
 
 def reset_admin_password(app):
@@ -163,3 +292,42 @@ def run_waitress(host=None, port=None):
     port = app.config["SERVER_PORT"]
     print(startup_message(app), flush=True)
     serve(app, host=host, port=port)
+
+
+def run_waitress_with_launcher(host=None, port=None, path="/kiosk"):
+    if local_server_is_ready(port):
+        for line in launch_mode_message(host, port, path, reused=True):
+            print(line, flush=True)
+        launch_browser(display_url(port, path), kiosk_mode=True)
+        return
+
+    overrides = {}
+
+    if host is not None:
+        overrides["SERVER_HOST"] = host
+
+    if port is not None:
+        overrides["SERVER_PORT"] = port
+
+    app = create_app(overrides or None)
+    host = app.config["SERVER_HOST"]
+    port = app.config["SERVER_PORT"]
+    local_url = display_url(port, path)
+
+    print(startup_message(app), flush=True)
+
+    server_thread = threading.Thread(
+        target=serve,
+        args=(app,),
+        kwargs={"host": host, "port": port},
+        daemon=True,
+    )
+    server_thread.start()
+
+    if not wait_for_local_server(port):
+        print(f"Server startup is taking longer than expected. Opening {local_url}.", flush=True)
+
+    for line in launch_mode_message(host, port, path, reused=False):
+        print(line, flush=True)
+    launch_browser(local_url, kiosk_mode=True)
+    server_thread.join()

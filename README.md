@@ -50,6 +50,18 @@ Waitress mode for local production-style testing:
 python serve.py
 ```
 
+Launcher mode for opening kiosk or TV after startup:
+
+```bash
+python serve.py --open-kiosk
+python serve.py --open-tv
+python serve.py --host 0.0.0.0 --open-kiosk
+python serve.py --host 0.0.0.0 --open-tv
+python serve.py --host 0.0.0.0 --port 5000 --open-kiosk
+```
+
+If a local server is already running on `http://127.0.0.1:<port>/api/version`, the launcher reuses it instead of starting a duplicate server.
+
 LAN startup for phones, tablets, kiosks, and Smart TV browsers:
 
 ```bash

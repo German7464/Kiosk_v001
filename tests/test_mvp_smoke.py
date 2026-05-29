@@ -3,13 +3,14 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 from PIL import Image
 from werkzeug.security import check_password_hash
 
 from kiosk.app import create_app
 from kiosk.database import get_database
-from kiosk.server import reset_admin_password, reset_admin_password_command, startup_message
+from kiosk.server import local_server_is_ready, reset_admin_password, reset_admin_password_command, startup_message, run_waitress_with_launcher
 from serve import parse_args
 
 
@@ -136,6 +137,20 @@ class MvpSmokeTests(unittest.TestCase):
 
         specific_message = startup_message(specific_host_app)
         self.assertIn("Other devices should use http://192.168.1.117:5000.", specific_message)
+
+        self.assertTrue(local_server_is_ready(5000, opener=lambda url, timeout=0.5: type("Response", (), {"status": 200})()))
+        self.assertFalse(local_server_is_ready(5000, opener=lambda url, timeout=0.5: (_ for _ in ()).throw(OSError())))
+
+        with patch("kiosk.server.launch_browser") as launch_browser, patch("kiosk.server.create_app") as create_app_mock, patch("kiosk.server.serve") as serve_mock:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                with patch("kiosk.server.local_server_is_ready", return_value=True):
+                    run_waitress_with_launcher(host="0.0.0.0", port=5000, path="/tv")
+
+            create_app_mock.assert_not_called()
+            serve_mock.assert_not_called()
+            launch_browser.assert_called_once_with("http://127.0.0.1:5000/tv", kiosk_mode=True)
+            self.assertIn("Existing local server detected", output.getvalue())
 
     def test_event_tag_and_image_flow(self):
         self.login()
