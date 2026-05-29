@@ -40,7 +40,11 @@ function fullscreenExitHandler() {
 }
 
 function fullscreenSupported() {
-    return Boolean(fullscreenRequestHandler() && fullscreenExitHandler());
+    return Boolean(fullscreenRequestHandler());
+}
+
+function fullscreenCanExit() {
+    return Boolean(fullscreenExitHandler());
 }
 
 function updateFullscreenButtonState() {
@@ -70,6 +74,10 @@ function toggleTvFullscreen() {
     }
 
     if (fullscreenElement()) {
+        if (!fullscreenCanExit()) {
+            return;
+        }
+
         handleFullscreenResult(fullscreenExitHandler().call(document));
         return;
     }
