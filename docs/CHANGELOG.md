@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-05-30
+
+- Added coursework planning documents for the Kiosk_v001 coursework preparation stage.
+
 ## 2026-05-29
 
 - Updated project documentation after audit-cleanup work to match the current implemented architecture, startup behavior, tests, and post-MVP additions.
