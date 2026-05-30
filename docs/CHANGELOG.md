@@ -2,6 +2,7 @@
 
 ## 2026-05-30
 
+- Added Appendix C test cases draft for the coursework.
 - Added the conclusion and preliminary references draft for the coursework.
 - Added the practical chapter draft for the coursework.
 - Added the theoretical chapter draft for the coursework.
