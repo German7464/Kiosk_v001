@@ -2,6 +2,7 @@
 
 ## 2026-05-30
 
+- Added detailed diagram specifications for coursework appendices.
 - Added Appendix D code listings draft for the coursework.
 - Added Appendix C test cases draft for the coursework.
 - Added the conclusion and preliminary references draft for the coursework.
