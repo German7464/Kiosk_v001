@@ -122,5 +122,8 @@
     "tv.no_active_events": "No active events",
     "tv.ready_description": "The TV display is ready and waiting for active event cards.",
     "tv.ready_title": "Events will appear here",
-    "kiosk.inactivity_warning_text": "Touch the screen, otherwise you will return to the main screen when the timer ends."
+    "kiosk.inactivity_warning_text": "Touch the screen, otherwise you will return to the main screen when the timer ends.",
+    "security.request_expired": "The form has expired or cannot be verified. Reload the page and try again.",
+    "security.too_many_attempts": "Too many password checks. Wait one minute and try again.",
+    "security.invalid_credentials": "Invalid credential request."
 }

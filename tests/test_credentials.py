@@ -1,3 +1,4 @@
+from tests.browser_client import browser_client
 import getpass
 import io
 import sqlite3
@@ -39,7 +40,7 @@ class CredentialTests(unittest.TestCase):
             "PUBLIC_UPLOAD_DIR": root / "static/uploads", "STATIC_FOLDER": root / "static",
         }
         self.app = create_app(self.config)
-        self.client = self.app.test_client()
+        self.client = browser_client(self.app)
         self.password = "initial-test-password"
 
     def dump(self):
@@ -103,7 +104,7 @@ class CredentialTests(unittest.TestCase):
 
     def test_password_reset_revokes_all_sessions(self):
         self.setup_admin()
-        second = self.app.test_client()
+        second = browser_client(self.app)
         self.login()
         self.login(second)
         save_admin_password(self.app, "replacement-password")
@@ -112,7 +113,7 @@ class CredentialTests(unittest.TestCase):
         self.assertEqual(self.login().status_code, 401)
         self.assertEqual(self.login(password="replacement-password").status_code, 302)
         cookie = self.client.get_cookie("session")
-        restarted = create_app(self.config).test_client()
+        restarted = browser_client(create_app(self.config))
         restarted.set_cookie("session", cookie.value)
         self.assertEqual(restarted.get("/admin").status_code, 200)
 
@@ -134,7 +135,7 @@ class CredentialTests(unittest.TestCase):
     def test_web_password_validation_and_session_revocation(self):
         self.setup_admin()
         self.login()
-        second = self.app.test_client()
+        second = browser_client(self.app)
         self.login(second)
         for new, confirmation in (("short", "short"), ("x" * 129, "x" * 129), (self.password, "different")):
             response = self.client.post("/admin/password/change", data={"current_password": self.password, "new_password": new, "confirm_password": confirmation})

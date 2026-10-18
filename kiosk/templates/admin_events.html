@@ -38,17 +38,21 @@
                     <a href="{{ url_for('admin.edit_event', event_id=event.id) }}">{{ t("admin.edit") }}</a>
                     <a href="{{ url_for('admin.edit_event_tags', event_id=event.id) }}">{{ t("admin.tags") }}</a>
                     <form method="post" action="{{ url_for('admin.toggle_event', event_id=event.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit">{{ t("common.hide") if event.status == "active" else t("common.show") }}</button>
                     </form>
                     <form method="post" action="{{ url_for('admin.move_event', event_id=event.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="direction" value="up">
                         <button type="submit">{{ t("common.move_up") }}</button>
                     </form>
                     <form method="post" action="{{ url_for('admin.move_event', event_id=event.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="direction" value="down">
                         <button type="submit">{{ t("common.move_down") }}</button>
                     </form>
                     <form method="post" action="{{ url_for('admin.delete_event', event_id=event.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit">{{ t("admin.delete") }}</button>
                     </form>
                 </div>

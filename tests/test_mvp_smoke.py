@@ -1,3 +1,4 @@
+from tests.browser_client import browser_client
 import io
 import json
 import tempfile
@@ -35,7 +36,7 @@ class MvpSmokeTests(unittest.TestCase):
             }
         )
         save_admin_password(self.app, "smoke-test-password", setup=True)
-        self.client = self.app.test_client()
+        self.client = browser_client(self.app)
 
     def tearDown(self):
         self.temporary_directory.cleanup()

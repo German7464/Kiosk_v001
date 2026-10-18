@@ -25,6 +25,8 @@ class Config:
     DATABASE_PATH = INSTANCE_DIR / "kiosk.sqlite"
     PRIVATE_UPLOAD_DIR = INSTANCE_DIR / "uploads"
     PUBLIC_UPLOAD_DIR = STATIC_DIR / "uploads"
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
     SECRET_KEY = None
     SERVER_HOST = "127.0.0.1"
     SERVER_PORT = 5000

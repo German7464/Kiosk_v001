@@ -2,6 +2,11 @@
 
 ## 2026-10-19
 
+- Added session-bound CSRF checks to all administrative unsafe requests, hidden tokens to POST forms, and a token header plus translated error handling to kiosk fullscreen validation. HTML pages use no-store; session cookies explicitly use HttpOnly and SameSite=Lax. Public API JSON and SQLite schema are unchanged.
+- Added a thread-safe single-process password-check limiter shared by login, fullscreen validation, and current-password changes: 10 checks per peer/username and 40 per peer in a sliding minute, with 429/Retry-After and a bounded 2048-entry store. Counters reset on process restart; forwarded headers do not identify peers. Distributed throttling and LAN transport protection remain pending.
+- Verified all 34 isolated Python tests, standalone kiosk JavaScript checks, compilation, and diff whitespace. Tested every administrative POST route for CSRF rejection without database mutation, rendered form tokens, multipart uploads, session/token behavior, concurrent checks, expiry, source rotation, and capacity limits. Updated the progress ledger and documented automated-first verification; Chrome is reserved for unresolved browser behavior. Working servers and data were not changed.
+
+
 - Removed automatic default-admin creation. Added transactional local `--setup-admin` and changed `--reset-admin-password` to hidden confirmed terminal input without printing credentials. Blocked existing admin/admin across login, protected actions, and fullscreen validation without replacing stored hashes at startup. Bound sessions to current credentials, invalidated earlier cookies and sessions after password replacement, and retained valid sessions across restart. Password changes require 12–128 characters and return to login. Schema, public API, content version, and working data are unchanged.
 - Verified 24 isolated tests, compilation, Flask routes, and diff whitespace checks; real Windows terminal setup/reset with hidden input also passed on a disposable installation. Windows-MCP with Chrome on isolated port 5002 confirmed setup-required messaging, successful login, and stale-session rejection/default-credential warning. General CSRF protection, throttling, LAN protection, hardware, EXE, endurance, and load checks remain pending. Updated TZ_PROGRESS.md and administration/run documentation.
 

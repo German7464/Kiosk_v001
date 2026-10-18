@@ -7,6 +7,7 @@
     <p class="label">{{ t("admin.tags") }}</p>
     <h1>{{ event.title }}</h1>
     <form class="admin-form" method="post" action="{{ url_for('admin.edit_event_tags_post', event_id=event.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% if tags %}
         <label class="admin-tag-search">
             <span>{{ t("admin.search_tags") }}</span>

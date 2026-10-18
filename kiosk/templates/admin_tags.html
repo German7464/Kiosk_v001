@@ -10,6 +10,7 @@
     <p class="form-error">{{ error }}</p>
     {% endif %}
     <form class="admin-inline-form" method="post" action="{{ url_for('admin.create_tag') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>
             <span>{{ t("admin.new_tag_name") }}</span>
             <input type="text" name="name" required>
@@ -33,6 +34,7 @@
             <div class="admin-row-actions">
                 <a href="{{ url_for('admin.edit_tag', tag_id=tag.id) }}">{{ t("admin.edit") }}</a>
                 <form method="post" action="{{ url_for('admin.delete_tag', tag_id=tag.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit">{{ t("admin.delete") }}</button>
                 </form>
             </div>

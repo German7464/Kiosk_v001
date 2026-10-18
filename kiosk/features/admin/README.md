@@ -24,6 +24,8 @@ Provides MVP admin authentication, event management, event image upload, tag man
 - `kiosk/core/i18n.py`
 - `kiosk/core/security.py`
 - `kiosk/core/credentials.py`
+- `kiosk/core/request_security.py`
+- `kiosk/templates/admin_security_error.html`
 - `kiosk/server.py`
 - `serve.py`
 - `kiosk/database.py`
@@ -108,4 +110,14 @@ Startup never replaces existing password hashes. Existing `admin/admin` is rejec
 
 Every protected administrative request checks the current user and an HMAC session token derived from the user ID and current password hash with the installation key. The hash itself is not stored in the cookie. Earlier sessions without this token require login again. Password reset/change and account deletion invalidate earlier sessions; valid sessions survive a restart with the same credentials and installation key. Web password changes enforce the same length policy, reject concurrent password replacements, clear the session, and redirect to login.
 
-No database schema or public API changes are introduced. Credentials do not increase content version and do not change kiosk/TV content. Existing content, image paths, and nondefault user credentials are retained. Login throttling, general CSRF protection, LAN transport protection, and future roles remain separate work.
+No database schema or public API changes are introduced. Credentials do not increase content version and do not change kiosk/TV content. Existing content, image paths, and nondefault user credentials are retained. The request-security increment below adds CSRF protection and single-process authentication limits. LAN transport protection and future roles remain separate work.
+
+## CSRF Protection and Authentication Limits
+
+All unsafe administrative requests, including login, logout, password change, and fullscreen validation, require the current session CSRF token. HTML POST forms submit a hidden `csrf_token`; the kiosk fullscreen fetch sends `X-CSRF-Token` from the page meta tag. Tokens are random per session and change after login/logout/password-change session clearing. Reload a stale form before retrying. Successful fullscreen JSON remains `{"success": true}`; existing unsuccessful credential JSON remains `{"success": false}`. CSRF errors return 403 and throttled checks return 429, with `success: false` and a translated `error` in fullscreen responses. Other administrative errors render a translated page. Public API JSON formats and routes are unchanged. HTML responses use `Cache-Control: no-store` so pages containing session tokens are not shared through caches. Cookies explicitly use HttpOnly and SameSite=Lax; this does not replace LAN transport protection.
+
+Login, fullscreen validation, and current-password verification share one thread-safe sliding-window limiter: up to 10 checks per source-address/username pair and 40 total checks per source address in 60 seconds, counting successful and unsuccessful checks. The next request returns 429 with `Retry-After`; attempts become available as the window expires. Username rotation is bounded by the source limit, cookie replacement does not reset limits, and password-change attempts use the authenticated username rather than a submitted username. Invalid CSRF requests are rejected before password verification and do not consume that budget.
+
+The limiter holds at most 2048 counter entries, prunes expired entries, and rejects new sources when full rather than evicting live counters. It uses monotonic time, reserves attempts before hashing passwords, and never stores passwords. Only the socket peer address is trusted; forwarded-address headers are ignored. Clients behind the same proxy/NAT share the source budget. Counters are local to one application process and reset on process restart; multiple server processes, distributed attackers, persistent throttling, and trusted-proxy deployment need separate design. This matches the current single-process Waitress setup and is not a claim of complete brute-force or denial-of-service protection.
+
+These changes do not alter schema or content version. Existing passwords and media remain unchanged. Tests use real rendered tokens without disabling production protection, and exercise every administrative POST route, multipart upload, sessions, concurrency, timer expiry, bounded counters, and kiosk JavaScript error handling.

@@ -10,6 +10,7 @@
     <p class="form-error">{{ error }}</p>
     {% endif %}
     <form class="admin-form" method="post" action="{{ url_for('admin.edit_tag_post', tag_id=tag.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>
             <span>{{ t("admin.tag_name") }}</span>
             <input type="text" name="name" value="{{ tag.name }}" required>

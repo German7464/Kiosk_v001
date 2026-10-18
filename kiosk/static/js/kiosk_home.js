@@ -101,6 +101,7 @@ async function requestKioskFullscreenExit() {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
+            "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content,
         },
         body: JSON.stringify({
             username: kioskUnlockUsername.value,
@@ -116,7 +117,7 @@ async function requestKioskFullscreenExit() {
         return true;
     }
 
-    kioskUnlockError.textContent = kioskUnlockError.dataset.invalidMessage;
+    kioskUnlockError.textContent = data.error || kioskUnlockError.dataset.invalidMessage;
     kioskUnlockError.hidden = false;
     kioskUnlockPassword.value = "";
     kioskUnlockPassword.focus();

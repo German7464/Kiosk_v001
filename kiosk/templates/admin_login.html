@@ -13,6 +13,7 @@
     <p class="form-error">{{ error }}</p>
     {% endif %}
     <form class="admin-form" method="post" action="{{ url_for('admin.login_post') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>
             <span>{{ t("admin.username") }}</span>
             <input type="text" name="username" autocomplete="username" required>

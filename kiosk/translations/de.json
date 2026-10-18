@@ -122,5 +122,8 @@
     "kiosk.inactivity_warning_text": "Berühren Sie den Bildschirm, sonst kehren Sie nach Ablauf des Timers zum Startbildschirm zurück.",
     "admin.setup_required": "Administrator-Einrichtung erforderlich. Auf dem Server python serve.py --setup-admin in einem lokalen Terminal ausführen.",
     "admin.default_blocked": "Standard-Administratorzugang gesperrt. Auf dem Server python serve.py --reset-admin-password in einem lokalen Terminal ausführen.",
-    "admin.password_length": "Das Passwort muss 12 bis 128 Zeichen enthalten."
+    "admin.password_length": "Das Passwort muss 12 bis 128 Zeichen enthalten.",
+    "security.request_expired": "Das Formular ist abgelaufen oder konnte nicht geprüft werden. Seite neu laden und erneut versuchen.",
+    "security.too_many_attempts": "Zu viele Passwortprüfungen. Eine Minute warten und erneut versuchen.",
+    "security.invalid_credentials": "Ungültige Anfrage zur Zugangsdatenprüfung."
 }

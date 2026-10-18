@@ -27,6 +27,7 @@
     </section>
     <div class="admin-form-layout">
         <form class="admin-form" method="post" action="{{ action_url }}" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label>
                 <span>{{ t("admin.title") }}</span>
                 <input type="text" name="title" value="{{ event.title if event else '' }}" required data-event-preview-field="title">

@@ -14,6 +14,7 @@
         <a href="{{ url_for('preview') }}">{{ t("admin.preview") }}</a>
         <a href="{{ url_for('admin.change_password') }}">{{ t("admin.change_password") }}</a>
         <form method="post" action="{{ url_for('admin.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">{{ t("admin.logout") }}</button>
         </form>
     </div>

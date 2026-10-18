@@ -137,7 +137,7 @@ Use:
 
 Do not use in-app browser checks.
 Do not try to open pages through iab.
-Keep Flask test client checks. Per owner instruction, perform available visual checks through Windows-MCP in Google Chrome on isolated test data. Never change working credentials for a test. Record unavailable physical-device checks as pending.
+Prioritize automated tests and Flask test client checks; perform them independently. Use Windows-MCP with Google Chrome only when remaining browser behavior needs practical verification. Use isolated test data and never change working credentials for a test. Record unavailable physical-device checks as pending.
 
 After each implementation step, include in the final report:
 - Changed files

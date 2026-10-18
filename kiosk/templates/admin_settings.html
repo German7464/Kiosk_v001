@@ -10,6 +10,7 @@
     <p class="form-error">{{ error }}</p>
     {% endif %}
     <form class="admin-form" method="post" action="{{ url_for('admin.save_admin_settings') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% if settings.site_icon %}
         <div class="admin-icon-preview">
             <img src="{{ settings.site_icon }}" alt="{{ settings.site_title }}">

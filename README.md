@@ -134,7 +134,7 @@ The reset command requires a local interactive terminal, asks for a new password
 
 Existing `admin / admin` credentials are blocked for login, administrative actions, and kiosk fullscreen unlock until replaced locally. Startup does not replace existing hashes. Other existing credentials remain unchanged. Sessions from earlier releases require a new login; changing or resetting a password invalidates all previous sessions for that account. A valid session survives server restart when credentials and the installation key remain unchanged. Browser password changes return to login.
 
-These commands are a temporary local setup path before the v2 Launcher. They require OS access to the installation and do not provide a web recovery endpoint. Login throttling, general CSRF protection, and LAN transport protection remain pending security work.
+These commands are a temporary local setup path before the v2 Launcher. They require OS access to the installation and do not provide a web recovery endpoint. Administrative forms now require a session CSRF token, and password checks share per-source limits (10 per username and 40 total in 60 seconds). Errors return 403 or 429; reload stale forms or wait for the Retry-After interval. Counters reset on restart and are scoped to one server process. See the admin feature README for limits. LAN transport protection remains pending security work.
 
 To launch the packaged kiosk client automatically, place `ClientKiosk.exe` next to `Kiosk_v001.exe`. If it is not present, the launcher falls back to the default browser. If both launch attempts fail, the server still starts and prints the manual URLs.
 
@@ -179,3 +179,15 @@ python -m unittest discover -s tests
 ```
 
 The tests use an isolated temporary SQLite database and temporary upload folders. They do not use `instance/kiosk.sqlite`.
+
+## Request Security Checks
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall run.py kiosk
+.\.venv\Scripts\python.exe -m unittest discover -s tests
+node tests/test_kiosk_request_security.js
+git diff --check
+git status --short --branch
+```
+
+The Node command is a standalone development check for kiosk request/error behavior; Node is not an application dependency. Automated Flask checks cover forms with rendered CSRF tokens and isolated runtime data. Use Chrome through Windows-MCP only when automated tests leave browser-specific behavior unresolved.

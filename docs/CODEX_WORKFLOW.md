@@ -19,7 +19,7 @@
 8. Do not add dependencies unless necessary.
 9. Update the related feature `README.md` only for major feature module changes.
 10. After every stage update `docs/TZ_PROGRESS.md` and `docs/CHANGELOG.md` with requirement references, checks, limitations, remaining decisions, and next work.
-11. Run compilation, isolated tests, Flask route checks, and Git checks. Use Windows-MCP with Chrome for authorized visual checks on isolated data; do not use IAB.
+11. Run compilation, isolated tests, Flask route checks, and Git checks. Prioritize automated verification. Use Windows-MCP with Chrome only for remaining browser behavior that needs practical checking, on isolated data; do not use IAB.
 
 ## Git Rules
 

@@ -1,3 +1,4 @@
+from tests.browser_client import browser_client
 import sqlite3
 import tempfile
 import unittest
@@ -66,7 +67,7 @@ class SessionSecurityTests(unittest.TestCase):
         config = self.config()
         app = create_app(config)
         save_admin_password(app, "session-test-password", setup=True)
-        client = app.test_client()
+        client = browser_client(app)
         statuses = {path: client.get(path).status_code for path in
                     ('/kiosk', '/kiosk/events', '/tv', '/preview', '/admin/login',
                      '/api/version', '/api/events', '/api/tags')}
@@ -74,7 +75,7 @@ class SessionSecurityTests(unittest.TestCase):
         self.assertEqual(client.get('/admin').status_code, 302)
         self.assertEqual(client.post('/admin/login', data={'username': 'admin', 'password': 'session-test-password'}).status_code, 302)
         cookie = client.get_cookie('session')
-        restarted = create_app(config).test_client()
+        restarted = browser_client(create_app(config))
         restarted.set_cookie('session', cookie.value)
         self.assertEqual(restarted.get('/admin').status_code, 200)
         print('Flask routes:', statuses, '/admin: 302 before login, 200 after restart')

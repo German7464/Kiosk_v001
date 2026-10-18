@@ -2,6 +2,7 @@ from flask import Flask, render_template, send_from_directory
 
 from kiosk.config import Config
 from kiosk.core.i18n import translate
+from kiosk.core.request_security import configure_request_security
 from kiosk.core.security import configure_session_security
 from kiosk.database import close_database, get_database, initialize_database
 from kiosk.features.admin import admin_blueprint
@@ -24,6 +25,7 @@ def create_app(config_overrides=None):
     configure_session_security(app)
     app.teardown_appcontext(close_database)
     initialize_database(app)
+    configure_request_security(app)
     app.register_blueprint(admin_blueprint)
     app.register_blueprint(api_blueprint)
 

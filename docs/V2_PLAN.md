@@ -12,7 +12,7 @@ Compilation and all eight isolated smoke tests passed. Public routes, authentica
 
 The owner approved uninterrupted local cached display with editing paused when safe write authority is unavailable, and a primary plus background standby on a second PC for the first network stage. Follow the two-PC validation plan in the requirements before introducing automatic multi-device election.
 
-1. Installation session keys and local credential setup are implemented; see TZ_PROGRESS.md for verification. Continue stage 2 with bounded authentication attempts and write-request protection, followed by remaining LAN security decisions.
+1. Installation session keys, local credential setup, CSRF protection, and bounded single-process authentication attempts are implemented; see TZ_PROGRESS.md for verification and limitations. Continue stage 2 with request/upload limits and remaining LAN security decisions.
 2. Remove placeholder wording and align architecture documentation with the implementation.
 3. Pin verified dependency versions for reproducible installation.
 4. Validate realistic event cards, image uploads, automatic screen updates, and fullscreen behavior.
