@@ -125,5 +125,7 @@
     "kiosk.inactivity_warning_text": "Touch the screen, otherwise you will return to the main screen when the timer ends.",
     "security.request_expired": "The form has expired or cannot be verified. Reload the page and try again.",
     "security.too_many_attempts": "Too many password checks. Wait one minute and try again.",
-    "security.invalid_credentials": "Invalid credential request."
+    "security.invalid_credentials": "Invalid credential request.",
+    "security.upload_limit": "The request, file, or image exceeds the configured limit.",
+    "security.invalid_upload": "The uploaded image or request is invalid."
 }

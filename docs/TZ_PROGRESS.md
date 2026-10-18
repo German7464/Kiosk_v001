@@ -35,7 +35,7 @@ After every stage update requirement references, evidence, limitations, remainin
 | 18 | Security | Partial | Installation credentials, single-process throttling, and CSRF verified; LAN protection and other controls pending. |
 | 19 | Diagnostics | Not started | No specified normal/safe/recovery modes. |
 | 20 | Performance | Not started | No agreed workload measurements. |
-| 21 | Testing | Partial | 34 isolated Python tests, kiosk JS checks, and earlier limited Windows Chrome checks; hardware/failure matrix pending. |
+| 21 | Testing | Partial | 42 isolated Python tests, kiosk JS checks, and earlier limited Windows Chrome checks; hardware/failure matrix pending. |
 | 22 | Development stages | Partial | Baseline and first security increment committed; stage 2 incomplete. |
 | 23 | Acceptance | Partial | Local checks only; system acceptance not achieved. |
 | 24 | Open decisions | Partial | See confirmed decisions below; hardware and limits remain unresolved. |
@@ -91,6 +91,14 @@ Earlier owner approvals in V2_REQUIREMENTS.md and commit 3c72e36 remain recorded
 
 ## Current stage and next work
 
-The local credential and request-security increments of stage 2 are complete; stage 2 as a whole is not. Next address file/request limits with the unresolved media-policy decisions, LAN transport protection, dependency reproducibility, and realistic baseline measurements. No later implementation stage is started automatically.
+The local credential and request-security increments of stage 2 are complete; stage 2 as a whole is not. Request/image limits are recorded below. Next address LAN transport protection, dependency reproducibility, and realistic baseline measurements; video and storage policy decisions remain unresolved. No later implementation stage is started automatically.
 
-Remaining security includes deployment-wide authentication limits, request/upload limits, LAN transport protection, group permissions, and update verification. Launcher and later stages are not part of this increment.
+Remaining security includes deployment-wide authentication limits, total storage quotas, LAN transport protection, group permissions, and update verification. Launcher and later stages are not part of this increment.
+
+## Upload-limit increment — 2026-10-19
+
+Requirement: 18.9, limited to current image uploads and HTTP request bounds. Owner selected 20 MiB/request, 16 MiB/file, and 25 million pixels; configurable positive integers. Multipart parts: 100; text/form-memory bound: 256 KiB. This does not settle all D05 video/storage decisions.
+
+Implemented bounded actual-stream copying, pre-decode pixel checks, full decoding, translated 413/400 application errors, and cleanup of current upload derivatives on processing failures. Both Waitress entrypoints use the body bound. Existing media and schema remain unchanged. Security overall remains Partial; LAN transport, storage quotas, and aggregate resource limits remain pending.
+
+Evidence: the complete 40-test Python suite passed, followed by all 8 upload tests after adding two boundary/failure cases (42 distinct Python tests verified overall). JavaScript checks, compileall, and git diff --check passed. Flask public pages/APIs: 200; admin before login: 302; after login/restart: 200. Oversized request/file/pixels/field/parts: 413; invalid image: 400. Real isolated loopback Waitress: public API 200, oversized body 413; test server stopped. Both server entrypoints were checked for body-limit propagation. Failed processing preserved database dumps and old media byte-for-byte. Browser inspection was unnecessary; no working server, credentials, or runtime data was changed. Commit subject: `fix: bound requests and image uploads`.

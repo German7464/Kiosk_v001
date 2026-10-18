@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from flask import current_app
 from PIL import Image, ImageOps
+from werkzeug.exceptions import BadRequest, RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
 
@@ -13,69 +14,64 @@ IMAGE_SIZES = {
 }
 
 
-def process_event_image(uploaded_file):
+class InvalidImage(BadRequest):
+    pass
+
+
+def save_uploaded_original(uploaded_file, path):
+    total = 0
+    with path.open("xb") as output:
+        while chunk := uploaded_file.stream.read(64 * 1024):
+            total += len(chunk)
+            if total > current_app.config["MAX_UPLOAD_FILE_BYTES"]:
+                raise RequestEntityTooLarge()
+            output.write(chunk)
+    try:
+        with Image.open(path) as image:
+            if image.width * image.height > current_app.config["MAX_IMAGE_PIXELS"]:
+                raise RequestEntityTooLarge()
+            image.verify()
+        with Image.open(path) as image:
+            image.load()
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning) as error:
+        raise RequestEntityTooLarge() from error
+    except (OSError, SyntaxError, ValueError) as error:
+        raise InvalidImage() from error
+
+
+def process_image(uploaded_file, category):
     if uploaded_file is None or not uploaded_file.filename:
         return None
-
-    filename = secure_filename(uploaded_file.filename)
-    suffix = Path(filename).suffix.lower() or ".image"
+    suffix = Path(secure_filename(uploaded_file.filename)).suffix.lower() or ".image"
     image_id = uuid4().hex
-    original_dir = current_app.config["PRIVATE_UPLOAD_DIR"] / "original" / "events"
-    public_base_dir = current_app.config["PUBLIC_UPLOAD_DIR"] / "events"
-    original_dir.mkdir(parents=True, exist_ok=True)
-    public_base_dir.mkdir(parents=True, exist_ok=True)
-    original_path = original_dir / f"{image_id}{suffix}"
-    uploaded_file.save(original_path)
-
+    original_path = current_app.config["PRIVATE_UPLOAD_DIR"] / "original" / category / f"{image_id}{suffix}"
+    public_dir = current_app.config["PUBLIC_UPLOAD_DIR"] / category
+    outputs = {version: public_dir / version / f"{image_id}.jpg" for version in IMAGE_SIZES} if category == "events" else {"icon": public_dir / f"{image_id}.png"}
+    paths = [original_path, *outputs.values()]
     try:
-        with Image.open(original_path) as image:
-            image.verify()
-    except OSError as error:
-        original_path.unlink(missing_ok=True)
-        raise ValueError("Unsupported image file.") from error
+        original_path.parent.mkdir(parents=True, exist_ok=True)
+        save_uploaded_original(uploaded_file, original_path)
+        for version, output_path in outputs.items():
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            if category == "events":
+                save_optimized_image(original_path, output_path, IMAGE_SIZES[version])
+            else:
+                save_optimized_icon(original_path, output_path)
+    except Exception:
+        for path in paths:
+            path.unlink(missing_ok=True)
+        raise
+    if category == "icons":
+        return {"icon_original": private_path_value(original_path), "site_icon": public_path_value(outputs["icon"])}
+    return {"image_original": private_path_value(original_path), **{f"image_{version}": public_path_value(path) for version, path in outputs.items()}}
 
-    image_paths = {
-        "image_original": private_path_value(original_path),
-    }
 
-    for version, size in IMAGE_SIZES.items():
-        version_dir = public_base_dir / version
-        version_dir.mkdir(parents=True, exist_ok=True)
-        output_path = version_dir / f"{image_id}.jpg"
-        save_optimized_image(original_path, output_path, size)
-        image_paths[f"image_{version}"] = public_path_value(output_path)
-
-    return image_paths
+def process_event_image(uploaded_file):
+    return process_image(uploaded_file, "events")
 
 
 def process_system_icon(uploaded_file):
-    if uploaded_file is None or not uploaded_file.filename:
-        return None
-
-    filename = secure_filename(uploaded_file.filename)
-    suffix = Path(filename).suffix.lower() or ".image"
-    image_id = uuid4().hex
-    original_dir = current_app.config["PRIVATE_UPLOAD_DIR"] / "original" / "icons"
-    public_dir = current_app.config["PUBLIC_UPLOAD_DIR"] / "icons"
-    original_dir.mkdir(parents=True, exist_ok=True)
-    public_dir.mkdir(parents=True, exist_ok=True)
-    original_path = original_dir / f"{image_id}{suffix}"
-    public_path = public_dir / f"{image_id}.png"
-    uploaded_file.save(original_path)
-
-    try:
-        with Image.open(original_path) as image:
-            image.verify()
-    except OSError as error:
-        original_path.unlink(missing_ok=True)
-        raise ValueError("Unsupported icon file.") from error
-
-    save_optimized_icon(original_path, public_path)
-
-    return {
-        "icon_original": private_path_value(original_path),
-        "site_icon": public_path_value(public_path),
-    }
+    return process_image(uploaded_file, "icons")
 
 
 def save_optimized_image(source_path, output_path, size):

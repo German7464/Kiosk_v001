@@ -90,3 +90,9 @@
 - Created the initial project skeleton with the `kiosk` package, core folders, and MVP dependencies.
 - Created initial project documentation.
 - Defined MVP scope, project context, Codex workflow, architecture plan, and development plan.
+
+## 2026-10-19 — Bound requests and image uploads
+
+- Enforced configurable request, file, pixel, form-field, and multipart limits; both Waitress launch paths apply the request-body cap.
+- Added translated limit/invalid-image errors and cleanup of failed upload derivatives, preserving prior content and version.
+- Added isolated boundary, preservation, failure, startup configuration, and real loopback HTTP tests. Full verification results: see TZ_PROGRESS.md. No new dependencies, schema changes, video support, or storage quota claims.

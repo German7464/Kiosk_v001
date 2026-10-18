@@ -191,3 +191,5 @@ git status --short --branch
 ```
 
 The Node command is a standalone development check for kiosk request/error behavior; Node is not an application dependency. Automated Flask checks cover forms with rendered CSRF tokens and isolated runtime data. Use Chrome through Windows-MCP only when automated tests leave browser-specific behavior unresolved.
+
+Image safety defaults: 20 MiB per request, 16 MiB per file, 25 million pixels; see the admin feature README for configuration and error behavior. Run `python -m unittest discover -s tests` to include upload boundary and isolated Waitress HTTP checks.

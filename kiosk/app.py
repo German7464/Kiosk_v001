@@ -22,6 +22,10 @@ def create_app(config_overrides=None):
             app.config["STATIC_DIR"] = config_overrides["STATIC_FOLDER"]
         if "RESOURCE_STATIC_DIR" not in config_overrides:
             app.config["RESOURCE_STATIC_DIR"] = Config.RESOURCE_STATIC_DIR
+    for name in ("MAX_CONTENT_LENGTH", "MAX_UPLOAD_FILE_BYTES", "MAX_IMAGE_PIXELS", "MAX_FORM_MEMORY_SIZE", "MAX_FORM_PARTS"):
+        value = app.config[name]
+        if type(value) is not int or value <= 0:
+            raise ValueError(f"{name} must be a positive integer.")
     configure_session_security(app)
     app.teardown_appcontext(close_database)
     initialize_database(app)

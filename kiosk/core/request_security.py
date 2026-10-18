@@ -6,9 +6,12 @@ import threading
 import time
 from collections import deque
 
+from werkzeug.exceptions import RequestEntityTooLarge
+
 from flask import current_app, jsonify, render_template, request, session
 
 from kiosk.core.i18n import translate
+from kiosk.core.images import InvalidImage
 from kiosk.database import get_database
 
 
@@ -66,8 +69,12 @@ def security_error(message, status, retry_after=None):
 
 
 def protect_admin_request():
+    if request.content_length is not None and request.content_length > current_app.config["MAX_CONTENT_LENGTH"]:
+        raise RequestEntityTooLarge()
     if request.blueprint != "admin" or request.method in {"GET", "HEAD", "OPTIONS"}:
         return None
+    if any(len(value.encode("utf-8")) > current_app.config["MAX_FORM_MEMORY_SIZE"] for name, values in request.form.lists() for value in values):
+        raise RequestEntityTooLarge()
     expected = session.get("csrf_token")
     supplied = request.headers.get("X-CSRF-Token") or request.form.get("csrf_token")
     if not isinstance(expected, str) or not isinstance(supplied, str) or len(expected) != 64 or len(supplied) != 64 or not expected.isascii() or not supplied.isascii() or not hmac.compare_digest(expected, supplied):
@@ -88,6 +95,8 @@ def protect_admin_request():
 
 
 def configure_request_security(app):
+    app.register_error_handler(413, lambda error: security_error("security.upload_limit", 413))
+    app.register_error_handler(InvalidImage, lambda error: security_error("security.invalid_upload", 400))
     app.extensions["authentication_limiter"] = AuthenticationLimiter()
     app.jinja_env.globals["csrf_token"] = csrf_token
     app.before_request(protect_admin_request)

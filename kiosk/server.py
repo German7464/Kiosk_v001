@@ -332,7 +332,7 @@ def run_waitress(host=None, port=None):
     host = app.config["SERVER_HOST"]
     port = app.config["SERVER_PORT"]
     print(startup_message(app), flush=True)
-    serve(app, host=host, port=port)
+    serve(app, host=host, port=port, max_request_body_size=app.config["MAX_CONTENT_LENGTH"])
 
 
 def run_waitress_with_launcher(host=None, port=None, path="/kiosk", auto_launch=True):
@@ -361,7 +361,7 @@ def run_waitress_with_launcher(host=None, port=None, path="/kiosk", auto_launch=
     server_thread = threading.Thread(
         target=serve,
         args=(app,),
-        kwargs={"host": host, "port": port},
+        kwargs={"host": host, "port": port, "max_request_body_size": app.config["MAX_CONTENT_LENGTH"]},
         daemon=True,
     )
     server_thread.start()
