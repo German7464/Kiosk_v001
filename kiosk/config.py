@@ -25,7 +25,7 @@ class Config:
     DATABASE_PATH = INSTANCE_DIR / "kiosk.sqlite"
     PRIVATE_UPLOAD_DIR = INSTANCE_DIR / "uploads"
     PUBLIC_UPLOAD_DIR = STATIC_DIR / "uploads"
-    SECRET_KEY = "dev"
+    SECRET_KEY = None
     SERVER_HOST = "127.0.0.1"
     SERVER_PORT = 5000
-    DEBUG = True
+    DEBUG = False

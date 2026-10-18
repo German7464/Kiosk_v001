@@ -22,6 +22,7 @@ Provides MVP admin authentication, event management, event image upload, tag man
 - `kiosk/templates/kiosk_home.html`
 - `kiosk/core/images.py`
 - `kiosk/core/i18n.py`
+- `kiosk/core/security.py`
 - `kiosk/database.py`
 - `kiosk/app.py`
 - `kiosk/static/img/site_icon.png`
@@ -87,3 +88,9 @@ TV mode receives active events, optimized TV images, and assigned event tags thr
 ## How the Feature Is Managed in Admin Panel
 
 The admin panel is protected by Flask session authentication. It can list, create, edit, delete, hide, show, and move events. Admin actions show translated status messages after successful saves and changes, then hide them automatically after a short delay. Admin event previews use one shared Jinja preview partial, one shared modal partial, and one shared JavaScript modal mechanism for the event list and the create/edit form, with kiosk and TV thumbnail modes, compact and full sizes, stable internal compositions, stable media areas, clean placeholders for missing or broken images, live form text updates, and selected image preview when available. The admin home page includes a direct preview link to `/preview`. It can upload event images and stores originals outside public static folders while exposing optimized kiosk, TV, and thumb versions. It can also list, create, edit, and delete tags with a local search field, then assign or remove tags on events; the event tag assignment page includes a local search field and wraps long tag names safely. It can edit the system title, kiosk home label, kiosk home heading, kiosk home description, interface language setting, and system icon. Interface translations are loaded from JSON files. Translation file management is not implemented in the admin panel. Password recovery is available only from the local command line through `python serve.py --reset-admin-password`; no web reset route is exposed. The kiosk home fullscreen exit prompt validates the current admin username and password through the same password hash logic used by admin login, and it does not use a separate kiosk password.
+
+## Session Security
+
+Without an explicit `SECRET_KEY` configuration override, startup generates a cryptographically random installation key in `instance/session.key`. A complete temporary file is atomically linked into place without overwriting an existing key, including concurrent startup. The filesystem must support hard links; failures stop startup. Empty, malformed, or inaccessible keys stop startup with a sanitized error. Temporary files are removed when possible. No fallback secret is used. The ignored instance directory must remain private to the operating-system account; Windows access follows its directory ACLs.
+
+Keep this file private and preserve it across restarts. Do not commit or publish it. Losing or replacing it invalidates sessions. The first upgrade from the shared development key requires signing in again. Explicit test keys do not create a key file. Debug mode is disabled by default. Session-key initialization does not modify database schema, password hashes, public API formats, or content version, and has no kiosk or TV UI changes. Default administrator credentials remain unchanged in this step; first-login hardening is separate work.

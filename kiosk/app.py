@@ -2,6 +2,7 @@ from flask import Flask, render_template, send_from_directory
 
 from kiosk.config import Config
 from kiosk.core.i18n import translate
+from kiosk.core.security import configure_session_security
 from kiosk.database import close_database, get_database, initialize_database
 from kiosk.features.admin import admin_blueprint
 from kiosk.features.api import api_blueprint
@@ -20,6 +21,7 @@ def create_app(config_overrides=None):
             app.config["STATIC_DIR"] = config_overrides["STATIC_FOLDER"]
         if "RESOURCE_STATIC_DIR" not in config_overrides:
             app.config["RESOURCE_STATIC_DIR"] = Config.RESOURCE_STATIC_DIR
+    configure_session_security(app)
     app.teardown_appcontext(close_database)
     initialize_database(app)
     app.register_blueprint(admin_blueprint)

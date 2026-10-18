@@ -2,6 +2,8 @@
 
 ## 2026-10-18
 
+- Replaced the shared development session secret with a persistent random installation key, atomic creation without overwrite, and explicit startup errors for invalid or inaccessible keys. Disabled debug mode by default; preserved explicit test overrides and existing data. Existing development-key sessions require login again; default credentials remain a separate task.
+
 - Confirmed local saves with a warning when standby protection is unavailable, controlled server-role transfer, own-password changes, and independent persistence and distribution states. Remaining version 2 parameters stay draft.
 
 - Recorded owner approval for local cached operation during server outages, paused editing without safe write authority, and a designated background standby on a second PC. Added the planned two-PC failure and reconnection validation scenarios; no replication or failover behavior has been implemented yet.
