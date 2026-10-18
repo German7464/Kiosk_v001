@@ -4,7 +4,7 @@
 
 Build a local client-server kiosk system for displaying event cards on kiosks, Smart TV, preview screens, and an admin panel.
 
-The project must follow the MVP scope only. Do not add features outside the MVP unless explicitly requested.
+Preserve the MVP as the compatibility baseline. Version 2 work follows docs/TZ.md and the explicitly selected stage; approval of the specification does not authorize all stages at once.
 
 ## Technology stack
 
@@ -66,9 +66,10 @@ Update docs/CHANGELOG.md after every completed task.
 
 Before editing code:
 1. Read AGENTS.md.
-2. Read docs/MVP_SCOPE.md.
-3. Read only the README.md of the feature being changed.
-4. Do not analyze the whole repository unless explicitly asked.
+2. Read docs/TZ.md and docs/TZ_PROGRESS.md.
+3. Read docs/V2_PLAN.md and docs/MVP_SCOPE.md for stage scope and compatibility.
+4. Read only the README.md of the feature being changed.
+5. Do not analyze the whole repository unless explicitly asked.
 
 For each task:
 1. State the files that will be changed.
@@ -76,7 +77,7 @@ For each task:
 3. Do not refactor unrelated code.
 4. Do not add new dependencies unless necessary.
 5. Update related README.md files only for major feature module changes.
-6. Update docs/CHANGELOG.md.
+6. Update docs/TZ_PROGRESS.md and docs/CHANGELOG.md after every completed stage. Record requirement references, evidence, limitations, unresolved decisions, and the next step. Do not mark an entire requirement verified from partial checks.
 7. Provide commands to run and test the change.
 
 ## MVP boundaries
@@ -136,8 +137,7 @@ Use:
 
 Do not use in-app browser checks.
 Do not try to open pages through iab.
-Use Flask test client checks only.
-The user will perform visual browser checks manually when needed.
+Keep Flask test client checks. Per owner instruction, perform available visual checks through Windows-MCP in Google Chrome on isolated test data. Never change working credentials for a test. Record unavailable physical-device checks as pending.
 
 After each implementation step, include in the final report:
 - Changed files

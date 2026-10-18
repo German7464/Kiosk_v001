@@ -1,6 +1,6 @@
 # Version 2 Development
 
-The expanded owner-requested requirements are recorded in [Version 2 Requirements](V2_REQUIREMENTS.md). That document is a draft with unresolved decisions; the priorities below remain the initial stabilization work, not the complete network-system scope.
+The current specification is [TZ](TZ.md), with implementation evidence in [TZ Progress](TZ_PROGRESS.md). [Version 2 Requirements](V2_REQUIREMENTS.md) retains earlier English decisions. Unresolved decisions remain open; the priorities below remain the initial stabilization work, not the complete network-system scope.
 
 ## Baseline
 
@@ -12,7 +12,7 @@ Compilation and all eight isolated smoke tests passed. Public routes, authentica
 
 The owner approved uninterrupted local cached display with editing paused when safe write authority is unavailable, and a primary plus background standby on a second PC for the first network stage. Follow the two-PC validation plan in the requirements before introducing automatic multi-device election.
 
-1. Replace the fixed development session secret and improve first-login credential handling.
+1. Complete first-login credential hardening after the verified installation session-key step. Use local interactive setup, block legacy admin/admin, and invalidate stale sessions.
 2. Remove placeholder wording and align architecture documentation with the implementation.
 3. Pin verified dependency versions for reproducible installation.
 4. Validate realistic event cards, image uploads, automatic screen updates, and fullscreen behavior.

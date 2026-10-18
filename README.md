@@ -20,7 +20,7 @@ React is not used in the first version.
 
 The MVP provides a local Flask application with event management, kiosk and TV display modes, preview mode, admin editing tools, image processing, translations, automatic client update checks, and an EXE build.
 
-Only the MVP scope defined in [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md) is allowed.
+The MVP remains the compatibility baseline. Version 2 follows [the specification](docs/TZ.md) and the selected stage recorded in [progress](docs/TZ_PROGRESS.md).
 
 ## Development Status
 
@@ -33,10 +33,10 @@ The MVP Flask application is implemented with SQLite storage, admin management f
 Before future tasks, read:
 
 1. [AGENTS.md](AGENTS.md)
-2. [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md)
+2. [docs/TZ.md](docs/TZ.md), [progress](docs/TZ_PROGRESS.md), [current plan](docs/V2_PLAN.md), and [MVP baseline](docs/MVP_SCOPE.md)
 3. The `README.md` inside the related major feature folder, when that feature exists
 
-Do not analyze the whole repository for every task. Make the smallest useful change, stay inside the MVP, and update [docs/CHANGELOG.md](docs/CHANGELOG.md) after completed work.
+Do not analyze the whole repository for every task. Make the smallest useful change, stay inside the selected stage, and update progress and [docs/CHANGELOG.md](docs/CHANGELOG.md) after every stage.
 
 ## Running Locally
 

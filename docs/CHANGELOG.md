@@ -2,6 +2,8 @@
 
 ## 2026-10-19
 
+- Recorded the full owner-provided specification unchanged, added a requirement progress ledger with evidence and limitations, and made per-stage progress updates mandatory in the project workflow. Confirmed local first-admin setup and blocking legacy default credentials as the next security increment.
+
 - Per owner request, used Windows-MCP and Google Chrome for visual checks. Started the current code with Waitress on loopback port 5001 while preserving the older server on port 5000. Verified kiosk home, empty event list, TV, preview navigation, login redirection, administrator login, event management, tags, and system settings. Restarted the new server and confirmed the existing Chrome session still opens administration without login. Confirmed TV fullscreen entry/exit. At 1366x768 with browser chrome visible, kiosk home and events require vertical scrolling. Existing admin placeholder wording and Chrome's weak/default-password warning remain; credential hardening is separate. No published event cards were available for visual verification, and content/passwords were not edited.
 
 ## 2026-10-18
