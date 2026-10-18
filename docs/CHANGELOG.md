@@ -102,3 +102,8 @@
 - Pinned the 16 required runtime/build packages, including transitive dependencies, to the verified Windows x64 / CPython 3.14.5 baseline. pip 26.1.1 is documented separately for bootstrapping.
 - Documented clean-environment setup and deliberate update/verification steps in README; updated the stage plan and specification progress ledger. Corrected legacy dash encoding in these two updated ledgers to UTF-8.
 - Isolated installation, exact package/version/location checks, pip check, PyInstaller version, and compilation passed. All 42 Python tests and the kiosk JavaScript check passed in the isolated environment. Fixed a discovered test-server shutdown race by finishing Waitress workers before closing sockets and asserting worker/event-loop termination. Full evidence is recorded in TZ_PROGRESS.md. No working environment or application behavior changes; clean-machine EXE and other platforms remain unverified.
+
+## 2026-10-19 - Independent application verification
+
+- Repeated the complete 42-test Python suite, JavaScript checks, compilation, and dependency consistency checks successfully.
+- Verified real HTTP login, multipart event/image creation, API data, image downloads/decoding, content-version advancement, and public display routes on an isolated temporary Waitress installation. Evidence and limitations are recorded in TZ_PROGRESS.md. No application source or working data changes.
