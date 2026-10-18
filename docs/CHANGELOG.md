@@ -2,6 +2,8 @@
 
 ## 2026-10-18
 
+- Preserved the verified MVP as annotated tag `v1.0.0-mvp` and started version 2 development on branch `v2` with a focused continuation and rollback plan.
+- Prepared local runtime recovery artifacts separately from the public source repository.
 - Restarted the local Waitress server after Codex restart and opened the application in Firefox through Windows-MCP.
 - Rechecked all eight smoke tests and Flask route status codes, including authenticated admin pages. Inspected kiosk, events, TV, preview, login, event creation, tags, and settings in the browser without changing application content.
 - Confirmed that the current database has no events or tags, the interface language is English, and the admin home still displays placeholder wording.

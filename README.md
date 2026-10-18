@@ -24,6 +24,8 @@ Only the MVP scope defined in [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md) is allowed.
 
 ## Development Status
 
+The MVP baseline is preserved by the annotated Git tag `v1.0.0-mvp`. Version 2 development continues on branch `v2`; version 2 is not a completed release. See [Version 2 Plan](docs/V2_PLAN.md) for priorities, validation limits, and rollback instructions.
+
 The MVP Flask application is implemented with SQLite storage, admin management flows, public display routes, public API endpoints, image processing, translations, responsive layouts, and reusable developer smoke tests.
 
 ## Working With This Project
