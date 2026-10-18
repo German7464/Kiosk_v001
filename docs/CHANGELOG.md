@@ -2,6 +2,11 @@
 
 ## 2026-10-18
 
+- Confirmed local saves with a warning when standby protection is unavailable, controlled server-role transfer, own-password changes, and independent persistence and distribution states. Remaining version 2 parameters stay draft.
+
+- Recorded owner approval for local cached operation during server outages, paused editing without safe write authority, and a designated background standby on a second PC. Added the planned two-PC failure and reconnection validation scenarios; no replication or failover behavior has been implemented yet.
+- Updated the requirements with owner clarifications: 100 total devices, tentative Windows 10 and low-resource Android TV targets, requested emergency Android server capability, video content, two account roles, operator-controlled update timing, and long-lived data compatibility. Promoted individual deletion recovery, publication preview, and device distribution progress to required version 2 features; left hardware limits and failure policies open.
+- Drafted the version 2 requirements for offline device groups, cached display, synchronization, isolated modules, safe updates, recovery, standby takeover, and a measured 100-device target. Recorded owner decisions and provisional acceptance criteria without changing application behavior.
 - Preserved the verified MVP as annotated tag `v1.0.0-mvp` and started version 2 development on branch `v2` with a focused continuation and rollback plan.
 - Prepared local runtime recovery artifacts separately from the public source repository.
 - Restarted the local Waitress server after Codex restart and opened the application in Firefox through Windows-MCP.

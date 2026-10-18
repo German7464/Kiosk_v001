@@ -1,5 +1,7 @@
 # Version 2 Development
 
+The expanded owner-requested requirements are recorded in [Version 2 Requirements](V2_REQUIREMENTS.md). That document is a draft with unresolved decisions; the priorities below remain the initial stabilization work, not the complete network-system scope.
+
 ## Baseline
 
 The verified MVP is preserved by annotated tag `v1.0.0-mvp`. Development continues on branch `v2`. This marks the start of version 2, not a completed version 2 release. The application name and existing MVP boundaries remain unchanged.
@@ -7,6 +9,8 @@ The verified MVP is preserved by annotated tag `v1.0.0-mvp`. Development continu
 Compilation and all eight isolated smoke tests passed. Public routes, authenticated admin routes, and browser navigation were checked. The current runtime database contains no events or tags. Visual validation with published cards, physical Smart TV testing, long-running operation, and an EXE test on another computer remain pending.
 
 ## Priorities
+
+The owner approved uninterrupted local cached display with editing paused when safe write authority is unavailable, and a primary plus background standby on a second PC for the first network stage. Follow the two-PC validation plan in the requirements before introducing automatic multi-device election.
 
 1. Replace the fixed development session secret and improve first-login credential handling.
 2. Remove placeholder wording and align architecture documentation with the implementation.
