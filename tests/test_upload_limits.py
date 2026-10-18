@@ -141,7 +141,7 @@ class UploadLimitTests(unittest.TestCase):
             self.assertEqual(serve.call_args.kwargs['max_request_body_size'], 20*1024*1024)
 
     def test_waitress_http_body_rejection(self):
-        server = create_server(self.app, host='127.0.0.1', port=0, max_request_body_size=256)
+        server = create_server(self.app, host='127.0.0.1', port=0, max_request_body_size=256, asyncore_loop_timeout=0.1)
         thread = threading.Thread(target=server.run, daemon=True)
         thread.start()
         try:
@@ -155,5 +155,9 @@ class UploadLimitTests(unittest.TestCase):
             error.exception.close()
             self.assertEqual(self.snapshot(), before)
         finally:
+            server.task_dispatcher.shutdown()
+            self.assertFalse(server.task_dispatcher.threads)
             server.close()
+            server.asyncore.close_all(map=server._map)
             thread.join(timeout=3)
+            self.assertFalse(thread.is_alive())

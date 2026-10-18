@@ -91,8 +91,14 @@
 - Created initial project documentation.
 - Defined MVP scope, project context, Codex workflow, architecture plan, and development plan.
 
-## 2026-10-19 — Bound requests and image uploads
+## 2026-10-19 â€” Bound requests and image uploads
 
 - Enforced configurable request, file, pixel, form-field, and multipart limits; both Waitress launch paths apply the request-body cap.
 - Added translated limit/invalid-image errors and cleanup of failed upload derivatives, preserving prior content and version.
 - Added isolated boundary, preservation, failure, startup configuration, and real loopback HTTP tests. Full verification results: see TZ_PROGRESS.md. No new dependencies, schema changes, video support, or storage quota claims.
+
+## 2026-10-19 - Pin verified application and build dependencies
+
+- Pinned the 16 required runtime/build packages, including transitive dependencies, to the verified Windows x64 / CPython 3.14.5 baseline. pip 26.1.1 is documented separately for bootstrapping.
+- Documented clean-environment setup and deliberate update/verification steps in README; updated the stage plan and specification progress ledger. Corrected legacy dash encoding in these two updated ledgers to UTF-8.
+- Isolated installation, exact package/version/location checks, pip check, PyInstaller version, and compilation passed. All 42 Python tests and the kiosk JavaScript check passed in the isolated environment. Fixed a discovered test-server shutdown race by finishing Waitress workers before closing sockets and asserting worker/event-loop termination. Full evidence is recorded in TZ_PROGRESS.md. No working environment or application behavior changes; clean-machine EXE and other platforms remain unverified.

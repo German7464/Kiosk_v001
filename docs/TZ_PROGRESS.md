@@ -91,14 +91,25 @@ Earlier owner approvals in V2_REQUIREMENTS.md and commit 3c72e36 remain recorded
 
 ## Current stage and next work
 
-The local credential and request-security increments of stage 2 are complete; stage 2 as a whole is not. Request/image limits are recorded below. Next address LAN transport protection, dependency reproducibility, and realistic baseline measurements; video and storage policy decisions remain unresolved. No later implementation stage is started automatically.
+The local credential and request-security increments of stage 2 are complete; stage 2 as a whole is not. Request/image limits are recorded below. Dependency installation is recorded below. Next address LAN transport protection and realistic baseline measurements; video and storage policy decisions remain unresolved. No later implementation stage is started automatically.
 
 Remaining security includes deployment-wide authentication limits, total storage quotas, LAN transport protection, group permissions, and update verification. Launcher and later stages are not part of this increment.
 
-## Upload-limit increment — 2026-10-19
+## Upload-limit increment â€” 2026-10-19
 
 Requirement: 18.9, limited to current image uploads and HTTP request bounds. Owner selected 20 MiB/request, 16 MiB/file, and 25 million pixels; configurable positive integers. Multipart parts: 100; text/form-memory bound: 256 KiB. This does not settle all D05 video/storage decisions.
 
 Implemented bounded actual-stream copying, pre-decode pixel checks, full decoding, translated 413/400 application errors, and cleanup of current upload derivatives on processing failures. Both Waitress entrypoints use the body bound. Existing media and schema remain unchanged. Security overall remains Partial; LAN transport, storage quotas, and aggregate resource limits remain pending.
 
 Evidence: the complete 40-test Python suite passed, followed by all 8 upload tests after adding two boundary/failure cases (42 distinct Python tests verified overall). JavaScript checks, compileall, and git diff --check passed. Flask public pages/APIs: 200; admin before login: 302; after login/restart: 200. Oversized request/file/pixels/field/parts: 413; invalid image: 400. Real isolated loopback Waitress: public API 200, oversized body 413; test server stopped. Both server entrypoints were checked for body-limit propagation. Failed processing preserved database dumps and old media byte-for-byte. Browser inspection was unnecessary; no working server, credentials, or runtime data was changed. Commit subject: `fix: bound requests and image uploads`.
+
+## Dependency installation increment - 2026-10-19
+
+Requirement references: stage 2 (section 22), technology/baseline preservation (section 2), and repeatable verification under section 26. Commit subject: `build: pin verified application and build dependencies`.
+
+- Pinned all 16 required application/build packages, including their installed transitive dependencies, in requirements.txt. Package provenance was checked against installed distribution dependency metadata, not an unrestricted environment freeze. No new application dependency was introduced.
+- Baseline: Windows x64, CPython 3.14.5, pip 26.1.1. pip is a separate bootstrap tool. README documents environment creation, installation, checks, and deliberate version updates. Other OS/Python/architecture combinations remain unverified.
+- Validation uses a new temporary venv outside the working environment with system site packages disabled. Installation from pinned requirements succeeded using package-index/cached wheels; exact installed package membership/versions and package locations were checked. All 16 match, with pip separately matching 26.1.1. pip check found no broken requirements. PyInstaller --version returned 6.22.3; compilation passed.
+- All 42 Python tests passed in the isolated environment (46.896 seconds), as did the kiosk JavaScript check and git diff --check. Flask public pages/APIs and login: 200; admin before login: 302, after login/restart: 200. Existing credential, CSRF, throttling, upload, and database preservation checks passed. The first successful suite exposed a teardown race in the temporary Waitress HTTP test; workers now stop before sockets, all channels close, and worker/event-loop completion is asserted. The full suite then passed without that background socket error. Existing working credentials, data, servers, and .venv were not modified. No runtime/database/route/API changes. Package versions are reproducible; package artifact hashes, byte-identical EXEs, clean-computer deployment, and platform support are not established by this check. Section 2 and stage 2 remain Partial.
+- Normalized legacy Windows-encoded dash bytes in this ledger and changelog to valid UTF-8 while updating them.
+- Next: LAN transport design decisions and realistic MVP baseline measurements; hardware, sustained operation, and clean-machine EXE acceptance remain pending.

@@ -38,6 +38,28 @@ Before future tasks, read:
 
 Do not analyze the whole repository for every task. Make the smallest useful change, stay inside the selected stage, and update progress and [docs/CHANGELOG.md](docs/CHANGELOG.md) after every stage.
 
+## Verified Dependency Installation
+
+The pinned dependency baseline is Windows x64, CPython 3.14.5, and pip 26.1.1. `requirements.txt` pins all 16 runtime and build packages, including transitive dependencies; pip is a separate bootstrap tool. Other Python versions, operating systems, and architectures are not verified by this checkpoint.
+
+Create a new environment with an installed CPython 3.14.5 interpreter. Use a different environment directory if `.venv` already contains your working installation:
+
+```powershell
+py -3.14 -c "import sys; assert sys.version_info[:3] == (3, 14, 5), sys.version"
+py -3.14 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install pip==26.1.1
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe -m unittest discover -s tests
+.\.venv\Scripts\python.exe -m compileall run.py kiosk
+.\.venv\Scripts\python.exe -m PyInstaller --version
+node tests/test_kiosk_request_security.js
+```
+
+Node is needed only for the JavaScript development check, not application startup. Package installation requires an available package index or a separately prepared local package source; everyday application operation does not require an index or Internet access. Do not recreate a working environment merely to run the application.
+
+To update dependencies, select versions deliberately in a separate environment, keep all required transitive packages pinned, run `pip check`, compare installed package versions with `requirements.txt` (excluding the separately pinned pip), and repeat the complete Python/JavaScript and Flask route checks. Update the requirements and verification record together in one reviewed commit. Do not regenerate pins from an environment containing unrelated tools. Existing pins reproduce package versions, not artifact hashes or byte-identical executables. A successful PyInstaller version check does not verify an EXE build or a clean-machine installation.
+
 ## Running Locally
 
 First create the administrator in a local interactive terminal (no default account is created):
