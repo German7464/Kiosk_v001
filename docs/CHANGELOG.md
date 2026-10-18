@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-18
+
+- Restarted the local Waitress server after Codex restart and opened the application in Firefox through Windows-MCP.
+- Rechecked all eight smoke tests and Flask route status codes, including authenticated admin pages. Inspected kiosk, events, TV, preview, login, event creation, tags, and settings in the browser without changing application content.
+- Confirmed that the current database has no events or tags, the interface language is English, and the admin home still displays placeholder wording.
+- Created a local project virtual environment and installed the existing requirements for startup verification.
+- Verified compilation, all eight isolated MVP smoke tests, and Flask test client responses for public pages, admin authentication, and public APIs.
+- Started the local Waitress server on 127.0.0.1:5000 without automatic client launching.
+- Verified the existing isolated Windows-MCP 0.8.8 installation and stdio connection with UI tools selected and anonymized telemetry disabled. The Notepad interaction check was blocked by USER_CONTROL.
+
 ## 2026-05-29
 
 - Changed the default production startup host to `0.0.0.0` so `python serve.py` and the packaged EXE are LAN-accessible by default.
