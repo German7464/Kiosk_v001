@@ -1,3 +1,4 @@
+import hmac
 import sqlite3
 from datetime import datetime, timezone
 from functools import wraps
@@ -5,6 +6,8 @@ from functools import wraps
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from kiosk.core.credentials import session_credential_token, uses_default_credentials, validate_password
+from kiosk.core.i18n import translate
 from kiosk.core.images import process_event_image, process_system_icon
 from kiosk.database import get_database, increase_content_version
 
@@ -15,7 +18,10 @@ admin_blueprint = Blueprint("admin", __name__, url_prefix="/admin")
 def admin_required(route_handler):
     @wraps(route_handler)
     def wrapped_route(*args, **kwargs):
-        if "admin_user_id" not in session:
+        user = find_user_by_id(session.get("admin_user_id"))
+        token = session.get("credential_token")
+        if user is None or not isinstance(token, str) or uses_default_credentials(user) or not hmac.compare_digest(token, session_credential_token(user)):
+            session.clear()
             return redirect(url_for("admin.login"))
 
         return route_handler(*args, **kwargs)
@@ -48,7 +54,7 @@ def find_user_by_id(user_id):
 def authenticate_admin_credentials(username, password):
     user = find_user_by_username(username)
 
-    if user is None or not check_password_hash(user["password_hash"], password):
+    if user is None or uses_default_credentials(user) or not check_password_hash(user["password_hash"], password):
         return None
 
     return user
@@ -545,7 +551,20 @@ def move_event(event_id):
 
 @admin_blueprint.get("/login")
 def login():
-    return render_template("admin_login.html")
+    return render_login()
+
+
+def active_admin_language():
+    row = get_database().execute("SELECT value FROM settings WHERE key = 'interface_language'").fetchone()
+    return row["value"] if row is not None else "en"
+
+
+def render_login(error=None, status=200):
+    database = get_database()
+    has_accounts = database.execute("SELECT 1 FROM users LIMIT 1").fetchone() is not None
+    admin = find_user_by_username("admin")
+    setup_message = "admin.setup_required" if not has_accounts else "admin.default_blocked" if uses_default_credentials(admin) else None
+    return render_template("admin_login.html", error=error, setup_message=setup_message), status
 
 
 @admin_blueprint.post("/login")
@@ -555,11 +574,12 @@ def login_post():
     user = authenticate_admin_credentials(username, password)
 
     if user is None:
-        return render_template("admin_login.html", error="Invalid username or password."), 401
+        return render_login(error="Invalid username or password.", status=401)
 
     session.clear()
     session["admin_user_id"] = user["id"]
     session["admin_username"] = user["username"]
+    session["credential_token"] = session_credential_token(user)
 
     return redirect(url_for("admin.admin_home"))
 
@@ -604,16 +624,27 @@ def change_password_post():
     if not new_password or new_password != confirm_password:
         return render_template("admin_password_change.html", error="New passwords do not match."), 400
 
+    try:
+        validate_password(new_password)
+    except ValueError:
+        return render_template("admin_password_change.html", error=translate("admin.password_length", active_admin_language())), 400
+
     updated_at = datetime.now(timezone.utc).isoformat()
-    get_database().execute(
+    database = get_database()
+    cursor = database.execute(
         """
         UPDATE users
         SET password_hash = ?, updated_at = ?
-        WHERE id = ?
+        WHERE id = ? AND password_hash = ?
         """,
-        (generate_password_hash(new_password), updated_at, user["id"]),
+        (generate_password_hash(new_password), updated_at, user["id"], user["password_hash"]),
     )
-    get_database().commit()
+    if cursor.rowcount != 1:
+        database.rollback()
+        session.clear()
+        return redirect(url_for("admin.login"))
+    database.commit()
+    session.clear()
     flash("flash.password_changed")
 
-    return redirect(url_for("admin.admin_home"))
+    return redirect(url_for("admin.login"))

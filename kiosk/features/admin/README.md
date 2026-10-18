@@ -23,6 +23,9 @@ Provides MVP admin authentication, event management, event image upload, tag man
 - `kiosk/core/images.py`
 - `kiosk/core/i18n.py`
 - `kiosk/core/security.py`
+- `kiosk/core/credentials.py`
+- `kiosk/server.py`
+- `serve.py`
 - `kiosk/database.py`
 - `kiosk/app.py`
 - `kiosk/static/img/site_icon.png`
@@ -93,4 +96,16 @@ The admin panel is protected by Flask session authentication. It can list, creat
 
 Without an explicit `SECRET_KEY` configuration override, startup generates a cryptographically random installation key in `instance/session.key`. A complete temporary file is atomically linked into place without overwriting an existing key, including concurrent startup. The filesystem must support hard links; failures stop startup. Empty, malformed, or inaccessible keys stop startup with a sanitized error. Temporary files are removed when possible. No fallback secret is used. The ignored instance directory must remain private to the operating-system account; Windows access follows its directory ACLs.
 
-Keep this file private and preserve it across restarts. Do not commit or publish it. Losing or replacing it invalidates sessions. The first upgrade from the shared development key requires signing in again. Explicit test keys do not create a key file. Debug mode is disabled by default. Session-key initialization does not modify database schema, password hashes, public API formats, or content version, and has no kiosk or TV UI changes. Default administrator credentials remain unchanged in this step; first-login hardening is separate work.
+Keep this file private and preserve it across restarts. Do not commit or publish it. Losing or replacing it invalidates sessions. The first upgrade from the shared development key requires signing in again. Explicit test keys do not create a key file. Debug mode is disabled by default. Session-key initialization does not modify database schema, password hashes, public API formats, or content version, and has no kiosk or TV UI changes. The credential increment below removes default-account creation and blocks legacy default credentials.
+
+## Local Administrator Setup and Credential Sessions
+
+A new installation has no users. Run `python serve.py --setup-admin` (or `Kiosk_v001.exe --setup-admin`) in a local terminal. The command asks for the password twice without echo, requires 12 to 128 characters, and creates `admin` only while the users table is empty. An immediate SQLite transaction serializes competing setup commands. Setup is refused once any account exists.
+
+`--reset-admin-password` now asks for a replacement password twice without echo instead of printing a generated temporary password. It updates only an existing `admin`; it does not create one or start the server/browser. Missing terminal, unsafe password input, cancellation, validation failure, and storage failures return a nonzero exit code. No password is accepted as an argument, read from a pipe, or printed. The filesystem and operating-system account remain the local authorization boundary.
+
+Startup never replaces existing password hashes. Existing `admin/admin` is rejected by login and fullscreen validation; its administrative sessions are rejected until explicit local reset. Login pages explain missing setup or blocked default credentials in the selected interface language. This does not implement the full Launcher wizard.
+
+Every protected administrative request checks the current user and an HMAC session token derived from the user ID and current password hash with the installation key. The hash itself is not stored in the cookie. Earlier sessions without this token require login again. Password reset/change and account deletion invalidate earlier sessions; valid sessions survive a restart with the same credentials and installation key. Web password changes enforce the same length policy, reject concurrent password replacements, clear the session, and redirect to login.
+
+No database schema or public API changes are introduced. Credentials do not increase content version and do not change kiosk/TV content. Existing content, image paths, and nondefault user credentials are retained. Login throttling, general CSRF protection, LAN transport protection, and future roles remain separate work.

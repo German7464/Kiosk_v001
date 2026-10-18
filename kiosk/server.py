@@ -1,7 +1,6 @@
 import os
 import shutil
 import socket
-import secrets
 import subprocess
 import threading
 import time
@@ -9,14 +8,12 @@ import sys
 import urllib.error
 import urllib.request
 import webbrowser
-from datetime import datetime, timezone
 from pathlib import Path
 
 from waitress import serve
-from werkzeug.security import generate_password_hash
 
 from kiosk.app import create_app
-from kiosk.database import get_database
+from kiosk.core.credentials import admin_password_command
 
 
 def kiosk_url(host, port):
@@ -314,33 +311,12 @@ def startup_launch_lines(host, port, path="/kiosk", auto_launch=True, base_dir=N
     return lines
 
 
-def reset_admin_password(app):
-    temporary_password = secrets.token_urlsafe(12)
-    updated_at = datetime.now(timezone.utc).isoformat()
-
-    with app.app_context():
-        database = get_database()
-        database.execute(
-            """
-            INSERT INTO users (username, password_hash, created_at, updated_at)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash, updated_at = excluded.updated_at
-            """,
-            ("admin", generate_password_hash(temporary_password), updated_at, updated_at),
-        )
-        database.commit()
-
-    return temporary_password
-
-
 def reset_admin_password_command(app=None):
-    if app is None:
-        app = create_app()
+    return admin_password_command(lambda: app if app is not None else create_app())
 
-    temporary_password = reset_admin_password(app)
-    print("Admin password has been reset.", flush=True)
-    print(f"Temporary password: {temporary_password}", flush=True)
-    print("Log in as admin and change this password immediately.", flush=True)
+
+def setup_admin_command(app=None):
+    return admin_password_command(lambda: app if app is not None else create_app(), setup=True)
 
 
 def run_waitress(host=None, port=None):

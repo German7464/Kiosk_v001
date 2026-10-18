@@ -1,7 +1,8 @@
 import argparse
+import sys
 
 from kiosk.config import Config
-from kiosk.server import reset_admin_password_command, run_waitress_with_launcher
+from kiosk.server import reset_admin_password_command, run_waitress_with_launcher, setup_admin_command
 
 
 def build_parser():
@@ -12,7 +13,9 @@ def build_parser():
     open_group = parser.add_mutually_exclusive_group()
     open_group.add_argument("--open-kiosk", action="store_true")
     open_group.add_argument("--open-tv", action="store_true")
-    parser.add_argument("--reset-admin-password", action="store_true")
+    credential_group = parser.add_mutually_exclusive_group()
+    credential_group.add_argument("--reset-admin-password", action="store_true")
+    credential_group.add_argument("--setup-admin", action="store_true")
     return parser
 
 
@@ -24,8 +27,10 @@ def main(argv=None):
     args = parse_args(argv)
 
     if args.reset_admin_password:
-        reset_admin_password_command()
-        return
+        return reset_admin_password_command()
+
+    if args.setup_admin:
+        return setup_admin_command()
 
     if args.open_kiosk:
         run_waitress_with_launcher(host=args.host, port=args.port, path="/kiosk", auto_launch=not args.no_client)
@@ -39,4 +44,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

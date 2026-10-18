@@ -10,8 +10,9 @@ from PIL import Image
 from werkzeug.security import check_password_hash
 
 from kiosk.app import create_app
+from kiosk.core.credentials import save_admin_password
 from kiosk.database import get_database
-from kiosk.server import find_clientkiosk_executable, launch_clientkiosk, local_server_is_ready, reset_admin_password, reset_admin_password_command, startup_launch_lines, startup_message, run_waitress_with_launcher
+from kiosk.server import find_clientkiosk_executable, launch_clientkiosk, local_server_is_ready, reset_admin_password_command, startup_launch_lines, startup_message, run_waitress_with_launcher
 from serve import parse_args
 
 
@@ -33,6 +34,7 @@ class MvpSmokeTests(unittest.TestCase):
                 "SECRET_KEY": "test",
             }
         )
+        save_admin_password(self.app, "smoke-test-password", setup=True)
         self.client = self.app.test_client()
 
     def tearDown(self):
@@ -212,7 +214,7 @@ class MvpSmokeTests(unittest.TestCase):
 
         correct_response = self.client.post(
             "/admin/fullscreen/validate",
-            data=json.dumps({"username": "admin", "password": "admin"}),
+            data=json.dumps({"username": "admin", "password": "smoke-test-password"}),
             content_type="application/json",
         )
         self.assertEqual(correct_response.status_code, 200)
@@ -223,7 +225,7 @@ class MvpSmokeTests(unittest.TestCase):
         change_response = self.client.post(
             "/admin/password/change",
             data={
-                "current_password": "admin",
+                "current_password": "smoke-test-password",
                 "new_password": "changed-admin-password",
                 "confirm_password": "changed-admin-password",
             },
@@ -232,7 +234,7 @@ class MvpSmokeTests(unittest.TestCase):
 
         old_password_response = self.client.post(
             "/admin/fullscreen/validate",
-            data=json.dumps({"username": "admin", "password": "admin"}),
+            data=json.dumps({"username": "admin", "password": "smoke-test-password"}),
             content_type="application/json",
         )
         self.assertEqual(old_password_response.get_json(), {"success": False})
@@ -343,7 +345,8 @@ class MvpSmokeTests(unittest.TestCase):
         self.assertEqual(settings["interface_language"], "ru")
 
     def test_admin_password_reset_uses_temporary_database(self):
-        temporary_password = reset_admin_password(self.app)
+        temporary_password = "replacement-test-password"
+        save_admin_password(self.app, temporary_password)
 
         with self.app.app_context():
             row = get_database().execute(
@@ -360,15 +363,16 @@ class MvpSmokeTests(unittest.TestCase):
         self.assertNotIn("Temporary password:", normal_output)
 
         reset_output = io.StringIO()
-        with redirect_stdout(reset_output):
-            reset_admin_password_command(self.app)
+        with redirect_stdout(reset_output), patch("kiosk.core.credentials.sys.stdin.isatty", return_value=True), patch("kiosk.core.credentials.getpass.getpass", side_effect=[temporary_password, temporary_password]):
+            self.assertEqual(reset_admin_password_command(self.app), 0)
 
-        self.assertIn("Temporary password:", reset_output.getvalue())
+        self.assertNotIn(temporary_password, reset_output.getvalue())
+        self.assertIn("credentials saved", reset_output.getvalue())
 
     def login(self):
         return self.client.post(
             "/admin/login",
-            data={"username": "admin", "password": "admin"},
+            data={"username": "admin", "password": "smoke-test-password"},
         )
 
     def create_event(self, title):

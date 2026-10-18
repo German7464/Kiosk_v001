@@ -32,10 +32,10 @@ After every stage update requirement references, evidence, limitations, remainin
 | 15 | Updates | Not started | No signed updater/recovery component. |
 | 16 | Compatibility | Partial | Temporary database preservation test; supported upgrade matrix pending. |
 | 17 | Display interface | Partial | MVP modes exist; empty-state Chrome checks only. |
-| 18 | Security | Partial | Installation secret verified; default credentials still pending at this checkpoint. |
+| 18 | Security | Partial | Installation secret and local credential increment verified; throttling, CSRF, and LAN protection pending. |
 | 19 | Diagnostics | Not started | No specified normal/safe/recovery modes. |
 | 20 | Performance | Not started | No agreed workload measurements. |
-| 21 | Testing | Partial | 15 isolated tests and limited Windows Chrome checks; hardware/failure matrix pending. |
+| 21 | Testing | Partial | 24 isolated tests and limited Windows Chrome checks; hardware/failure matrix pending. |
 | 22 | Development stages | Partial | Baseline and first security increment committed; stage 2 incomplete. |
 | 23 | Acceptance | Partial | Local checks only; system acceptance not achieved. |
 | 24 | Open decisions | Partial | See confirmed decisions below; hardware and limits remain unresolved. |
@@ -52,6 +52,20 @@ After every stage update requirement references, evidence, limitations, remainin
 | 2.5; part of 16 | Disposable SQLite backup preserves users, hashes, events, tags, settings, image references | ff7793e; database-copy test | No general migration or physical storage guarantee |
 | Part of 17 and 21 | Empty kiosk/events/TV, preview, login/admin/tags/settings; session survives restart; TV fullscreen | 552ea3f; Windows-MCP, Chrome, 1366x768 | No event cards, Android TV, clean installation, endurance or load acceptance |
 
+## Credential increment — 2026-10-19
+
+Requirement references: 18.2, parts of 18.4 and 8.6; initial-admin subset of 5.1. Status: **Verified** for the local Flask/CLI scope below. Commit subject: `fix: secure local administrator setup and revoke stale sessions`.
+
+- Removed default account creation; transactional local setup creates admin only with an empty users table.
+- Setup/reset use hidden confirmed terminal input, no password arguments or password output. Policy: 12–128 characters. Reset only updates an existing admin.
+- Existing admin/admin login, fullscreen validation, and administrative sessions are blocked without startup hash replacement.
+- Protected requests validate the current account and HMAC credential token. Password replacement/deletion revokes prior sessions; restart with unchanged credentials preserves a valid session. Older cookies require login again.
+- Automatic evidence: tests/test_credentials.py, tests/test_session_security.py, and updated MVP smoke fixtures. 24 tests passed, including concurrent setup, cancellation/noninteractive input, storage rollback, legacy data preservation, and session revocation. Compilation and git diff --check passed for this increment.
+- Practical terminal evidence: setup and reset completed in a real Windows PTY with hidden input; login succeeded after each operation and the earlier session was rejected after reset. Only a disposable installation was used.
+- Flask: public pages/APIs and login page 200; unauthenticated admin 302; invalid/default login 401; valid login 302 then admin 200; stale session 302. Fullscreen response format remains unchanged.
+- Windows-MCP + Google Chrome at 1366x768 on isolated loopback port 5002: setup-required notice, successful login after local setup, and revocation of that session with the default-credential-blocked notice. Browser password storage was dismissed. Working credentials/data were not changed.
+- Remaining limitations: no physical Android TV, clean-machine EXE, LAN transport, endurance, or 100-device acceptance. Web password change was tested with Flask, not submitted through the browser. The original TZ has intentional Markdown hard-break spaces; the documentation checkpoint checked other whitespace with `git -c core.whitespace=-blank-at-eol diff --check` while preserving the source verbatim.
+
 ## Confirmed decisions and specification differences
 
 Earlier owner approvals in V2_REQUIREMENTS.md and commit 3c72e36 remain recorded separately from implementation. TZ.md is preserved verbatim.
@@ -64,6 +78,6 @@ Earlier owner approvals in V2_REQUIREMENTS.md and commit 3c72e36 remain recorded
 
 ## Current stage and next work
 
-Stage 2 credential hardening is next: remove default seeding, implement local setup/reset, reject legacy credentials and stale sessions, preserve data, and test on isolated installations.
+The local credential increment of stage 2 is complete; stage 2 as a whole is not. Next select a small security increment for bounded login attempts and write-request protection before broader LAN deployment. No later implementation stage is started automatically.
 
 Remaining security includes login throttling, general write-request protection, LAN transport protection, group permissions, and update verification. Launcher and later stages are not part of this increment.

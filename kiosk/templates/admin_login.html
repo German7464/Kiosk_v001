@@ -6,6 +6,9 @@
 <section class="admin-panel">
     <p class="label">{{ t("admin.login_label") }}</p>
     <h1>{{ t("admin.sign_in") }}</h1>
+    {% if setup_message %}
+    <p class="form-error">{{ t(setup_message) }}</p>
+    {% endif %}
     {% if error %}
     <p class="form-error">{{ error }}</p>
     {% endif %}

@@ -8,6 +8,8 @@ from unittest.mock import patch
 
 from kiosk.app import create_app
 from kiosk.core.security import load_session_key
+from kiosk.core.credentials import save_admin_password
+from werkzeug.security import generate_password_hash
 
 
 class SessionSecurityTests(unittest.TestCase):
@@ -63,13 +65,14 @@ class SessionSecurityTests(unittest.TestCase):
     def test_session_survives_restart_and_public_routes(self):
         config = self.config()
         app = create_app(config)
+        save_admin_password(app, "session-test-password", setup=True)
         client = app.test_client()
         statuses = {path: client.get(path).status_code for path in
                     ('/kiosk', '/kiosk/events', '/tv', '/preview', '/admin/login',
                      '/api/version', '/api/events', '/api/tags')}
         self.assertEqual(set(statuses.values()), {200})
         self.assertEqual(client.get('/admin').status_code, 302)
-        self.assertEqual(client.post('/admin/login', data={'username': 'admin', 'password': 'admin'}).status_code, 302)
+        self.assertEqual(client.post('/admin/login', data={'username': 'admin', 'password': 'session-test-password'}).status_code, 302)
         cookie = client.get_cookie('session')
         restarted = create_app(config).test_client()
         restarted.set_cookie('session', cookie.value)
@@ -80,6 +83,7 @@ class SessionSecurityTests(unittest.TestCase):
         source = self.config('mvp')
         create_app({**source, 'SECRET_KEY': 'dev'})
         with closing(sqlite3.connect(source['DATABASE_PATH'])) as database:
+            database.execute("INSERT INTO users (username, password_hash, created_at, updated_at) VALUES (?, ?, 'old', 'old')", ('admin', generate_password_hash('admin')))
             database.execute("INSERT INTO events (title, image_original, image_kiosk, image_tv, image_thumb, created_at, updated_at) VALUES ('Preserved', 'instance/uploads/original.png', '/static/uploads/kiosk.jpg', '/static/uploads/tv.jpg', '/static/uploads/thumb.jpg', 'old', 'old')")
             database.execute("INSERT INTO tags (name, created_at, updated_at) VALUES ('Preserved tag', 'old', 'old')")
             database.execute('INSERT INTO event_tags VALUES (1, 1)')

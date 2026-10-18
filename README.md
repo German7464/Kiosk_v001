@@ -40,6 +40,15 @@ Do not analyze the whole repository for every task. Make the smallest useful cha
 
 ## Running Locally
 
+First create the administrator in a local interactive terminal (no default account is created):
+
+```bash
+python serve.py --setup-admin
+Kiosk_v001.exe --setup-admin
+```
+
+Use only the command matching your installation. Enter and confirm a password of 12 to 128 characters. Input is hidden; do not supply passwords as command arguments or through a pipe. This command refuses to run when accounts already exist and does not launch the server or browser.
+
 Development mode:
 
 ```bash
@@ -121,7 +130,11 @@ The packaged EXE supports the same reset mode:
 Kiosk_v001.exe --reset-admin-password
 ```
 
-The reset command updates only the stored password hash for `admin`, prints the temporary password once, and then exits. Log in with the temporary password and change it immediately in the admin panel.
+The reset command requires a local interactive terminal, asks for a new password twice with hidden input, updates only the existing `admin` password hash and timestamp, and exits without starting the server. It does not print the password. If no accounts exist, use `--setup-admin` instead. Passwords must contain 12 to 128 characters.
+
+Existing `admin / admin` credentials are blocked for login, administrative actions, and kiosk fullscreen unlock until replaced locally. Startup does not replace existing hashes. Other existing credentials remain unchanged. Sessions from earlier releases require a new login; changing or resetting a password invalidates all previous sessions for that account. A valid session survives server restart when credentials and the installation key remain unchanged. Browser password changes return to login.
+
+These commands are a temporary local setup path before the v2 Launcher. They require OS access to the installation and do not provide a web recovery endpoint. Login throttling, general CSRF protection, and LAN transport protection remain pending security work.
 
 To launch the packaged kiosk client automatically, place `ClientKiosk.exe` next to `Kiosk_v001.exe`. If it is not present, the launcher falls back to the default browser. If both launch attempts fail, the server still starts and prints the manual URLs.
 

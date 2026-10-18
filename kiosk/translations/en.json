@@ -1,4 +1,7 @@
 {
+    "admin.setup_required": "Administrator setup is required. On this server, run python serve.py --setup-admin in a local terminal.",
+    "admin.default_blocked": "Default administrator credentials are blocked. On this server, run python serve.py --reset-admin-password in a local terminal.",
+    "admin.password_length": "Password must contain 12 to 128 characters.",
     "admin.assigned_events": "Assigned events",
     "admin.change_password": "Change password",
     "admin.confirm_new_password": "Confirm new password",
