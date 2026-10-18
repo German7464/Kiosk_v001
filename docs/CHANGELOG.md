@@ -107,3 +107,8 @@
 
 - Repeated the complete 42-test Python suite, JavaScript checks, compilation, and dependency consistency checks successfully.
 - Verified real HTTP login, multipart event/image creation, API data, image downloads/decoding, content-version advancement, and public display routes on an isolated temporary Waitress installation. Evidence and limitations are recorded in TZ_PROGRESS.md. No application source or working data changes.
+
+## 2026-10-19 - Add repeatable MVP baseline measurements
+
+- Added a fixed isolated Windows HTTP measurement command, deterministic synthetic content, semantic/media checks, latency/throughput/body-size metrics, sampled server memory, queue diagnostics, and bounded server cleanup. No application behavior or dependency changes.
+- Recorded measured local results and explicit acceptance limitations in MVP_BASELINE.md; updated README, stage plan, and specification progress. Added statistics, error-reporting, deadline, diagnostics, and server-cleanup checks. All 50 Python tests, JavaScript checks, compileall, and git diff --check passed; full evidence is recorded in TZ_PROGRESS.md.

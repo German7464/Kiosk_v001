@@ -34,8 +34,8 @@ After every stage update requirement references, evidence, limitations, remainin
 | 17 | Display interface | Partial | MVP modes exist; empty-state Chrome checks only. |
 | 18 | Security | Partial | Installation credentials, single-process throttling, and CSRF verified; LAN protection and other controls pending. |
 | 19 | Diagnostics | Not started | No specified normal/safe/recovery modes. |
-| 20 | Performance | Not started | No agreed workload measurements. |
-| 21 | Testing | Partial | 42 isolated Python tests, kiosk JS checks, and earlier limited Windows Chrome checks; hardware/failure matrix pending. |
+| 20 | Performance | Partial | Fixed local synthetic HTTP baseline in MVP_BASELINE.md; no UI/LAN/hardware/100-device acceptance. |
+| 21 | Testing | Partial | 50 isolated Python tests, kiosk JS checks, and earlier limited Windows Chrome checks; hardware/failure matrix pending. |
 | 22 | Development stages | Partial | Baseline and first security increment committed; stage 2 incomplete. |
 | 23 | Acceptance | Partial | Local checks only; system acceptance not achieved. |
 | 24 | Open decisions | Partial | See confirmed decisions below; hardware and limits remain unresolved. |
@@ -91,7 +91,7 @@ Earlier owner approvals in V2_REQUIREMENTS.md and commit 3c72e36 remain recorded
 
 ## Current stage and next work
 
-The local credential and request-security increments of stage 2 are complete; stage 2 as a whole is not. Request/image limits are recorded below. Dependency installation is recorded below. Next address LAN transport protection and realistic baseline measurements; video and storage policy decisions remain unresolved. No later implementation stage is started automatically.
+The local credential and request-security increments of stage 2 are complete; stage 2 as a whole is not. Request/image limits are recorded below. Dependency installation is recorded below. The local synthetic HTTP baseline is recorded below. Next address LAN transport protection and populated-screen/browser checks; video and storage policy decisions remain unresolved. No later implementation stage is started automatically.
 
 Remaining security includes deployment-wide authentication limits, total storage quotas, LAN transport protection, group permissions, and update verification. Launcher and later stages are not part of this increment.
 
@@ -120,3 +120,14 @@ Requirement references: stage 2 (section 22), technology/baseline preservation (
 - Independently exercised the application over real loopback HTTP using a disposable installation and Waitress: public pages/APIs returned 200; login and authenticated admin returned 200 after redirects; created an active event with a 1920x1080 PNG via multipart POST with a real session CSRF token; confirmed the event API fields, downloaded and decoded all three generated image variants, and confirmed content-version advancement. Kiosk events, TV, and preview pages still returned 200 afterward.
 - Temporary server stopped and disposable data was removed. Two initial ad hoc harness errors (a duplicated static URL prefix and unsupported EnvironBuilder context-manager use) were corrected before the successful HTTP run; these were verification-script errors, not application failures. The final harness coordinates event-loop shutdown before closing sockets.
 - Working data, accounts, application source, and existing servers were unchanged. No Chrome inspection was needed for these transport/data checks. Actual screen rendering, physical devices, packaged installation, and sustained/load operation remain unverified.
+
+## Local MVP baseline increment - 2026-10-19
+
+References: local subset of sections 20 and 21, stage 2 of section 22. Commit subject: `test: add repeatable MVP baseline measurements`.
+
+- Added an opt-in fixed-profile developer command, isolated child Waitress process, bounded request/scenario timeouts, sanitized JSON diagnostics, queue-notification aggregation, Windows working-set sampling, and cleanup/error checks. No runtime feature, schema, public API, or dependency changes.
+- Prepared and verified 100 events (80 public), 20 tags, 300 assignments, 10 deterministic PNG uploads, 30 decoded derivatives, and content version 1 -> 221 over real HTTP. Admin before login: 302; authenticated admin: 200.
+- Two successful local measurement runs; the second aggregates queue notifications rather than printing them. Its retained checkpoint and limitations are in MVP_BASELINE.md: 350 sequential plus 1000 concurrent measured responses all 200, no request/sampling/queue errors; 10 client threads and four server workers. Queueing occurred and is explicitly recorded. Server stopped gracefully and disposable data was removed. These clients are not 100 registered devices or browser clients.
+- All 50 Python tests passed in the isolated pinned environment (49.427 seconds). JavaScript checks, compileall for run.py/kiosk/tools, and git diff --check passed. Existing Flask checks still report public pages/APIs 200, admin 302 before login and 200 after login/restart. The new checks cover nearest-rank statistics, error retention, expired deadlines, forced/graceful shutdown, and queue diagnostics.
+- No Chrome/hardware inspection for this HTTP measurement; populated layout, automatic client activation, fullscreen, LAN, clean-machine EXE, sustained resources, and 72-hour operation remain pending. Section 20 is Partial, not accepted against the proposed targets. Working servers, credentials, and data were not modified.
+- Next: populated-screen/automatic-refresh Chrome checks and LAN transport design decisions; no later implementation stage starts automatically.

@@ -215,3 +215,17 @@ git status --short --branch
 The Node command is a standalone development check for kiosk request/error behavior; Node is not an application dependency. Automated Flask checks cover forms with rendered CSRF tokens and isolated runtime data. Use Chrome through Windows-MCP only when automated tests leave browser-specific behavior unresolved.
 
 Image safety defaults: 20 MiB per request, 16 MiB per file, 25 million pixels; see the admin feature README for configuration and error behavior. Run `python -m unittest discover -s tests` to include upload boundary and isolated Waitress HTTP checks.
+
+## Local MVP Baseline Measurement
+
+On Windows, with the pinned dependencies installed:
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.measure_mvp_baseline
+```
+
+The fixed profile starts its own four-thread Waitress process on a free loopback port and creates a disposable database, administrator, 100 events (80 active), 20 tags, 300 assignments, and 10 seeded synthetic images. It accepts no database path or external server address. It verifies HTTP authentication, API content, generated images, and content-version advancement before measuring seven public routes (three warmups and 50 sequential samples each), then 1000 requests with ten concurrent clients. Both client and server run on this computer. HTTP clients open connections through urllib; this is not a browser or 100-device simulation.
+
+JSON reports are stored under ignored `logs/measurements/`. Nonzero exit means a request, validation, sampling, timeout, or cleanup error; inspect the sanitized error records and any completed metrics. Requests have a ten-second timeout, and a 180-second watchdog terminates the temporary server if the scenario overruns; shutdown/cleanup can take additional time. Temporary data is removed after stopping the server. No working server or account is used. Windows process working memory is sampled every 100 ms throughout dataset preparation and measurements; its observed maximum is not a guaranteed peak. Reports contain no test passwords, cookies, installation secrets, hostnames, or server addresses.
+
+See [MVP Baseline](docs/MVP_BASELINE.md) for the measured checkpoint, metric definitions, and limitations. The command is an opt-in developer measurement, not part of normal application startup or a release acceptance threshold.

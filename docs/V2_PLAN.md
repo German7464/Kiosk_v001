@@ -12,10 +12,10 @@ Compilation and all eight isolated smoke tests passed. Public routes, authentica
 
 The owner approved uninterrupted local cached display with editing paused when safe write authority is unavailable, and a primary plus background standby on a second PC for the first network stage. Follow the two-PC validation plan in the requirements before introducing automatic multi-device election.
 
-1. Installation session keys, local credential setup, CSRF protection, and bounded single-process authentication attempts are implemented; see TZ_PROGRESS.md for verification and limitations. Request/image limits are implemented; see TZ_PROGRESS.md. Continue stage 2 with remaining LAN security decisions and baseline measurements. Dependency version installation is verified for Windows x64 / CPython 3.14.5; see TZ_PROGRESS.md.
+1. Installation session keys, local credential setup, CSRF protection, and bounded single-process authentication attempts are implemented; see TZ_PROGRESS.md for verification and limitations. Request/image limits are implemented; see TZ_PROGRESS.md. A repeatable local HTTP baseline is recorded in MVP_BASELINE.md; continue stage 2 with remaining LAN security decisions and populated-screen/browser checks. Dependency version installation is verified for Windows x64 / CPython 3.14.5; see TZ_PROGRESS.md.
 2. Remove placeholder wording and align architecture documentation with the implementation.
 3. Maintain the verified dependency pins in requirements.txt; repeat isolated installation and the complete checks when updating versions. This does not verify clean-machine EXE installation.
-4. Validate realistic event cards, image uploads, automatic screen updates, and fullscreen behavior.
+4. Local synthetic-data HTTP/image baseline measurements are recorded in MVP_BASELINE.md. Validate populated event-card rendering, automatic screen updates, and fullscreen behavior in Chrome, then on physical target devices.
 5. Verify sustained kiosk and TV operation and the packaged EXE on a clean Windows computer.
 
 Keep changes small, run compilation and Flask test client checks, and commit completed steps separately. Do not add excluded MVP features without explicit authorization. Repository-wide access or unrestricted Codex execution is not required for this workflow.
