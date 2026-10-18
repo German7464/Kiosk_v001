@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-19
+
+- Per owner request, used Windows-MCP and Google Chrome for visual checks. Started the current code with Waitress on loopback port 5001 while preserving the older server on port 5000. Verified kiosk home, empty event list, TV, preview navigation, login redirection, administrator login, event management, tags, and system settings. Restarted the new server and confirmed the existing Chrome session still opens administration without login. Confirmed TV fullscreen entry/exit. At 1366x768 with browser chrome visible, kiosk home and events require vertical scrolling. Existing admin placeholder wording and Chrome's weak/default-password warning remain; credential hardening is separate. No published event cards were available for visual verification, and content/passwords were not edited.
+
 ## 2026-10-18
 
 - Replaced the shared development session secret with a persistent random installation key, atomic creation without overwrite, and explicit startup errors for invalid or inaccessible keys. Disabled debug mode by default; preserved explicit test overrides and existing data. Existing development-key sessions require login again; default credentials remain a separate task.
