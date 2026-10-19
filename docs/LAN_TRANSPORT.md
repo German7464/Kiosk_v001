@@ -1,6 +1,6 @@
 # Standalone LAN Transport Protection
 
-Status: approved design with a verified isolated prototype and opt-in managed HTTPS source startup. Local loopback integration is verified; physical LAN, actual browser trust, and packaged deployment remain pending. Requirement: TZ 18.11, with related session and write protection under 18.4 and 18.8. This document defines bounded stage 2 work; it does not complete security or authorize later network stages.
+Status: approved design with a verified isolated prototype, opt-in managed HTTPS source startup, and bounded Windows Chrome trust lifecycle. Physical LAN, other browser/platform trust, and packaged deployment remain pending. Requirement: TZ 18.11, with related session and write protection under 18.4 and 18.8. This document defines bounded stage 2 work; it does not complete security or authorize later network stages.
 
 ## Current Application
 
@@ -184,8 +184,50 @@ The fixed developer scenario creates disposable installations and certificate fi
 
 Checkpoint: `logs/https/managed-20261019T190228594494Z.json`, 30.122 seconds, all 17 named checks passed. Application/TLS-port responses: 64 x 200, 6 x 302, 2 x 400, 36 x 401, 1 x 403, 2 x 429, and 1 x 413. The separate management-Origin rejection was 403. All 108 observed application requests had correct metadata. Unknown CA was rejected through TLS verification code 20; wrong-name and expired configurations did not reach readiness. All three recorded managed shutdowns had proxy exit 0, no forced kill, stopped backend, and removed temporary configuration. The real CLI returned 1 and cleaned up after its proxy was deliberately stopped. Temporary installations and crash-fixture directories were removed. A JSON-expression fixture initially omitted Caddy's required matcher `name`, causing a validator panic; the generator was corrected before the successful scenarios.
 
+## Controlled Windows Chrome Verification
+
+This is an operator-observed developer scenario, not unattended browser automation or production certificate provisioning. Run only with explicit permission to temporarily add/remove a test root in the current user's Windows trust store. It never changes LocalMachine trust, firewall, working credentials/data, user servers, or a working Chrome profile. Dependencies are the existing Python environment, pinned Caddy, PowerShell 7.6.6, and installed Chrome. No download or package installation occurs.
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.check_browser_https --caddy logs/https-tools/caddy/caddy.exe --pwsh (Get-Command pwsh).Source --chrome 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+.\.venv\Scripts\python.exe -m unittest tests.test_browser_https
+```
+
+Keep stdin open in an interactive terminal. The helper starts a disposable managed HTTPS installation and prints `READY`. Use the following commands one at a time, observing the actual browser before recording a result:
+
+| Command | Required observation / action |
+| --- | --- |
+| `browser untrusted` | Fresh Chrome must show `NET::ERR_CERT_AUTHORITY_INVALID`; never bypass the warning. |
+| `record untrusted ERR_CERT_AUTHORITY_INVALID` | Record only the observed unknown-authority failure. |
+| `trust` | Close owned Chrome. Compare the locally generated public CA SHA-256 in Python and .NET; verify it is absent, then add only that CA to CurrentUser Root. Windows may require confirmation for this specific test CA. |
+| `exercise` | Run real verified HTTPS login, CSRF/cookie, upload/media, password revocation, forwarding, throttling, and request-bound checks. Temporary passwords stay in memory. |
+| `browser trusted` | Fresh Chrome must load the populated event page and image. Also open `/kiosk`, `/tv`, `/preview`, `/admin/login`, `/api/version`, `/api/events`, and `/api/tags` at the printed origin; check navigation stays HTTPS. Do not enter or save passwords in Chrome. |
+| `record trusted pages_and_media_loaded` | Record successful page/media observations. Return to the event page before updating. |
+| `update` | Change the fixture through authenticated HTTPS; keep the existing browser open and observe the new event title and advanced version without manual reload. |
+| `record updated updated_event_visible` | Record the observed refresh, not merely HTTP write success. |
+| `browser wrong-name` | Separate invalid-certificate fixture must show `NET::ERR_CERT_COMMON_NAME_INVALID`. |
+| `record wrong-name ERR_CERT_COMMON_NAME_INVALID` | Record actual identity rejection. |
+| `browser expired` | Separate expired fixture must show `NET::ERR_CERT_DATE_INVALID`. |
+| `record expired ERR_CERT_DATE_INVALID` | Record actual validity rejection. |
+| `untrust` | Close owned Chrome and remove only the owned exact-digest root; confirm Windows removal if prompted. Verify absence. |
+| `browser removed` | New Chrome profile must again show `NET::ERR_CERT_AUTHORITY_INVALID` for the original valid service. |
+| `record removed ERR_CERT_AUTHORITY_INVALID` | Record actual loss of browser trust. |
+| `finish` | Require all six observations, all five automated HTTP check groups, and removed trust, then clean up and save a report. |
+
+`record` stores manual observations; it does not inspect or prove browser state by itself. Use Windows-MCP with fresh snapshots for actual observations. `abort`, Ctrl+C, closed stdin, invalid commands, failures, and the 30-minute scenario budget all enter cleanup. Trust subprocesses have a 180-second budget to permit the visible Windows confirmation; other external commands remain bounded to 30 seconds. A failure does not bypass policy, ignore TLS errors, retry over HTTP, or silently skip browser checks.
+
+The test CA private key is never exported; disposable leaf keys and profiles are removed. A preexisting exact-digest root is rejected without claiming ownership or removing it. Enrollment is marked owned before attempting the write so an uncertain write is included in cleanup. The helper closes its Chrome Job Object, removes its root, stops its own negative-fixture proxies and managed installation, and deletes its guarded temporary directory. The two negative fixtures deliberately bypass managed readiness only for browser rejection tests; normal startup continues to reject invalid certificates before opening a browser. Their proxies use the existing prototype's explicit terminate/wait cleanup; graceful shutdown is checked for the valid managed installation.
+
+If cleanup fails, return nonzero and retain the fixture directory rather than delete certificate evidence. Abrupt process/OS termination can leave a test root or temporary files; this helper is not crash-proof trust recovery. Locate only the owned `kiosk-browser-https-*` directory in system temp, recompute the public `authority.pem` SHA-256, inspect CurrentUser Root, remove only that exact certificate with the helper's `remove` action, and verify absence before deleting the owned directory. Never remove roots by subject alone. No automatic startup enrollment or broad trust-store reset is provided.
+
+Checkpoint: `logs/https/browser-20261019T193629868932Z.json`, 350.925 seconds, Windows 10 build 19045, Chrome 155.0.8059.82, Caddy 2.11.7. Windows-MCP confirmed unknown authority before enrollment and after removal, trusted page/media loads, automatic event update from version 2 to 3 without reload, wrong identity, and expiry. All four public modes, login, and three APIs were opened; preview-to-admin navigation stayed HTTPS. Browser login submission/fullscreen were not exercised in this increment. The 1050x708 Chrome window on a 1366x768 desktop does not establish TV viewing-distance readability or physical-device acceptance.
+
+The automated HTTPS component recorded 63 x 200, 7 x 302, 1 x 400, 36 x 401, 1 x 403, 2 x 429, and 1 x 413. These counts belong to the HTTP client, not a Chrome network trace; certificate failures are browser errors, not HTTP responses. All six browser observations and five automated check groups passed. Test CA removal, browser/profile cleanup, proxy/backend stop, and fixture deletion succeeded; managed proxy exit 0 without forced termination. The two invalid-certificate fixture proxies were explicitly terminated (exit 1). Independent final inspection found zero temporary test authorities and zero browser-fixture directories.
+
+Initial preparation detected and corrected public-certificate loading through an API that also expected a private key, and an empty version result caused by PowerShell argument handling. Failed attempts cleaned up. An earlier Computer Use observation stopped because it could not determine the interstitial URL; the owner explicitly selected Windows-MCP, which completed the checks. Ten isolated helper tests cover ownership, uncertain enrollment, removal failure, sanitized results, cleanup continuation, process-assignment failure, and manual command/observation validation; they never modify OS trust.
+
 ## Stage Boundary and Next Work
 
-Managed HTTPS source startup and local lifecycle validation are implemented. Next: controlled actual Windows-browser trust enrollment/identity rejection and physical LAN validation with prepared certificates, followed by separately scoped certificate maintenance and packaging. Physical Android TV, independent client addresses/NAT, fully disconnected operation, certificate custody/renewal/revocation operations, clean installation, chunked/unknown-length upload overflow behavior, and endurance remain pending. Do not deploy to user servers, install roots, change firewall rules, or claim section 18 complete from loopback checks.
+Managed HTTPS source startup, local lifecycle validation, and the bounded Windows Chrome trust lifecycle are verified. Next: physical LAN verification with prepared certificates and explicitly selected devices, followed by separately scoped certificate maintenance and packaging. Physical Android TV, other browsers/platforms, independent client addresses/NAT, fully disconnected operation, certificate custody/renewal/revocation operations, clean installation, chunked/unknown-length upload overflow behavior, and endurance remain pending. Do not deploy to user servers, install production roots, change firewall rules, or claim section 18 complete from loopback checks.
 
 References: [Waitress TLS limitation](https://docs.pylonsproject.org/projects/waitress/en/stable/), [Waitress reverse proxy handling](https://docs.pylonsproject.org/projects/waitress/en/stable/reverse-proxy.html), [Flask proxy trust](https://flask.palletsprojects.com/en/stable/deploying/proxy_fix/), and [Flask security guidance](https://flask.palletsprojects.com/en/stable/web-security/).

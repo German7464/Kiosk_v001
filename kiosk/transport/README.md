@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provide opt-in Windows source startup with a supervised Caddy TLS proxy, loopback-only Waitress, explicit certificate trust, and bounded cleanup. Existing HTTP startup remains separate. This is local integration evidence, not physical LAN/browser/Android acceptance or a packaged service.
+Provide opt-in Windows source startup with a supervised Caddy TLS proxy, loopback-only Waitress, explicit certificate trust, and bounded cleanup. Existing HTTP startup remains separate. Local integration and a bounded Windows Chrome trust lifecycle are verified; physical LAN/Android acceptance and a packaged service remain pending.
 
 ## Related Files
 
@@ -12,6 +12,8 @@ Provide opt-in Windows source startup with a supervised Caddy TLS proxy, loopbac
 - `kiosk/transport/windows.py`: owned Windows Job Object.
 - `tests/test_managed_https.py`: isolated profile, CLI, ownership, and failure checks.
 - `tools/check_managed_https.py`: disposable real HTTPS and CLI verification.
+- `tools/check_browser_https.py` and `tools/browser_trust.ps1`: explicit, operator-observed disposable Chrome trust lifecycle, requiring permission to modify CurrentUser root trust.
+- `tests/test_browser_https.py`: ownership, failure cleanup, and observation/command checks without real trust-store writes.
 - `docs/LAN_TRANSPORT.md`: configuration, provenance, trust boundaries, and pending acceptance.
 
 ## Related Database Tables
@@ -53,3 +55,5 @@ Prepare the pinned Caddy binary and a valid server key/certificate/CA as describ
 ```
 
 The developer check creates its own installations, credentials, certificate fixtures, and listeners; it never opens OS certificate stores or user databases. A copied source-only installation verifies the real CLI. It requires read-only Windows TCP/process inspection. Reports under ignored `logs/https/` contain fixed results, codes, and cleanup state, not credentials, cookies, bodies, keys, or runtime paths.
+
+The separate opt-in browser helper **does** access `CurrentUser\\Root` after an explicit `trust` command. Use only with operator authorization; normal startup and the managed automated check do not enroll trust. It uses separate Chrome profiles, exact public-certificate digests, and owned-process cleanup. Windows may show enrollment/removal confirmation dialogs. See [browser verification](../../docs/LAN_TRANSPORT.md#controlled-windows-chrome-verification) for commands, observations, and recovery limits.
