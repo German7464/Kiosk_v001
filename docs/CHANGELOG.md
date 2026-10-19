@@ -2,6 +2,8 @@
 
 ## 2026-10-19
 
+- Documented the approved standalone LAN transport design: a separate HTTPS proxy with loopback-only Waitress, per-installation certificate trust, controlled enrollment/renewal/recovery, future secure-session and trusted-forwarding requirements, and an acceptance matrix. Clarified that current LAN commands still use plaintext HTTP. No runtime/dependency/OS changes; TLS implementation and verification remain pending.
+
 - Fixed TV refresh when only one event is active: apply current text/image edits without waiting for a nonexistent next-slide timer, start rotation when more events appear, and replace a removed current event. Added a JavaScript regression check covering these transitions, ordering, empty-state cleanup, and recovery. API/schema and refresh intervals are unchanged.
 - Fixed displaced kiosk dialogs: release the screen entrance animation transform after completion and keep the fullscreen-unlock overlay fixed to the viewport with a height-bounded scrollable panel. Chrome verified centered tags during scrolling and the German unlock panel at 100%/125% zoom.
 - Verified synthetic populated kiosk/TV screens, admin previews, tag navigation, image placeholders, automatic refresh, and fullscreen through Windows-MCP and Chrome, with independent automated checks. Recorded 1366x768 desktop and emulated 768x1024 layout coverage, language checks, 50 passing Python tests, both JS checks, Flask status codes, and explicit limits in TZ_PROGRESS.md. Long content still requires scrolling; hardware, LAN security, EXE, and endurance acceptance remain pending.

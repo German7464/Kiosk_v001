@@ -104,6 +104,8 @@ python serve.py --host 0.0.0.0 --port 5000 --open-kiosk
 
 If a local server is already running on `http://127.0.0.1:<port>/api/version`, the launcher reuses it instead of starting a duplicate server.
 
+The commands below currently serve plaintext HTTP, including administrative credentials and sessions when used over LAN. They do not implement protected LAN deployment. The approved [standalone LAN transport design](docs/LAN_TRANSPORT.md) specifies HTTPS, client trust setup, and acceptance checks; implementation remains pending. Use loopback for local development.
+
 LAN startup for phones, tablets, kiosks, and Smart TV browsers:
 
 ```bash
@@ -156,7 +158,7 @@ The reset command requires a local interactive terminal, asks for a new password
 
 Existing `admin / admin` credentials are blocked for login, administrative actions, and kiosk fullscreen unlock until replaced locally. Startup does not replace existing hashes. Other existing credentials remain unchanged. Sessions from earlier releases require a new login; changing or resetting a password invalidates all previous sessions for that account. A valid session survives server restart when credentials and the installation key remain unchanged. Browser password changes return to login.
 
-These commands are a temporary local setup path before the v2 Launcher. They require OS access to the installation and do not provide a web recovery endpoint. Administrative forms now require a session CSRF token, and password checks share per-source limits (10 per username and 40 total in 60 seconds). Errors return 403 or 429; reload stale forms or wait for the Retry-After interval. Counters reset on restart and are scoped to one server process. See the admin feature README for limits. LAN transport protection remains pending security work.
+These commands are a temporary local setup path before the v2 Launcher. They require OS access to the installation and do not provide a web recovery endpoint. Administrative forms now require a session CSRF token, and password checks share per-source limits (10 per username and 40 total in 60 seconds). Errors return 403 or 429; reload stale forms or wait for the Retry-After interval. Counters reset on restart and are scoped to one server process. See the admin feature README for limits. LAN transport protection is [designed](docs/LAN_TRANSPORT.md) but remains unimplemented and unverified.
 
 To launch the packaged kiosk client automatically, place `ClientKiosk.exe` next to `Kiosk_v001.exe`. If it is not present, the launcher falls back to the default browser. If both launch attempts fail, the server still starts and prints the manual URLs.
 

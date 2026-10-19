@@ -32,7 +32,7 @@ After every stage update requirement references, evidence, limitations, remainin
 | 15 | Updates | Not started | No signed updater/recovery component. |
 | 16 | Compatibility | Partial | Temporary database preservation test; supported upgrade matrix pending. |
 | 17 | Display interface | Partial | Populated Chrome checks, 1366x768 desktop and emulated 768x1024 viewport; long content needs scrolling; physical-device/readability acceptance pending. |
-| 18 | Security | Partial | Installation credentials, single-process throttling, and CSRF verified; LAN protection and other controls pending. |
+| 18 | Security | Partial | Installation credentials, single-process throttling, and CSRF verified; standalone LAN protection designed in LAN_TRANSPORT.md; implementation, verification, and other controls pending. |
 | 19 | Diagnostics | Not started | No specified normal/safe/recovery modes. |
 | 20 | Performance | Partial | Fixed local synthetic HTTP baseline in MVP_BASELINE.md; no UI/LAN/hardware/100-device acceptance. |
 | 21 | Testing | Partial | 50 isolated Python tests, kiosk/TV JS checks, and populated Windows Chrome scenarios; hardware/failure matrix pending. |
@@ -91,7 +91,7 @@ Earlier owner approvals in V2_REQUIREMENTS.md and commit 3c72e36 remain recorded
 
 ## Current stage and next work
 
-The local credential and request-security increments of stage 2 are complete; stage 2 as a whole is not. Request/image limits, dependency installation, the local synthetic HTTP baseline, and bounded populated-screen Chrome checks are recorded below. Next address LAN transport protection design; long-content TV readability, video, and storage policy decisions remain unresolved. Physical-device checks remain pending. No later implementation stage is started automatically.
+The local credential and request-security increments of stage 2 are complete; stage 2 as a whole is not. Request/image limits, dependency installation, the local synthetic HTTP baseline, and bounded populated-screen Chrome checks are recorded below. The standalone LAN transport design is documented, with implementation and verification pending. Next select a Windows-compatible TLS proxy and define a separately scoped isolated HTTPS prototype; long-content TV readability, video, and storage policy decisions remain unresolved. Physical-device checks remain pending. No later implementation stage is started automatically.
 
 Remaining security includes deployment-wide authentication limits, total storage quotas, LAN transport protection, group permissions, and update verification. Launcher and later stages are not part of this increment.
 
@@ -150,3 +150,15 @@ References: local subsets of sections 17 and 21, stage 2 of section 22. Commit s
 - Verification-harness correction: its initial empty toggle form lacked a generated Content-Type and stopped the temporary server before that request reached the application. The harness was corrected and the isolated scenario repeated on a new free port; this was not an application failure. The earlier separate dependency-check venv was inaccessible during this session, so checks used the existing working `.venv` with CPython 3.14.5 without modifying it or installing dependencies.
 - Cleanup verified: closed the task's Chrome tab, stopped the isolated server gracefully with exit code 0, and confirmed its temporary runtime directories were removed. Its sanitized state reports zero HTTP preparation/control errors after the harness correction. Verification scripts/state under ignored `logs/` are not committed; no temporary credentials or runtime content are retained in the commit.
 - Physical Android TV, physical touch/portrait devices, viewing-distance legibility, LAN transport, offline display, EXE installation, endurance, and 100-device acceptance remain pending. The HTTP baseline was not repeated. Next: agree the LAN transport protection deployment/trust design and retain the long-content readability decision for a bounded follow-up.
+
+
+## LAN transport design - 2026-10-19
+
+References: 18.11, related parts of 18.4/18.8, and stage 2 of section 22. Design completed; transport implementation and verification remain pending. Section 18 remains **Partial**. Commit subject: `docs: define standalone LAN transport protection`.
+
+- Owner selected autonomous installation without corporate infrastructure, a documentation-only increment, and a separate TLS reverse proxy as a necessary future deployment component. No component was installed or selected in this stage.
+- LAN_TRANSPORT.md defines threats, HTTPS for all routes/media, loopback-only Waitress, separate local HTTP development, per-installation authority trust with independent fingerprint verification, key custody, renewal/address changes, and compromise/re-enrollment procedures. No warning bypass, plaintext downgrade, or automatic trust-store change is approved.
+- Defined the future secure-cookie/host/profile contract, one trusted local proxy and one Waitress forwarding interpreter, preservation of authentication limits and upload bounds, and a failure/acceptance matrix. Platform trust support, proxy selection/version/packaging, certificate parameters, and exact configuration interfaces remain for a separately scoped implementation stage.
+- No application code, API, schema, dependencies, credentials, runtime data, OS trust, firewall, or server configuration changed. The README now identifies current LAN commands as plaintext HTTP. Existing security and stage 2 statuses remain Partial; this document does not establish actual TLS protection, offline display, physical Android TV support, or deployment acceptance.
+- Validation: documentation consistency and local Markdown links checked; git diff --check and compilation passed. The existing isolated route/authentication smoke test passed (1 test, 1.296 seconds): wrong login 401, valid login 302, authenticated admin 200, logout 302. Independent disposable Flask checks returned 200 for /kiosk, /kiosk/events, /tv, /preview, /admin/login and all three public APIs; /admin without login returned 302. Temporary data was removed. No browser or live TLS test applies to this documentation-only increment; no TLS result is claimed.
+- Next: choose/evaluate a maintained Windows-compatible TLS proxy and specify its certificate/profile/configuration contract for an isolated prototype; deployment is a separate task.
