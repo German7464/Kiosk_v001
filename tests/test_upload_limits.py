@@ -1,10 +1,10 @@
+import http.client
 import io
 import sqlite3
 import tempfile
 import threading
 import unittest
 import urllib.request
-import urllib.error
 from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
@@ -149,10 +149,16 @@ class UploadLimitTests(unittest.TestCase):
             with urllib.request.urlopen(base+'/api/version', timeout=5) as response:
                 self.assertEqual(response.status, 200)
             before = self.snapshot()
-            with self.assertRaises(urllib.error.HTTPError) as error:
-                urllib.request.urlopen(urllib.request.Request(base+'/admin/events/create', data=b'x'*257), timeout=5)
-            self.assertEqual(error.exception.code, 413)
-            error.exception.close()
+            connection = http.client.HTTPConnection('127.0.0.1', int(server.effective_port), timeout=5)
+            try:
+                connection.putrequest('POST', '/admin/events/create')
+                connection.putheader('Content-Length', '257')
+                connection.endheaders()
+                with connection.getresponse() as response:
+                    self.assertEqual(response.status, 413)
+                    response.read()
+            finally:
+                connection.close()
             self.assertEqual(self.snapshot(), before)
         finally:
             server.task_dispatcher.shutdown()

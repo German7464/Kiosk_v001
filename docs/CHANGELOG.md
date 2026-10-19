@@ -2,6 +2,8 @@
 
 ## 2026-10-19
 
+- Added a reproducible isolated Windows HTTPS prototype using pinned Caddy 2.11.7, disposable .NET certificates, loopback Waitress, explicit Python CA trust, sanitized reports, and bounded process/data cleanup. Verified HTTPS administration/images, secure sessions/CSRF, trusted forwarding, authentication limits, declared-body rejection, certificate failures/replacement, and backend failure. No production startup, dependency, database/API, OS trust, firewall, or working-data changes. Stabilized the existing Waitress body-limit test by checking early rejection from headers without racing a rejected body. Documented checksums/license, prototype limitations, and pending production integration.
+
 - Documented the approved standalone LAN transport design: a separate HTTPS proxy with loopback-only Waitress, per-installation certificate trust, controlled enrollment/renewal/recovery, future secure-session and trusted-forwarding requirements, and an acceptance matrix. Clarified that current LAN commands still use plaintext HTTP. No runtime/dependency/OS changes; TLS implementation and verification remain pending.
 
 - Fixed TV refresh when only one event is active: apply current text/image edits without waiting for a nonexistent next-slide timer, start rotation when more events appear, and replace a removed current event. Added a JavaScript regression check covering these transitions, ordering, empty-state cleanup, and recovery. API/schema and refresh intervals are unchanged.

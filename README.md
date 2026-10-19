@@ -104,7 +104,7 @@ python serve.py --host 0.0.0.0 --port 5000 --open-kiosk
 
 If a local server is already running on `http://127.0.0.1:<port>/api/version`, the launcher reuses it instead of starting a duplicate server.
 
-The commands below currently serve plaintext HTTP, including administrative credentials and sessions when used over LAN. They do not implement protected LAN deployment. The approved [standalone LAN transport design](docs/LAN_TRANSPORT.md) specifies HTTPS, client trust setup, and acceptance checks; implementation remains pending. Use loopback for local development.
+The commands below currently serve plaintext HTTP, including administrative credentials and sessions when used over LAN. They do not implement protected LAN deployment. The approved [standalone LAN transport design and isolated HTTPS prototype](docs/LAN_TRANSPORT.md) specify HTTPS, client trust setup, and acceptance checks; protected normal startup remains pending. Use loopback for local development.
 
 LAN startup for phones, tablets, kiosks, and Smart TV browsers:
 
@@ -158,7 +158,7 @@ The reset command requires a local interactive terminal, asks for a new password
 
 Existing `admin / admin` credentials are blocked for login, administrative actions, and kiosk fullscreen unlock until replaced locally. Startup does not replace existing hashes. Other existing credentials remain unchanged. Sessions from earlier releases require a new login; changing or resetting a password invalidates all previous sessions for that account. A valid session survives server restart when credentials and the installation key remain unchanged. Browser password changes return to login.
 
-These commands are a temporary local setup path before the v2 Launcher. They require OS access to the installation and do not provide a web recovery endpoint. Administrative forms now require a session CSRF token, and password checks share per-source limits (10 per username and 40 total in 60 seconds). Errors return 403 or 429; reload stale forms or wait for the Retry-After interval. Counters reset on restart and are scoped to one server process. See the admin feature README for limits. LAN transport protection is [designed](docs/LAN_TRANSPORT.md) but remains unimplemented and unverified.
+These commands are a temporary local setup path before the v2 Launcher. They require OS access to the installation and do not provide a web recovery endpoint. Administrative forms now require a session CSRF token, and password checks share per-source limits (10 per username and 40 total in 60 seconds). Errors return 403 or 429; reload stale forms or wait for the Retry-After interval. Counters reset on restart and are scoped to one server process. See the admin feature README for limits. LAN transport protection has a [verified isolated loopback prototype](docs/LAN_TRANSPORT.md); protected normal startup, browser trust, and physical LAN deployment remain pending.
 
 To launch the packaged kiosk client automatically, place `ClientKiosk.exe` next to `Kiosk_v001.exe`. If it is not present, the launcher falls back to the default browser. If both launch attempts fail, the server still starts and prints the manual URLs.
 
@@ -231,3 +231,17 @@ The fixed profile starts its own four-thread Waitress process on a free loopback
 JSON reports are stored under ignored `logs/measurements/`. Nonzero exit means a request, validation, sampling, timeout, or cleanup error; inspect the sanitized error records and any completed metrics. Requests have a ten-second timeout, and a 180-second watchdog terminates the temporary server if the scenario overruns; shutdown/cleanup can take additional time. Temporary data is removed after stopping the server. No working server or account is used. Windows process working memory is sampled every 100 ms throughout dataset preparation and measurements; its observed maximum is not a guaranteed peak. Reports contain no test passwords, cookies, installation secrets, hostnames, or server addresses.
 
 See [MVP Baseline](docs/MVP_BASELINE.md) for the measured checkpoint, metric definitions, and limitations. The command is an opt-in developer measurement, not part of normal application startup or a release acceptance threshold.
+
+
+## Isolated HTTPS Prototype
+
+The opt-in Windows developer check uses a pinned official Caddy 2.11.7 executable and PowerShell 7.6.6/.NET for disposable certificate generation. It creates its own loopback servers and temporary data, verifies real TLS with a private Python trust context, and removes the temporary installation. It does not change OS trust, firewall, existing servers, passwords, or normal application startup. No new Python dependency is needed. Read-only listener inspection must be permitted by the execution environment.
+
+Prepare the binary with the verified download/checksum procedure in [LAN transport](docs/LAN_TRANSPORT.md#proxy-provenance), then run:
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.check_https_prototype --caddy logs/https-tools/caddy/caddy.exe --pwsh (Get-Command pwsh).Source
+.\.venv\Scripts\python.exe -m unittest tests.test_https_prototype
+```
+
+Reports and downloaded tools stay in ignored logs directories. This checks loopback HTTPS, not Chrome trust, physical LAN/Android TV, installation, or production certificate maintenance. Public APIs and database formats are unchanged.
