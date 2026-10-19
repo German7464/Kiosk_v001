@@ -182,7 +182,6 @@ function randomUpdateDelay() {
 
 function applyTvData(versionData, eventsData, showCurrentEvent) {
     const currentEvent = tvEvents[(tvEventIndex + tvEvents.length - 1) % tvEvents.length];
-    const wasEmpty = tvEvents.length === 0;
     tvEvents = eventsData.events || [];
     currentContentVersion = versionData.content_version;
     tvVersion.textContent = `${labels.versionLabel} ${currentContentVersion}`;
@@ -199,15 +198,13 @@ function applyTvData(versionData, eventsData, showCurrentEvent) {
     tvEmptyState.hidden = true;
     setTvEmptyMode(false);
 
-    if (currentEvent) {
-        const nextIndex = tvEvents.findIndex((event) => event.id === currentEvent.id);
-        tvEventIndex = nextIndex >= 0 ? (nextIndex + 1) % tvEvents.length : 0;
-    } else {
-        tvEventIndex = 0;
-    }
+    const currentIndex = currentEvent ? tvEvents.findIndex((event) => event.id === currentEvent.id) : -1;
+    tvEventIndex = currentIndex >= 0 ? (currentIndex + 1) % tvEvents.length : 0;
 
-    if (showCurrentEvent || wasEmpty) {
+    if (showCurrentEvent || currentIndex < 0) {
         showNextTvEvent();
+    } else {
+        applyTvEvent(tvEvents[currentIndex]);
     }
 }
 

@@ -6,16 +6,16 @@ The current specification is [TZ](TZ.md), with implementation evidence in [TZ Pr
 
 The verified MVP is preserved by annotated tag `v1.0.0-mvp`. Development continues on branch `v2`. This marks the start of version 2, not a completed version 2 release. The application name and existing MVP boundaries remain unchanged.
 
-Compilation and all eight isolated smoke tests passed. Public routes, authenticated admin routes, and browser navigation were checked. The current runtime database contains no events or tags. Visual validation with published cards, physical Smart TV testing, long-running operation, and an EXE test on another computer remain pending.
+The initial baseline passed compilation, eight isolated smoke tests, route checks, and browser navigation. Later stabilization checks cover 50 Python tests and standalone kiosk/TV JavaScript checks. Populated-screen Chrome checks now use disposable synthetic content; see TZ_PROGRESS.md for their exact scope. Physical Smart TV testing, long-running operation, and an EXE test on another computer remain pending.
 
 ## Priorities
 
 The owner approved uninterrupted local cached display with editing paused when safe write authority is unavailable, and a primary plus background standby on a second PC for the first network stage. Follow the two-PC validation plan in the requirements before introducing automatic multi-device election.
 
-1. Installation session keys, local credential setup, CSRF protection, and bounded single-process authentication attempts are implemented; see TZ_PROGRESS.md for verification and limitations. Request/image limits are implemented; see TZ_PROGRESS.md. A repeatable local HTTP baseline is recorded in MVP_BASELINE.md; continue stage 2 with remaining LAN security decisions and populated-screen/browser checks. Dependency version installation is verified for Windows x64 / CPython 3.14.5; see TZ_PROGRESS.md.
+1. Installation session keys, local credential setup, CSRF protection, bounded single-process authentication attempts, and request/image limits are implemented. The local HTTP baseline and bounded populated-screen Chrome checks are recorded; continue stage 2 with LAN transport protection design. Dependency version installation is verified for Windows x64 / CPython 3.14.5; see TZ_PROGRESS.md for evidence and limits.
 2. Remove placeholder wording and align architecture documentation with the implementation.
 3. Maintain the verified dependency pins in requirements.txt; repeat isolated installation and the complete checks when updating versions. This does not verify clean-machine EXE installation.
-4. Local synthetic-data HTTP/image baseline measurements are recorded in MVP_BASELINE.md. Validate populated event-card rendering, automatic screen updates, and fullscreen behavior in Chrome, then on physical target devices.
+4. Local synthetic-data HTTP/image baseline measurements are recorded in MVP_BASELINE.md. Populated Chrome checks verified navigation, placeholders, automatic updates, and fullscreen, and exposed fixed TV-update and dialog-positioning defects. Portrait coverage is a 768x1024 emulated viewport, not physical hardware. Long content still requires scrolling; unattended TV readability and content-length/layout policy remain unresolved. Continue validation on physical target devices.
 5. Verify sustained kiosk and TV operation and the packaged EXE on a clean Windows computer.
 
 Keep changes small, run compilation and Flask test client checks, and commit completed steps separately. Do not add excluded MVP features without explicit authorization. Repository-wide access or unrestricted Codex execution is not required for this workflow.
