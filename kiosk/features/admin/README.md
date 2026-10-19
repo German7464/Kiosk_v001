@@ -100,6 +100,10 @@ Without an explicit `SECRET_KEY` configuration override, startup generates a cry
 
 Keep this file private and preserve it across restarts. Do not commit or publish it. Losing or replacing it invalidates sessions. The first upgrade from the shared development key requires signing in again. Explicit test keys do not create a key file. Debug mode is disabled by default. Session-key initialization does not modify database schema, password hashes, public API formats, or content version, and has no kiosk or TV UI changes. The credential increment below removes default-account creation and blocks legacy default credentials.
 
+## HTTPS Startup
+
+The opt-in `serve.py --https-config instance/https.json` profile serves the existing admin routes through managed Caddy HTTPS and loopback-only Waitress. It enforces Secure, HttpOnly, SameSite=Lax cookies and trusts forwarded scheme/host/address only through the single configured loopback hop. CSRF, credential revocation, and the single-process limiter remain active. HTTP startup remains a separate compatibility path. Configuration and prepared certificate/trust requirements are documented in `docs/LAN_TRANSPORT.md`; no root installation, password replacement, or web transport-settings route is introduced. Physical browser/LAN/Android trust acceptance remains pending.
+
 ## Local Administrator Setup and Credential Sessions
 
 A new installation has no users. Run `python serve.py --setup-admin` (or `Kiosk_v001.exe --setup-admin`) in a local terminal. The command asks for the password twice without echo, requires 12 to 128 characters, and creates `admin` only while the users table is empty. An immediate SQLite transaction serializes competing setup commands. Setup is refused once any account exists.

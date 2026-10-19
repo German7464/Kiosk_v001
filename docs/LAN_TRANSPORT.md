@@ -1,10 +1,10 @@
 # Standalone LAN Transport Protection
 
-Status: approved design with a verified isolated loopback HTTPS prototype. Protected deployment through the normal application launcher is not implemented or verified. Requirement: TZ 18.11, with related session and write protection under 18.4 and 18.8. This document defines bounded stage 2 work; it does not complete security or authorize later network stages.
+Status: approved design with a verified isolated prototype and opt-in managed HTTPS source startup. Local loopback integration is verified; physical LAN, actual browser trust, and packaged deployment remain pending. Requirement: TZ 18.11, with related session and write protection under 18.4 and 18.8. This document defines bounded stage 2 work; it does not complete security or authorize later network stages.
 
 ## Current Application
 
-The existing Flask/Waitress application serves HTTP. LAN startup can expose login, fullscreen password validation, session cookies, content, and media without transport protection. CSRF and password hashing do not prevent interception or modification in transit. Existing commands and runtime behavior are unchanged by the isolated prototype.
+Existing HTTP commands retain their compatibility behavior and can expose credentials, sessions, content, and media when used over LAN. The separate `--https-config` mode now supervises Caddy and loopback Waitress with explicit certificates and CA trust. CSRF and password hashing alone do not protect HTTP transport. Existing installations are not silently converted to HTTPS.
 
 ## Threats and Trust Boundaries
 
@@ -26,7 +26,7 @@ Browser / display client
 - Waitress binds exclusively to loopback in this profile; no LAN-accessible backend listener exists. The proxy is the only network entry point. Local processes remain inside the stated operating-system trust boundary.
 - The protected LAN profile exposes no plaintext HTTP service and has no automatic downgrade when TLS fails. Users open the HTTPS address directly; an HTTP redirect is not a security boundary.
 - Keep local HTTP development as a separate explicit profile. Do not enable it as an automatic recovery path for a protected deployment. Existing deployments are not silently reconfigured.
-- A separate TLS proxy is approved as a necessary deployment component. Caddy 2.11.7 Windows amd64 is selected and evaluated for the isolated prototype below. Production startup supervision, installation, and packaging remain pending. Waitress and Flask remain the application stack; no Python dependency is added.
+- A separate TLS proxy is approved as a necessary deployment component. Caddy 2.11.7 Windows amd64 is pinned for the prototype and managed source startup below. Service installation and packaging remain pending. Waitress and Flask remain the application stack; no Python dependency is added.
 
 ## Autonomous Certificate Trust
 
@@ -50,13 +50,13 @@ Only the server leaf private key is needed for daily serving. Keep the authority
 
 ## Planned Application Integration Contract
 
-These are future production requirements, not current launcher configuration options. The prototype exercises a bounded subset with temporary application overrides and a dedicated Waitress instance.
+The managed profile below implements this contract for source startup. The earlier prototype remains an independent bounded developer check.
 
 - The protected profile requires an explicit external HTTPS origin and host allowlist, loopback backend binding, and Secure + HttpOnly + SameSite=Lax session cookies. All local launch URLs and readiness checks must respect the selected profile rather than reusing an unrelated HTTP server.
 - The proxy validates the public Host, rejects unknown hosts, and removes client-provided forwarded metadata before setting its own canonical host/scheme and single client address. Its request-body bound must preserve the application's existing 20 MiB default or configured lower deployment limit.
 - Waitress is the single forwarding-metadata interpreter: trust only the exact loopback proxy address, one proxy hop, and the necessary forwarded host/scheme/address metadata. Clear other forwarded metadata. Do not add a second ProxyFix layer or trust arbitrary proxies. Configure the proxy/backend address family explicitly so trust is not accidentally widened.
 - Authentication limits use the client address produced by this trusted chain. A client cannot choose its budget with X-Forwarded-For, Forwarded, or a supplied username on password change. Keep the documented single-process limiter limitation; shared NAT clients can still share a budget.
-- HTTP development retains its separate cookie/transport policy. The HTTPS profile must fail startup on inconsistent transport settings instead of silently serving credentials over HTTP. Final option names and CLI/configuration format are deferred to the implementation stage.
+- HTTP development retains its separate cookie/transport policy. The HTTPS profile fails startup on inconsistent transport settings instead of silently serving credentials over HTTP. Its versioned configuration and CLI are defined below.
 - No route, JSON schema, database migration, content-version change, or credential replacement is required by this design. Certificates authenticate the service, not users or group membership. Pairing, device authorization, replication, update signatures, and future client authentication remain separate work.
 
 ## Verification and Acceptance Plan
@@ -132,8 +132,60 @@ The sanitized report under ignored `logs/https/` contains fixed check names, cou
 
 Checkpoint: `logs/https/prototype-20261019T183356687195Z.json`, 14.999 seconds, all scenario checks passed. Responses: 62 x 200, 6 x 302, 2 x 400, 36 x 401, 1 x 403, 2 x 429, 1 x 413, and the expected backend-failure 502. All 107 observed application requests had correct metadata. TLS verification rejected unknown authority (20), wrong identity (64), and expiry (10). Waitress exited 0; four owned proxy processes were terminated and waited for; temporary data was removed. Raw reports and binaries are not committed.
 
+## Managed HTTPS Startup
+
+This opt-in Windows source profile uses prepared certificates; it is not an installer, certificate issuer, service, or EXE acceptance result. Existing HTTP startup remains separate. Related implementation and verification are listed in [the transport README](../kiosk/transport/README.md).
+
+Prepare the pinned official executable using the provenance procedure above and keep its LICENSE alongside it. Place the public CA certificate, server certificate chain, and matching unencrypted PEM leaf key under operator-controlled storage. The leaf must cover the exact configured name/IP, be valid at the current time, chain to the configured CA, and permit server authentication. The authority private key must remain outside the running application/proxy account. The temporary test generator is not a production certificate-custody tool. Startup does not change ACLs or establish that the selected files have appropriate operator permissions; protect the profile, executable, and leaf key through Windows account/directory permissions.
+
+Example ignored `instance/https.json`:
+
+```json
+{
+  "schema_version": 1,
+  "public_origin": "https://192.168.1.117:8443",
+  "listen_host": "0.0.0.0",
+  "caddy_executable": "tools/caddy.exe",
+  "certificate_file": "tls/server.pem",
+  "private_key_file": "tls/server.key",
+  "ca_file": "tls/authority.pem"
+}
+```
+
+All seven fields are required; unknown/duplicate fields, unsupported versions, malformed values, and configuration files over 64 KiB are rejected. Relative paths resolve against the profile directory. No application path is hardcoded. HTTPS origins allow one DNS name or IPv4 address, optional port (443 by default), and no path, credentials, query, or fragment. The allowed Host is the canonical origin authority, including its nondefault port. The listener is an explicit IPv4 address, including `0.0.0.0`; IPv6 and multiple external names are not included in this increment. The exact Caddy digest is checked before execution; startup never downloads a binary.
+
+```powershell
+.\.venv\Scripts\python.exe serve.py --https-config instance/https.json --no-client
+.\.venv\Scripts\python.exe serve.py --https-config instance/https.json --open-tv
+```
+
+Do not combine the profile with `--host`, `--port`, `--setup-admin`, or `--reset-admin-password`. Credential commands remain separate local interactive operations. Startup validates inputs and generated proxy JSON, initializes the existing application, starts a four-thread IPv4 loopback Waitress backend, and starts its own hidden Caddy process. The generated body bound matches the application bound (20 MiB by default). Certificate failures discovered during TLS readiness stop the installation; normal application initialization may already have occurred. No database migration or credential replacement is performed.
+
+Readiness checks the owned Caddy configuration identity and requests `/api/version` over actual verified TLS using only the configured public CA. The probe connects directly to the selected local listener with the configured server name/Host, without DNS or system HTTP proxy dependence. It checks a per-start `X-Kiosk-Instance` response header and integer content version from the owned backend. Public JSON formats are unchanged. A successful unrelated HTTP server is never reused. URLs are printed and the browser is opened only after readiness; the old ClientKiosk.exe path is not used until independently verified for HTTPS trust. Browser trust must already be enrolled through the controlled procedure above.
+
+### Management Boundary and Shutdown
+
+Owner-selected change from the prototype's `admin off`: permit an additional Caddy administrative API on a dynamically allocated `127.0.0.1` port, with Host/Origin enforcement and configuration persistence disabled. This is a local management HTTP socket, not a LAN application endpoint or credential-login route. It enables graceful `/stop`; its identity is checked before sending stop. The normal running arrangement has three TCP listeners: configured external TLS, loopback backend, and loopback administration. No public plaintext listener, automatic certificate issuance, root installation, HTTP redirect, HTTP/3, or plaintext recovery profile is enabled.
+
+Local processes are trusted under the stated OS boundary: the administrative API is not authenticated against a hostile local account, and Host/Origin checks do not prevent a local program from invoking it. Protect OS access; this increment does not provide per-account management isolation. It does not stop or configure a preexisting proxy/server. Port conflicts fail rather than reusing another installation.
+
+The startup budget is 30 seconds, with bounded cleanup afterward. The foreground supervisor monitors its proxy and backend event loop every 100 ms and stops the other component after failure; no automatic restart or HTTP downgrade is attempted. On Ctrl+C, request graceful Caddy shutdown, allow its eight-second request drain within a ten-second stop budget, then shut down Waitress workers and sockets within a separate bounded budget. A stalled proxy is killed and the launcher returns failure instead of claiming graceful completion. Windows Job Object kill-on-close contains the owned proxy after abrupt owner termination; inability to assign the job aborts startup. Ordinary cleanup removes temporary generated configuration/storage, not operator certificates, session key, or user data. Abrupt owner death can leave nonsecret temporary configuration directories; it does not leave the proxy running. The verification harness removes its own crash fixture directory.
+
+Failures report the fixed lifecycle phase and exception class, without raw exception text, subprocess output, request bodies, cookies, or keys. This deliberately bounded diagnostic output does not establish the future section 19 diagnostic system. After startup, browser certificate enforcement remains essential; proactive certificate-expiry monitoring and in-place reload are not implemented. Renew certificates through controlled maintenance/restart with the validated pair and the recovery rules above.
+
+### Managed Integration Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.check_managed_https --caddy logs/https-tools/caddy/caddy.exe --pwsh (Get-Command pwsh).Source
+.\.venv\Scripts\python.exe -m unittest tests.test_managed_https
+```
+
+The fixed developer scenario creates disposable installations and certificate fixtures, checks actual listeners, real HTTPS administration/media, cookies/CSRF, password revocation, forwarding sanitization, throttling, early declared-body 413, rejection of plaintext and untrusted administrative Origin, graceful shutdown, and session continuity across managed restart. It rejects wrong-name/expired startup and missing/mismatched keys, rejects an occupied public port without reuse, runs the actual CLI from a temporary source copy, verifies CLI failure/cleanup after proxy exit, and confirms job containment after forcibly terminating a fixture owner. Windows read-only TCP/process inspection must be permitted; no check is silently skipped.
+
+Checkpoint: `logs/https/managed-20261019T190228594494Z.json`, 30.122 seconds, all 17 named checks passed. Application/TLS-port responses: 64 x 200, 6 x 302, 2 x 400, 36 x 401, 1 x 403, 2 x 429, and 1 x 413. The separate management-Origin rejection was 403. All 108 observed application requests had correct metadata. Unknown CA was rejected through TLS verification code 20; wrong-name and expired configurations did not reach readiness. All three recorded managed shutdowns had proxy exit 0, no forced kill, stopped backend, and removed temporary configuration. The real CLI returned 1 and cleaned up after its proxy was deliberately stopped. Temporary installations and crash-fixture directories were removed. A JSON-expression fixture initially omitted Caddy's required matcher `name`, causing a validator panic; the generator was corrected before the successful scenarios.
+
 ## Stage Boundary and Next Work
 
-This stage delivers an isolated loopback prototype, not a protected product launch mode. Next scope production transport-profile integration and proxy lifecycle/configuration validation. Browser trust enrollment, physical LAN/Android TV behavior, independent clients behind NAT, fully disconnected operation, certificate custody/renewal/revocation procedures, service packaging, and clean installation remain pending. Do not deploy to user servers, install roots, change firewall rules, or claim section 18 complete from the prototype.
+Managed HTTPS source startup and local lifecycle validation are implemented. Next: controlled actual Windows-browser trust enrollment/identity rejection and physical LAN validation with prepared certificates, followed by separately scoped certificate maintenance and packaging. Physical Android TV, independent client addresses/NAT, fully disconnected operation, certificate custody/renewal/revocation operations, clean installation, chunked/unknown-length upload overflow behavior, and endurance remain pending. Do not deploy to user servers, install roots, change firewall rules, or claim section 18 complete from loopback checks.
 
 References: [Waitress TLS limitation](https://docs.pylonsproject.org/projects/waitress/en/stable/), [Waitress reverse proxy handling](https://docs.pylonsproject.org/projects/waitress/en/stable/reverse-proxy.html), [Flask proxy trust](https://flask.palletsprojects.com/en/stable/deploying/proxy_fix/), and [Flask security guidance](https://flask.palletsprojects.com/en/stable/web-security/).

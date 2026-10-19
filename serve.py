@@ -6,10 +6,11 @@ from kiosk.server import reset_admin_password_command, run_waitress_with_launche
 
 
 def build_parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=Config.SERVER_PORT)
     parser.add_argument("--no-client", action="store_true")
+    parser.add_argument("--https-config")
     open_group = parser.add_mutually_exclusive_group()
     open_group.add_argument("--open-kiosk", action="store_true")
     open_group.add_argument("--open-tv", action="store_true")
@@ -20,11 +21,23 @@ def build_parser():
 
 
 def parse_args(argv=None):
-    return build_parser().parse_args(argv)
+    parser = build_parser()
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    args = parser.parse_args(arguments)
+    if args.https_config and (args.setup_admin or args.reset_admin_password or any(
+        item in {"--host", "--port"} or item.startswith(("--host=", "--port=")) for item in arguments
+    )):
+        parser.error("--https-config cannot be combined with --host, --port, or credential commands.")
+    return args
 
 
 def main(argv=None):
     args = parse_args(argv)
+
+    if args.https_config:
+        from kiosk.transport.runtime import run_https
+
+        return run_https(args.https_config, path="/tv" if args.open_tv else "/kiosk", auto_launch=not args.no_client)
 
     if args.reset_admin_password:
         return reset_admin_password_command()

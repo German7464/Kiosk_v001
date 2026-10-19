@@ -104,7 +104,14 @@ python serve.py --host 0.0.0.0 --port 5000 --open-kiosk
 
 If a local server is already running on `http://127.0.0.1:<port>/api/version`, the launcher reuses it instead of starting a duplicate server.
 
-The commands below currently serve plaintext HTTP, including administrative credentials and sessions when used over LAN. They do not implement protected LAN deployment. The approved [standalone LAN transport design and isolated HTTPS prototype](docs/LAN_TRANSPORT.md) specify HTTPS, client trust setup, and acceptance checks; protected normal startup remains pending. Use loopback for local development.
+The HTTP commands below serve plaintext, including administrative credentials and sessions when used over LAN. Use loopback for local development. An opt-in [managed HTTPS profile](docs/LAN_TRANSPORT.md#managed-https-startup) now starts Caddy and loopback Waitress with prepared certificates; browser trust and physical LAN/Android TV acceptance remain pending.
+
+```powershell
+.\.venv\Scripts\python.exe serve.py --https-config instance/https.json --no-client
+.\.venv\Scripts\python.exe serve.py --https-config instance/https.json --open-tv
+```
+
+The profile specifies the external origin, IPv4 listener, pinned Caddy executable, server certificate/key, and public CA file. Paths resolve relative to the profile. It cannot be combined with `--host`, `--port`, or credential commands. No certificate/root installation, service, firewall change, automatic download, or HTTP fallback occurs. HTTPS readiness precedes browser opening; this profile uses the browser rather than unverified legacy ClientKiosk.exe. See the linked configuration and certificate prerequisites before running.
 
 LAN startup for phones, tablets, kiosks, and Smart TV browsers:
 
@@ -158,7 +165,7 @@ The reset command requires a local interactive terminal, asks for a new password
 
 Existing `admin / admin` credentials are blocked for login, administrative actions, and kiosk fullscreen unlock until replaced locally. Startup does not replace existing hashes. Other existing credentials remain unchanged. Sessions from earlier releases require a new login; changing or resetting a password invalidates all previous sessions for that account. A valid session survives server restart when credentials and the installation key remain unchanged. Browser password changes return to login.
 
-These commands are a temporary local setup path before the v2 Launcher. They require OS access to the installation and do not provide a web recovery endpoint. Administrative forms now require a session CSRF token, and password checks share per-source limits (10 per username and 40 total in 60 seconds). Errors return 403 or 429; reload stale forms or wait for the Retry-After interval. Counters reset on restart and are scoped to one server process. See the admin feature README for limits. LAN transport protection has a [verified isolated loopback prototype](docs/LAN_TRANSPORT.md); protected normal startup, browser trust, and physical LAN deployment remain pending.
+These commands are a temporary local setup path before the v2 Launcher. They require OS access to the installation and do not provide a web recovery endpoint. Administrative forms require a session CSRF token, and password checks share per-source limits (10 per username and 40 total in 60 seconds). Errors return 403 or 429; reload stale forms or wait for the Retry-After interval. Counters reset on restart and are scoped to one server process. See the admin feature README for limits. The [managed HTTPS profile](docs/LAN_TRANSPORT.md#managed-https-startup) adds opt-in protected startup; physical LAN deployment and actual browser trust remain pending.
 
 To launch the packaged kiosk client automatically, place `ClientKiosk.exe` next to `Kiosk_v001.exe`. If it is not present, the launcher falls back to the default browser. If both launch attempts fail, the server still starts and prints the manual URLs.
 
@@ -245,3 +252,10 @@ Prepare the binary with the verified download/checksum procedure in [LAN transpo
 ```
 
 Reports and downloaded tools stay in ignored logs directories. This checks loopback HTTPS, not Chrome trust, physical LAN/Android TV, installation, or production certificate maintenance. Public APIs and database formats are unchanged.
+
+Verify the managed application lifecycle, including actual source CLI startup, graceful proxy shutdown, and owner-failure cleanup, with disposable data:
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.check_managed_https --caddy logs/https-tools/caddy/caddy.exe --pwsh (Get-Command pwsh).Source
+.\.venv\Scripts\python.exe -m unittest tests.test_managed_https
+```
