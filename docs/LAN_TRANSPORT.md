@@ -228,6 +228,24 @@ Initial preparation detected and corrected public-certificate loading through an
 
 ## Two-PC LAN Verification
 
+### Guided launchers (recommended for the operator)
+
+After preparing the client archive, the server opens File Explorer with that ZIP selected when Explorer is available. The path is also printed in the console.
+
+Double-click `LAN_Server.cmd` in the project directory. Its Russian console asks for the second PC's IPv4, suggests this server's route-selected local IPv4 for confirmation, and retries invalid addresses/passwords. It uses the existing project venv, prepared pinned Caddy, and PowerShell 7; it does not install/download prerequisites. Enter a disposable 12-128 character password and confirm it without echo. The server uses port 8443 and never changes working credentials or content.
+
+The wizard offers an optional temporary firewall rule after explicit confirmation, followed by a Windows elevation prompt. The rule is scoped to the exact server IPv4, client IPv4 and TCP port; it covers network profiles without changing them or disabling the firewall. A fixed validating helper adds/removes only the session's uniquely named `Kiosk-LAN-Wizard-<session>` rule. Declining preserves the existing network configuration. Ordinary completion/failure removes a rule successfully created by this run; cleanup refusal/failure makes the result Pending. Abrupt owner/OS termination can leave that rule, so retain the session's exact name if recovery is needed. No rule or trust-store operation is executed while implementing/testing the wizard.
+
+After verified readiness, copy the displayed `Kiosk-LAN-Client.zip` to the second PC through a controlled channel, extract it, and double-click its `LAN_Client.cmd`. The ZIP contains the public CA, session manifest, synthetic image, PowerShell helpers, launcher, and a random temporary test-control capability. **Unlike the manual public-only bundle, this wizard ZIP grants temporary test-session access:** do not publish it or include it in diagnostic reports. It contains no server/CA private key, working database, or account password. The server removes its ZIP after ordinary termination; delete transferred copies after client cleanup. The client requires PowerShell 7 and installed Chrome. Its execution-policy override is limited to that child process, not saved in Windows.
+
+Both consoles display the complete SHA-256 fingerprint in eight groups. The client requires the operator to independently compare all groups against the server console and explicitly confirm; the fingerprint is not silently trusted from the ZIP. No manual digest command entry is needed. The client then reuses the existing TLS/application checks, asks for the disposable password and its replacement, and automatically coordinates restart, source-budget comparison and report transfer. No user has to switch computers within a 30-second window. The fixture-only control handler is HTTPS, selected-source and random-header authenticated; it accepts bounded JSON and fixed test actions, never shell commands, paths, firewall or trust operations. Production routes/startup do not expose it.
+
+After the automatic checks, Russian client prompts guide the four browser observations. The wizard waits for the authentication budget to expire before browser login/fullscreen testing, launches Chrome with separate marked temporary profiles, asks before adding the exact test root to CurrentUser trust, coordinates the event-title update, removes the root, and launches another fresh profile to verify rejection. Ordinary cleanup stops its launched browser tree, verifies root absence, and removes only its marked profile directories under the resolved OS temporary root. It never closes normal browser profiles. Failed observations cannot produce a completed physical result. Profile locks, trust cleanup failures, or server failure make the result Pending.
+
+If the client console is interrupted, retain the extracted folder and run `LAN_Client.cmd` there again: a saved session/digest ownership ledger offers cleanup only, preserving the earlier report. Close any remaining test Chrome windows first. Never use this recovery to remove an unknown preexisting root: enrollment requires an initial absence check, and only a root owned by the saved session is removed. For a new verification, start a fresh server session and use its new ZIP. Abrupt client termination can leave a root/profile until this recovery is performed. Interrupted server firewall cleanup requires removing only its exact session rule with operator elevation; the wizard is a test tool, not a crash-proof installer.
+
+The server supervises the owned test proxy/backend while waiting (up to two hours), prints Russian stage progress and saves sanitized `logs/https/wizard-<timestamp>/result.json`. Physical acceptance requires all existing application/source checks, actual update/restart, all four operator browser observations, client cleanup, graceful managed cleanup and successful owned firewall removal when applicable. Local regression/simulated UI results do not satisfy physical acceptance. This is a simpler verification interface within stage 2, not authorization or implementation of the stage 3 product Launcher.
+
 The source helpers are implemented; physical LAN acceptance remains **Pending** until an actual second Windows PC completes the procedure. This bounded increment covers TZ 18.11, regression checks for 18.4/18.8, and physical Windows transport evidence under 21.4. It does not implement the replication/failover scenarios of 21.2. Both PCs need PowerShell 7; the client needs Chrome. Use only disposable credentials. No new application dependency, public API, database migration, or production configuration is introduced.
 
 ### Prepare the server
@@ -292,6 +310,7 @@ Browser outcomes and remote trust/profile/firewall cleanup are explicit operator
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest tests.test_lan_https
+.\.venv\Scripts\python.exe -m unittest tests.test_lan_wizard
 .\.venv\Scripts\python.exe -m compileall run.py kiosk tools/check_lan_https.py
 .\.venv\Scripts\python.exe -m unittest discover -s tests
 node tests/test_kiosk_request_security.js

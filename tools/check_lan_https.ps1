@@ -2,7 +2,8 @@ param(
     [string]$SessionFile = "$PSScriptRoot/session.json",
     [string]$ExpectedSha256,
     [string]$ReportFile = "$PSScriptRoot/client-report.json",
-    [switch]$LibraryOnly
+    [switch]$LibraryOnly,
+    [switch]$Wizard
 )
 
 $ErrorActionPreference = 'Stop'
@@ -71,8 +72,11 @@ function Invoke-LanRequest {
     try {
         $response = $Transport.Client.SendAsync($request).GetAwaiter().GetResult()
         $code = [string][int]$response.StatusCode
-        if (-not $script:codes.ContainsKey($code)) { $script:codes[$code] = 0 }
-        $script:codes[$code]++
+        $script:LanResponseStatus = [int]$code
+        if ($Path -ne '/_lan-test/control') {
+            if (-not $script:codes.ContainsKey($code)) { $script:codes[$code] = 0 }
+            $script:codes[$code]++
+        }
         if ([int]$code -ne $Expected) { throw 'Unexpected HTTP status' }
         $body = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
         $headersOut = @{}
@@ -113,6 +117,7 @@ function Test-LanPortClosed {
 }
 
 if ($LibraryOnly) { return }
+if ($Wizard) { . "$PSScriptRoot/lan_wizard.ps1" }
 
 $report = @{ schema_version = 1; session = ''; success = $false; checks = @(); http_statuses = @{}; error = $null }
 $trusted = $null
@@ -120,7 +125,12 @@ $untrusted = $null
 $stale = $null
 $plain = $null
 $authority = $null
+$cleanupOnly = $false
 try {
+    if ($Wizard) {
+        $ExpectedSha256 = Initialize-LanWizard
+        if (-not $ExpectedSha256) { $cleanupOnly = $true; return }
+    }
     if (Test-Path -LiteralPath $ReportFile) { throw 'Report already exists; choose a new report path' }
     if ($ExpectedSha256 -cnotmatch '^[a-f0-9]{64}$') { throw 'Independent lowercase SHA-256 required' }
     $sessionPath = (Resolve-Path -LiteralPath $SessionFile).Path
@@ -164,11 +174,21 @@ try {
     $loginPage = Invoke-LanRequest $trusted '/admin/login'
     if (-not $loginPage.Headers.ContainsKey('Set-Cookie') -or $loginPage.Headers['Set-Cookie'] -notmatch '(?i)secure' -or
         $loginPage.Headers['Set-Cookie'] -notmatch '(?i)httponly' -or $loginPage.Headers['Set-Cookie'] -notmatch '(?i)samesite=lax') { throw 'Secure cookie attributes missing' }
-    $passwordSecure = Read-Host 'Disposable admin password (same as on test server)' -AsSecureString
+    $passwordSecure = if ($Wizard) { Read-LanPassword 'initial' } else { Read-Host 'Disposable admin password (same as on test server)' -AsSecureString }
     $password = [Net.NetworkCredential]::new('', $passwordSecure).Password
     $passwordSecure.Dispose()
     $null = Invoke-LanRequest $trusted '/admin/login' 403 ([Net.Http.StringContent]::new('username=admin&password=invalid', [Text.Encoding]::UTF8, 'application/x-www-form-urlencoded'))
-    $null = Send-LanForm $trusted '/admin/login' @{username = 'admin'; password = $password}
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        try {
+            $null = Send-LanForm $trusted '/admin/login' @{username = 'admin'; password = $password}
+            break
+        } catch {
+            if (-not $Wizard -or $script:LanResponseStatus -ne 401 -or $attempt -eq 3) { throw }
+            Write-Host 'Пароль не подошёл. Введите первоначальный пароль из окна сервера ещё раз.' -ForegroundColor Yellow
+            $retry = Read-LanPassword 'initial'
+            try { $password = [Net.NetworkCredential]::new('', $retry).Password } finally { $retry.Dispose() }
+        }
+    }
     $null = Invoke-LanRequest $trusted '/admin'
     $report.checks += 'csrf_cookie_login'
     $before = (Invoke-LanRequest $trusted '/api/version').Text | ConvertFrom-Json
@@ -192,13 +212,16 @@ try {
     if ($fullscreen.success -ne $true) { throw 'Fullscreen authentication failed' }
     $report.checks += 'upload_images_version_fullscreen'
     foreach ($cookie in $trusted.Cookies.GetCookies($originUri)) { $stale.Cookies.Add($originUri, [Net.Cookie]::new($cookie.Name, $cookie.Value, $cookie.Path)) }
-    $replacement = Read-Host 'New disposable password (remember for Chrome fullscreen; 12-128 characters)' -AsSecureString
-    $newPassword = [Net.NetworkCredential]::new('', $replacement).Password
-    $replacement.Dispose()
-    $confirmation = Read-Host 'Confirm new disposable password' -AsSecureString
-    try {
-        if ($newPassword.Length -lt 12 -or $newPassword.Length -gt 128 -or $newPassword -cne [Net.NetworkCredential]::new('', $confirmation).Password) { throw 'Invalid new disposable password' }
-    } finally { $confirmation.Dispose() }
+    if ($Wizard) { $newPassword = Read-LanReplacementPassword }
+    else {
+        $replacement = Read-Host 'New disposable password (remember for Chrome fullscreen; 12-128 characters)' -AsSecureString
+        $newPassword = [Net.NetworkCredential]::new('', $replacement).Password
+        $replacement.Dispose()
+        $confirmation = Read-Host 'Confirm new disposable password' -AsSecureString
+        try {
+            if ($newPassword.Length -lt 12 -or $newPassword.Length -gt 128 -or $newPassword -cne [Net.NetworkCredential]::new('', $confirmation).Password) { throw 'Invalid new disposable password' }
+        } finally { $confirmation.Dispose() }
+    }
     $null = Send-LanForm $trusted '/admin/password/change' @{current_password = $password; new_password = $newPassword; confirm_password = $newPassword}
     $password = $null
     $null = Invoke-LanRequest $stale '/admin' 302
@@ -221,7 +244,10 @@ try {
     $report.checks += 'plaintext_rejected'
     $identity = (Invoke-LanRequest $trusted '/api/version').Headers['X-Kiosk-Instance']
     if (-not $identity) { throw 'Managed identity missing' }
-    $null = Read-Host 'On SERVER enter restart; after readiness press Enter here (no browser trust yet)'
+    if ($Wizard) {
+        Write-Host 'Перезапускаю тестовый сервер и проверяю сохранение входа…'
+        Invoke-LanWizardCommand $trusted 'restart'
+    } else { $null = Read-Host 'On SERVER enter restart; after readiness press Enter here (no browser trust yet)' }
     $null = Invoke-LanRequest $trusted '/admin'
     $newIdentity = (Invoke-LanRequest $trusted '/api/version').Headers['X-Kiosk-Instance']
     if (-not $newIdentity -or $newIdentity -eq $identity) { throw 'Managed restart not observed' }
@@ -231,7 +257,8 @@ try {
     $null = Invoke-LanRequest $trusted '/api/version' 200 $null $spoof
     $null = Invoke-LanRequest $trusted '/api/version' 400 $null @{Host = 'evil.invalid'}
     $report.checks += 'forwarding_host'
-    $null = Read-Host 'Prepare SERVER budget command; press Enter to run remote authentication limits'
+    if ($Wizard) { Write-Host 'Проверяю защиту входа и независимость двух компьютеров…' }
+    else { $null = Read-Host 'Prepare SERVER budget command; press Enter to run remote authentication limits' }
     for ($index = 0; $index -lt 10; $index++) { $null = Send-LanForm $trusted '/admin/login' @{username = 'lan-pair'; password = 'invalid'} 401 }
     $limited = Send-LanForm $trusted '/admin/login' @{username = 'lan-pair'; password = 'invalid'} 429 $spoof
     if ([int]$limited.Headers['Retry-After'] -lt 1) { throw 'Missing Retry-After' }
@@ -244,23 +271,38 @@ try {
     $null = Invoke-LanRequest $trusted "/api/version?lan_budget=$($manifest.session)"
     $report.checks += 'source_budget'
     $budgetTimer = [Diagnostics.Stopwatch]::StartNew()
-    $null = Read-Host 'Within 30 seconds enter budget on SERVER; after success press Enter here'
+    if ($Wizard) { Invoke-LanWizardCommand $trusted 'budget' }
+    else { $null = Read-Host 'Within 30 seconds enter budget on SERVER; after success press Enter here' }
     if ($budgetTimer.Elapsed.TotalSeconds -ge 30) { throw 'Budget comparison window expired; repeat a fresh session' }
-    $null = Send-LanForm $trusted '/admin/login' @{username = 'lan-still-exhausted'; password = 'invalid'} 429 $spoof
+    $lastLimited = Send-LanForm $trusted '/admin/login' @{username = 'lan-still-exhausted'; password = 'invalid'} 429 $spoof
+    if ($Wizard) { $script:LanBudgetWait = [int]$lastLimited.Headers['Retry-After'] }
     $report.checks += 'remote_budget_after_local'
     $report.success = $true
 } catch {
     $report.error = $_.Exception.GetType().Name
+    if ($Wizard) {
+        Write-Host "`nЭтап не пройден. Не продолжайте проверку. Код: $($report.error)." -ForegroundColor Red
+        Write-Host 'Проверьте адреса, пароль и доступ по сети. Сохраните это сообщение.'
+        if ($null -ne $trusted) { try { Invoke-LanWizardCommand $trusted 'abort' } catch {} }
+    }
 } finally {
     $password = $null
     $newPassword = $null
     foreach ($resource in @($trusted, $untrusted, $stale, $plain, $authority)) { if ($null -ne $resource) { $resource.Dispose() } }
-    $json = $report | ConvertTo-Json -Depth 6
-    $stream = [IO.File]::Open([IO.Path]::GetFullPath($ReportFile), [IO.FileMode]::CreateNew, [IO.FileAccess]::Write)
-    try {
-        $bytes = [Text.Encoding]::UTF8.GetBytes($json)
-        $stream.Write($bytes, 0, $bytes.Length)
-    } finally { $stream.Dispose() }
-    @{success = $report.success; error = $report.error; report = $ReportFile} | ConvertTo-Json -Compress
+    if (-not $cleanupOnly) {
+        $json = $report | ConvertTo-Json -Depth 6
+        $stream = [IO.File]::Open([IO.Path]::GetFullPath($ReportFile), [IO.FileMode]::CreateNew, [IO.FileAccess]::Write)
+        try {
+            $bytes = [Text.Encoding]::UTF8.GetBytes($json)
+            $stream.Write($bytes, 0, $bytes.Length)
+        } finally { $stream.Dispose() }
+        @{success = $report.success; error = $report.error; report = $ReportFile} | ConvertTo-Json -Compress
+    }
+}
+if ($Wizard -and $report.success) {
+    try { Complete-LanWizard $report $pem $ExpectedSha256 } catch {
+        Write-Host 'Мастер не завершён. Сохраните папку клиента; повторный запуск предложит очистку.' -ForegroundColor Red
+        exit 1
+    }
 }
 if (-not $report.success) { exit 1 }

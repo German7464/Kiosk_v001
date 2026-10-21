@@ -20,6 +20,8 @@ The owner approved uninterrupted local cached display with editing paused when s
 
 The next selected increment is physical HTTPS LAN verification with this Windows PC as server and a second Windows/Chrome PC as client. The owner selected temporary test certificates, manual client actions, PowerShell 7 on the client, and manually scoped firewall rules if needed; addresses are determined immediately before running. The [two-PC procedure](LAN_TRANSPORT.md#two-pc-lan-verification) and disposable helpers are prepared. Run it with the selected devices and import the matching client report before recording physical verification; local tests do not close that acceptance. No later stage is authorized by this preparation.
 
+The owner subsequently requested two easy-to-run files with guided input. `LAN_Server.cmd` and the generated ZIP's `LAN_Client.cmd` provide Russian test-only wizards, automatic fixture restart/budget/report coordination, and explicit optional temporary firewall/trust operations with ordinary cleanup. The manual path remains available. This is not the stage 3 product Launcher, and physical acceptance remains Pending until the guided/manual session actually completes on both PCs.
+
 Keep changes small, run compilation and Flask test client checks, and commit completed steps separately. Do not add excluded MVP features without explicit authorization. Repository-wide access or unrestricted Codex execution is not required for this workflow.
 
 ## Restore the MVP Code
