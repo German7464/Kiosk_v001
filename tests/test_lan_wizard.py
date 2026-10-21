@@ -160,8 +160,10 @@ $cert = [Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem
 try { $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($cert.RawData)).ToLowerInvariant() } finally { $cert.Dispose() }
 $transport = [KioskLanTls]::new($pem,$digest,$true)
 try {
+    Test-LanHostRejection $transport
+    if ($script:codes['400'] -ne 1) { throw 'Managed proxy Host rejection missing' }
     Invoke-LanWizardCommand $transport 'restart'
-    if ($script:codes.Count -ne 0) { throw 'Control codes mixed into application evidence' }
+    if ($script:codes.Count -ne 1 -or $script:codes['400'] -ne 1) { throw 'Control codes mixed into application evidence' }
 } finally { $transport.Dispose() }
 ''', encoding='utf-8')
                 identity = fixture.runtime.identity

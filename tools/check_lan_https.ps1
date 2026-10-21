@@ -16,6 +16,10 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
+using System.Net.Sockets;
+using System.IO;
+using System.Text;
+using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
@@ -55,6 +59,42 @@ public sealed class KioskLanTls : IDisposable {
             return chain.Build(leaf);
         }
     }
+    public int ProbeHost(Uri origin) {
+        if (origin.Scheme != "https" || origin.UserInfo.Length != 0 || origin.AbsolutePath != "/" || origin.Query.Length != 0 || origin.Fragment.Length != 0)
+            throw new ArgumentException("HTTPS origin required");
+        using (var tcp = new TcpClient()) {
+            var connecting = tcp.ConnectAsync(origin.DnsSafeHost, origin.Port);
+            if (!connecting.Wait(15000)) throw new TimeoutException("TCP connection timed out");
+            connecting.GetAwaiter().GetResult();
+            using (var tls = new SslStream(tcp.GetStream(), false, (sender, certificate, chain, errors) =>
+                Validate(null, certificate as X509Certificate2, chain, errors))) {
+                tls.ReadTimeout = 15000;
+                tls.WriteTimeout = 15000;
+                tls.AuthenticateAsClient(new SslClientAuthenticationOptions {
+                    TargetHost = origin.DnsSafeHost,
+                    EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                    CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+                });
+                byte[] request = Encoding.ASCII.GetBytes("GET /api/version HTTP/1.1\r\nHost: evil.invalid\r\nConnection: close\r\n\r\n");
+                tls.Write(request, 0, request.Length);
+                tls.Flush();
+                var line = new StringBuilder();
+                for (int index = 0; index < 256; index++) {
+                    int current = tls.ReadByte();
+                    if (current < 0) throw new IOException("Incomplete HTTP status");
+                    if (current == '\n') {
+                        string[] fields = line.ToString().TrimEnd('\r').Split(' ');
+                        int status;
+                        if (fields.Length >= 2 && (fields[0] == "HTTP/1.1" || fields[0] == "HTTP/1.0") &&
+                            int.TryParse(fields[1], out status) && status >= 100 && status <= 599) return status;
+                        throw new IOException("Invalid HTTP status");
+                    }
+                    line.Append((char)current);
+                }
+                throw new IOException("HTTP status too long");
+            }
+        }
+    }
     public void Dispose() { Client.Dispose(); root.Dispose(); }
 }
 '@
@@ -70,6 +110,7 @@ function Invoke-LanRequest {
     $request.Content = $Content
     foreach ($key in $Headers.Keys) { $null = $request.Headers.TryAddWithoutValidation($key, [string]$Headers[$key]) }
     $response = $null
+    $script:LanResponseStatus = 0
     try {
         $response = $Transport.Client.SendAsync($request).GetAwaiter().GetResult()
         $code = [string][int]$response.StatusCode
@@ -87,6 +128,17 @@ function Invoke-LanRequest {
         if ($null -ne $response) { $response.Dispose() }
         $request.Dispose()
     }
+}
+
+function Test-LanHostRejection {
+    param([KioskLanTls]$Transport)
+    $script:LanResponseStatus = 0
+    $status = $Transport.ProbeHost([uri]$script:origin)
+    $script:LanResponseStatus = $status
+    $code = [string]$status
+    if (-not $script:codes.ContainsKey($code)) { $script:codes[$code] = 0 }
+    $script:codes[$code]++
+    if ($status -ne 400) { throw 'Unexpected HTTP status' }
 }
 
 function Get-LanToken {
@@ -174,7 +226,7 @@ function Write-LanFailure {
     $diagnostic = @{schema_version=1;stage=$stage;reason=$reason;error=$Failure.Exception.GetType().Name;
         source=$source;line=[int]$Failure.InvocationInfo.ScriptLineNumber}
     $status = Get-Variable -Name LanResponseStatus -Scope Script -ErrorAction SilentlyContinue
-    if ($null -ne $status) { $diagnostic.http_status = [int]$status.Value }
+    if ($null -ne $status -and [int]$status.Value -ge 100 -and [int]$status.Value -le 599) { $diagnostic.http_status = [int]$status.Value }
     Write-Host "`nЭтап: $stage. Причина: $reason." -ForegroundColor Red
     Write-Host $message
     $destination = Join-Path (Split-Path -Parent ([IO.Path]::GetFullPath($ReportFile))) ('client-diagnostics-' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '.json')
@@ -330,7 +382,7 @@ try {
     $spoof = @{'Forwarded' = 'for=198.51.100.1;proto=http;host=evil.invalid'; 'X-Forwarded-For' = '198.51.100.2';
         'X-Forwarded-Proto' = 'http'; 'X-Forwarded-Host' = 'evil.invalid'; 'X-Forwarded-Port' = '80'; 'X-Real-IP' = '198.51.100.3'}
     $null = Invoke-LanRequest $trusted '/api/version' 200 $null $spoof
-    $null = Invoke-LanRequest $trusted '/api/version' 400 $null @{Host = 'evil.invalid'}
+    Test-LanHostRejection $trusted
     $report.checks += 'forwarding_host'
     $script:LanStage = 'authentication_budgets'
     if ($Wizard) { Write-Host 'Проверяю защиту входа и независимость двух компьютеров…' }

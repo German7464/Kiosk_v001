@@ -235,6 +235,8 @@ $transport = [KioskLanTls]::new($pem, $Digest, $true)
 try {
     if ($Mode -eq 'valid') {
         try { $null = Invoke-LanRequest $transport '/api/version' } catch { throw $_.Exception.ToString() }
+        Test-LanHostRejection $transport
+        if ($script:codes['400'] -ne 1) { throw 'Missing actual Host rejection status' }
         $null = Send-LanForm $transport '/admin/login' @{username='admin';password='disposable-test-password'}
         $null = Invoke-LanRequest $transport '/admin'
         if ($script:codes['302'] -ne 1 -or $script:codes['200'] -lt 2) { throw 'Missing status evidence' }
@@ -266,6 +268,10 @@ try {
             $rejected = $false
             try { $null = Invoke-LanRequest $unknown '/api/version' } catch { $rejected = $unknown.CallbackSeen -and ($unknown.LastErrors -band [Net.Security.SslPolicyErrors]::RemoteCertificateChainErrors) }
             if (-not $rejected) { throw 'Unknown CA accepted or no TLS observed' }
+            $unknown.CallbackSeen = $false
+            $rejected = $false
+            try { Test-LanHostRejection $unknown } catch { $rejected = $unknown.CallbackSeen -and $script:LanResponseStatus -eq 0 }
+            if (-not $rejected) { throw 'Host probe bypassed unknown authority' }
         } finally { $unknown.Dispose() }
     } else {
         $rejected = $false
@@ -274,12 +280,16 @@ try {
             if (-not $rejected) { throw $_.Exception.ToString() }
         }
         if (-not $rejected) { throw 'Invalid TLS accepted' }
+        $transport.CallbackSeen = $false
+        $rejected = $false
+        try { Test-LanHostRejection $transport } catch { $rejected = $transport.CallbackSeen -and $script:LanResponseStatus -eq 0 }
+        if (-not $rejected) { throw 'Host probe bypassed certificate identity or validity' }
     }
 } finally { $transport.Dispose() }
 '''
         for fixture in ('valid', 'wrong-name', 'expired'):
             with self.subTest(fixture=fixture), tempfile.TemporaryDirectory() as installation:
-                app = fixture_factory(Path(installation), 'disposable-test-password')({})
+                app = fixture_factory(Path(installation), 'disposable-test-password')({'TRUSTED_HOSTS': ['127.0.0.1']})
                 server = make_server('127.0.0.1', 0, app, ssl_context=(str(self.root / (fixture + '.pem')), str(self.root / (fixture + '.key'))))
                 thread = threading.Thread(target=server.serve_forever, daemon=True)
                 thread.start()
