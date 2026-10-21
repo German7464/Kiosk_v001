@@ -80,6 +80,16 @@ For each task:
 6. Update docs/TZ_PROGRESS.md and docs/CHANGELOG.md after every completed stage. Record requirement references, evidence, limitations, unresolved decisions, and the next step. Do not mark an entire requirement verified from partial checks.
 7. Provide commands to run and test the change.
 
+## Stage completion and transition
+
+At the start of each task, read docs/TZ.md and docs/TZ_PROGRESS.md to identify the selected stage, its acceptance criteria, and outstanding checks.
+
+Mark a stage completed in docs/TZ_PROGRESS.md only when all required work and acceptance checks for that stage are complete. Record supporting evidence and update docs/CHANGELOG.md. In the final response, explicitly state that the stage is completed and identify the next stage that can begin.
+
+If mandatory checks, physical-device verification, or unresolved decisions remain, keep the stage incomplete and state what is still required. Completing a helper task or passing partial checks does not complete the entire stage.
+
+Readiness to begin the next stage does not authorize implementing it automatically. Continue only within the owner's selected scope.
+
 ## MVP boundaries
 
 The first version must include:

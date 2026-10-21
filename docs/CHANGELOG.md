@@ -2,6 +2,8 @@
 
 ## 2026-10-21
 
+- Clarified AGENTS.md: read TZ.md and TZ_PROGRESS.md at task start, explicitly record and report full stage completion and the next available stage, and retain incomplete status while required acceptance checks remain. Starting a later stage still requires owner-selected scope.
+
 - Saved implementation context, prior verification evidence, pending physical LAN gates, operator steps and a ready-to-paste new-chat prompt in CHAT_HANDOFF.md. Documentation only; no new runtime or physical acceptance result is claimed.
 
 - Fixed the LAN client's hostile-Host test: HttpClient used the overridden Host as TLS identity, causing name rejection before HTTP. A bounded SslStream probe now validates the configured server identity and sends only the hostile HTTP Host, requiring an actual 400. Extended real .NET tests retain rejection of unknown CA, wrong name and expiry; the actual managed proxy scenario passed the corrected probe and subsequent restart. All 117 Python tests, compilation, both JS checks, PowerShell parsing, independent Flask checks, documentation links and whitespace checks passed. Cleared stale response statuses so a failed TLS request is no longer labelled with the preceding HTTP 200. Production routes, dependencies, certificate validation and user data are unchanged; physical completion remains Pending.
