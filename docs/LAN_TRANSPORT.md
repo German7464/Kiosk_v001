@@ -226,6 +226,82 @@ The automated HTTPS component recorded 63 x 200, 7 x 302, 1 x 400, 36 x 401, 1 x
 
 Initial preparation detected and corrected public-certificate loading through an API that also expected a private key, and an empty version result caused by PowerShell argument handling. Failed attempts cleaned up. An earlier Computer Use observation stopped because it could not determine the interstitial URL; the owner explicitly selected Windows-MCP, which completed the checks. Ten isolated helper tests cover ownership, uncertain enrollment, removal failure, sanitized results, cleanup continuation, process-assignment failure, and manual command/observation validation; they never modify OS trust.
 
+## Two-PC LAN Verification
+
+The source helpers are implemented; physical LAN acceptance remains **Pending** until an actual second Windows PC completes the procedure. This bounded increment covers TZ 18.11, regression checks for 18.4/18.8, and physical Windows transport evidence under 21.4. It does not implement the replication/failover scenarios of 21.2. Both PCs need PowerShell 7; the client needs Chrome. Use only disposable credentials. No new application dependency, public API, database migration, or production configuration is introduced.
+
+### Prepare the server
+
+Determine the current IPv4 addresses on both PCs using `Get-NetIPAddress -AddressFamily IPv4`. Use distinct unicast addresses on the intended LAN, and an unused port of 1024 or higher. The server binds the selected address explicitly; unavailable/nonlocal addresses and occupied ports fail. Start from the project root, substituting the actual addresses:
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.check_lan_https --server-ip <SERVER_IPV4> --client-ip <CLIENT_IPV4> --port 8443 --caddy logs/https-tools/caddy/caddy.exe --pwsh (Get-Command pwsh).Source
+```
+
+Enter and confirm a temporary admin password using hidden terminal input. Enter the same password on the client later; do not use working credentials. The helper creates an isolated installation, temporary authority and server certificates covering localhost, loopback, and the exact LAN address. It never exports the authority private key. Certificate generation defaults remain unchanged for existing local scenarios.
+
+The console prints the HTTPS origin, a **public-only client directory**, the CA SHA-256 fingerprint, and exact optional firewall add/remove commands. Transfer **only this client directory**, not its parent, to the second PC. It contains `authority.pem`, `session.json`, the two PowerShell helpers, and a synthetic PNG; no keys, credentials, database, or uploaded working media. Compare the fingerprint through an independent channel such as the server console. The session manifest is not an authenticated discovery mechanism.
+
+If needed, manually run the printed `New-NetFirewallRule` command in elevated PowerShell on the server. It restricts the rule to the chosen local IPv4, TCP port, client IPv4, and Private network profile. Do not change the Windows network profile automatically or broaden the rule. Retain the printed removal command independently for interrupted-run recovery. The helper does not execute either command. Existing services and ports are not stopped or reused.
+
+The session has a 60-minute default deadline (`--minutes 1..120`). While waiting for console commands it supervises its proxy/backend every 100 ms. Ctrl+C, input EOF, timeout, and component failure terminate the fixture; remote trust and firewall cleanup remain operator responsibilities. Ordinary termination removes server data and leaf keys. An OS/process crash may leave its own temporary directory; remove only the directory identified by that test session after confirming its processes are stopped.
+
+### Run the automated client
+
+Before installing the test CA into Windows, run from the transferred client directory:
+
+```powershell
+pwsh -NoProfile -File ./check_lan_https.ps1 -ExpectedSha256 <INDEPENDENT_LOWERCASE_SHA256>
+```
+
+The client verifies it is running on the selected second PC. It disables HTTP proxies and redirects; authenticated requests stay at the selected HTTPS origin. First it requires an actual unknown-authority TLS rejection, then verifies requests with only the explicitly selected test CA. Name, validity, and server-authentication usage remain enforced. Chain downloads are disabled for the explicit-CA verification and revocation is not checked for this disposable offline authority. This is not production certificate-revocation acceptance. TLS failures are not HTTP status codes.
+
+The scenario checks public pages/APIs, cookie flags, unauthenticated admin redirect, CSRF rejection, login, a multipart event upload, three downloaded JPEG derivatives, content-version advancement, fullscreen credential validation, and old-session revocation after a password change. Enter and remember the new disposable password when prompted; it is needed for later Chrome fullscreen authorization and is never written to the report. The server separately fully decodes all three stored derivatives before accepting completion; the client checks their JPEG signature rather than claiming a full browser decode.
+
+The client also checks internal backend/management ports from the LAN address and verifies plaintext on the TLS port returns 400 without a cookie. When prompted, enter `restart` in the server console, wait for its next `lan>` prompt, then continue on the client. The original cookie must still open `/admin`, and the managed readiness identity must change. Internal ports may change on restart; the server independently verifies the exact three owned listeners at every start.
+
+At the authentication-budget prompt, prepare to act on the server. The client exhausts the per-account and per-source budgets while changing forwarded headers; every throttled response requires Retry-After. At the next prompt, enter `budget` on the server within 30 seconds, wait for the next `lan>` prompt, then immediately continue on the client. The server must receive 401 from its independent source while the remote client still receives 429. Late/missing comparisons fail rather than claiming source independence. This covers two actual source addresses, not NAT or 100 devices.
+
+The client writes a new `client-report.json` with fixed check names and aggregate status counts, never bodies, cookies, keys, credentials, or raw errors. Failure produces success=false and a fixed exception class. Existing report files are not overwritten. Transfer the report back and enter on the server:
+
+```text
+import <absolute-path-to-client-report.json>
+```
+
+The server requires the matching session, all named checks, and expected status evidence. Imported results are operator-supplied test evidence, not cryptographically authenticated telemetry. Incomplete/foreign reports cannot complete the session. If a run fails, clean up and start a new disposable session rather than treating partial reports as success.
+
+### Observe Chrome and clean up
+
+1. Open Chrome using a fresh dedicated `--user-data-dir` directory and the printed HTTPS `/kiosk/events` URL. Before root enrollment, observe `ERR_CERT_AUTHORITY_INVALID`; do not bypass it. Enter `record untrusted ERR_CERT_AUTHORITY_INVALID` on the server.
+2. Inspect and then enroll **only** the exact public test root on the client, after fingerprint verification:
+
+   ```powershell
+   pwsh -NoProfile -File ./browser_trust.ps1 -Action inspect -CertificateFile ./authority.pem -ExpectedSha256 <SHA256>
+   pwsh -NoProfile -File ./browser_trust.ps1 -Action add -CertificateFile ./authority.pem -ExpectedSha256 <SHA256>
+   ```
+
+   Inspection must report zero before enrollment. If the root already exists, abort and create a new fixture; do not claim ownership or remove an unknown existing root. Windows may show confirmation dialogs. Keep the CA file and exact fingerprint for recovery.
+3. Restart the dedicated Chrome instance if needed. Check the populated event and images, `/kiosk`, `/kiosk/events`, `/tv`, `/preview`, login, and the three APIs. Follow preview navigation to administration and confirm HTTPS remains in use. Test fullscreen entry/exit with the new disposable password; decline password storage. Record `record trusted pages_images_navigation_fullscreen` on the server only after these checks.
+4. Keep the event display open. Enter `update` on the server. After normal polling, confirm the title becomes `LAN updated` without reloading; record `record updated LAN_updated_visible_without_reload`. The update changes only the disposable event and content version.
+5. Close the dedicated Chrome instance. Remove the root with `browser_trust.ps1 -Action remove` using the same certificate/fingerprint, then inspect and require zero. Open a fresh dedicated Chrome profile and verify `ERR_CERT_AUTHORITY_INVALID` at the original service again. Record `record removed ERR_CERT_AUTHORITY_INVALID` on the server. Close that Chrome instance and remove only the dedicated profiles, after verifying their absolute paths belong to this test. Never terminate unrelated Chrome processes or delete the normal Chrome profile.
+6. Enter `finish` on the server. It requires the imported report, all four ordered browser observations, the real update/restart, independent-source timing, valid observed metadata from both addresses, and three fully decoded derivatives. Then remove the exact printed firewall rule if it was added. Verify the test CA is absent and dedicated profiles are gone, and enter `cleanup-confirmed` on the server. Ordinary graceful proxy/backend shutdown and server temporary-directory removal are required for success.
+
+Browser outcomes and remote trust/profile/firewall cleanup are explicit operator attestations; the server cannot inspect another PC's OS state. Do not record checks that were not performed. If interrupted or aborted, perform steps 5 and the firewall removal independently; retain the public CA and fingerprint until absence is verified. Copy the client report before deleting the transferred public bundle. `abort` exits without accepting physical verification. Reports under ignored `logs/https/lan-*.json` distinguish Pending from Verified; keys, databases, profiles, and reports are not committed.
+
+### Local regression commands
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest tests.test_lan_https
+.\.venv\Scripts\python.exe -m compileall run.py kiosk tools/check_lan_https.py
+.\.venv\Scripts\python.exe -m unittest discover -s tests
+node tests/test_kiosk_request_security.js
+node tests/test_tv_updates.js
+git diff --check
+git status --short --branch
+```
+
+Local tests cover address/report rejection, metadata, timed source comparison, browser evidence ordering, incomplete cleanup, isolated updates/media, LAN SAN generation, and actual .NET HTTPS acceptance/rejection against temporary loopback servers. They never enroll trust or change firewall rules. A Windows restricted token can prevent Schannel credential acquisition (`0x8009030E`) before any certificate callback; rerun this bounded test with permitted normal-token execution rather than weakening TLS or reporting it passed. Loopback regression results do not establish a physical LAN result.
+
 ## Stage Boundary and Next Work
 
 Managed HTTPS source startup, local lifecycle validation, and the bounded Windows Chrome trust lifecycle are verified. Next: physical LAN verification with prepared certificates and explicitly selected devices, followed by separately scoped certificate maintenance and packaging. Physical Android TV, other browsers/platforms, independent client addresses/NAT, fully disconnected operation, certificate custody/renewal/revocation operations, clean installation, chunked/unknown-length upload overflow behavior, and endurance remain pending. Do not deploy to user servers, install production roots, change firewall rules, or claim section 18 complete from loopback checks.

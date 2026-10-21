@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-21
+
+- Prepared disposable two-PC HTTPS LAN verification: bounded supervised server session, optional LAN SAN test certificates, public-only client transfer bundle, PowerShell 7 explicit-CA HTTPS checks, strict session/report completeness, actual source-metadata/budget comparison, ordered operator Chrome observations, and managed cleanup requirements. Firewall and browser trust changes remain manual and explicit. Production routes, APIs, schema, startup behavior, dependencies, and working data are unchanged.
+- Added 15 isolated regressions, including real .NET loopback TLS rejection/acceptance, multipart media/version and stale-session checks, actual managed restart/listener/cleanup checks, and sanitized failure reporting. All 102 Python tests passed, along with compilation, both JS checks, independent Flask route checks, documentation links, and whitespace checks. Documented the two-PC procedure and interrupted-run cleanup. Physical LAN/second-PC Chrome acceptance remains Pending; security and stage 2 remain Partial. No system trust, firewall, or working-server changes were made.
+
 ## 2026-10-19
 
 - Added an explicitly invoked, operator-observed Windows Chrome HTTPS trust lifecycle scenario with disposable managed application data, separate Chrome profiles, exact-digest CurrentUser test-root enrollment/removal, safe reports, and bounded cleanup. Verified unknown CA before/after trust, trusted public pages/APIs/media, automatic event refresh, wrong identity, and expiry through Windows-MCP. Normal startup never changes trust; production code/dependencies/API/schema remain unchanged. Physical LAN, other platforms, production certificate operations, and packaging remain pending.

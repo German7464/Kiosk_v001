@@ -1,6 +1,16 @@
-param([Parameter(Mandatory = $true)][string]$OutputDirectory)
+param(
+    [Parameter(Mandatory = $true)][string]$OutputDirectory,
+    [string]$LanAddress
+)
 
 $ErrorActionPreference = 'Stop'
+$lanIp = $null
+if ($LanAddress) {
+    $lanIp = [Net.IPAddress]::Parse($LanAddress)
+    if ($lanIp.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or
+        [Net.IPAddress]::IsLoopback($lanIp) -or $lanIp.Equals([Net.IPAddress]::Any) -or
+        $lanIp.GetAddressBytes()[0] -ge 224 -or $lanIp.GetAddressBytes()[0] -eq 0) { throw 'Unicast LAN IPv4 required' }
+}
 $outputRoot = [IO.Path]::GetFullPath($OutputDirectory)
 [IO.Directory]::CreateDirectory($outputRoot) | Out-Null
 $now = [DateTimeOffset]::UtcNow
@@ -32,6 +42,7 @@ try {
             } else {
                 $names.AddDnsName('localhost')
                 $names.AddIpAddress([Net.IPAddress]::Parse('127.0.0.1'))
+                if ($lanIp) { $names.AddIpAddress($lanIp) }
             }
             $request.CertificateExtensions.Add($names.Build())
             $start = $now.AddMinutes(-5)

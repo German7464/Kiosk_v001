@@ -6,7 +6,7 @@ The current specification is [TZ](TZ.md), with implementation evidence in [TZ Pr
 
 The verified MVP is preserved by annotated tag `v1.0.0-mvp`. Development continues on branch `v2`. This marks the start of version 2, not a completed version 2 release. The application name and existing MVP boundaries remain unchanged.
 
-The initial baseline passed compilation, eight isolated smoke tests, route checks, and browser navigation. Later stabilization checks cover 87 Python tests, standalone kiosk/TV JavaScript checks, isolated/managed real-HTTPS scenarios, and a bounded Windows Chrome temporary-root trust lifecycle. Populated-screen Chrome checks use disposable synthetic content; see TZ_PROGRESS.md for their exact scope. Physical Smart TV testing, long-running operation, and an EXE test on another computer remain pending.
+The initial baseline passed compilation, eight isolated smoke tests, route checks, and browser navigation. Later stabilization checks include isolated LAN-helper regressions with actual .NET loopback TLS, standalone kiosk/TV JavaScript checks, isolated/managed real-HTTPS scenarios, and a bounded Windows Chrome temporary-root trust lifecycle. See TZ_PROGRESS.md for current counts and exact scopes. Populated-screen Chrome checks use disposable synthetic content. Physical Smart TV testing, long-running operation, and an EXE test on another computer remain pending.
 
 ## Priorities
 
@@ -17,6 +17,8 @@ The owner approved uninterrupted local cached display with editing paused when s
 3. Maintain the verified dependency pins in requirements.txt; repeat isolated installation and the complete checks when updating versions. This does not verify clean-machine EXE installation.
 4. Local synthetic-data HTTP/image baseline measurements are recorded in MVP_BASELINE.md. Populated Chrome checks verified navigation, placeholders, automatic updates, and fullscreen, and exposed fixed TV-update and dialog-positioning defects. Portrait coverage is a 768x1024 emulated viewport, not physical hardware. Long content still requires scrolling; unattended TV readability and content-length/layout policy remain unresolved. Continue validation on physical target devices.
 5. Verify sustained kiosk and TV operation and the packaged EXE on a clean Windows computer.
+
+The next selected increment is physical HTTPS LAN verification with this Windows PC as server and a second Windows/Chrome PC as client. The owner selected temporary test certificates, manual client actions, PowerShell 7 on the client, and manually scoped firewall rules if needed; addresses are determined immediately before running. The [two-PC procedure](LAN_TRANSPORT.md#two-pc-lan-verification) and disposable helpers are prepared. Run it with the selected devices and import the matching client report before recording physical verification; local tests do not close that acceptance. No later stage is authorized by this preparation.
 
 Keep changes small, run compilation and Flask test client checks, and commit completed steps separately. Do not add excluded MVP features without explicit authorization. Repository-wide access or unrestricted Codex execution is not required for this workflow.
 

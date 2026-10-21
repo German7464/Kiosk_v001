@@ -14,6 +14,7 @@ Provide opt-in Windows source startup with a supervised Caddy TLS proxy, loopbac
 - `tools/check_managed_https.py`: disposable real HTTPS and CLI verification.
 - `tools/check_browser_https.py` and `tools/browser_trust.ps1`: explicit, operator-observed disposable Chrome trust lifecycle, requiring permission to modify CurrentUser root trust.
 - `tests/test_browser_https.py`: ownership, failure cleanup, and observation/command checks without real trust-store writes.
+- `tools/check_lan_https.py`, `tools/check_lan_https.ps1`, and `tests/test_lan_https.py`: disposable two-PC session, explicit-CA PowerShell client, bounded evidence import, and isolated regression checks. Physical results require the selected second PC and operator observations.
 - `docs/LAN_TRANSPORT.md`: configuration, provenance, trust boundaries, and pending acceptance.
 
 ## Related Database Tables
@@ -57,3 +58,5 @@ Prepare the pinned Caddy binary and a valid server key/certificate/CA as describ
 The developer check creates its own installations, credentials, certificate fixtures, and listeners; it never opens OS certificate stores or user databases. A copied source-only installation verifies the real CLI. It requires read-only Windows TCP/process inspection. Reports under ignored `logs/https/` contain fixed results, codes, and cleanup state, not credentials, cookies, bodies, keys, or runtime paths.
 
 The separate opt-in browser helper **does** access `CurrentUser\\Root` after an explicit `trust` command. Use only with operator authorization; normal startup and the managed automated check do not enroll trust. It uses separate Chrome profiles, exact public-certificate digests, and owned-process cleanup. Windows may show enrollment/removal confirmation dialogs. See [browser verification](../../docs/LAN_TRANSPORT.md#controlled-windows-chrome-verification) for commands, observations, and recovery limits.
+
+The [two-PC LAN procedure](../../docs/LAN_TRANSPORT.md#two-pc-lan-verification) uses a fresh temporary installation and a public-only client bundle. Server startup does not open Chrome, install trust, or change firewall rules. The PowerShell 7 client verifies a separately supplied CA fingerprint and uses .NET CustomRootTrust with server identity, validity, and server-authentication usage checks. Offline test-chain verification does not establish a production revocation mechanism. Browser trust and firewall changes are explicit operator actions; cleanup and browser observations are operator attestations. Automated local results alone never verify physical LAN acceptance.
