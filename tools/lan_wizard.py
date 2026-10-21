@@ -114,10 +114,11 @@ class WizardFixture(LanFixture):
         bundle = self.manifest.parent
         source = Path(__file__).resolve().parent
         shutil.copy2(source.parent / 'LAN_Client.cmd', bundle / 'LAN_Client.cmd')
+        shutil.copy2(source.parent / 'LAN_Diagnose.cmd', bundle / 'LAN_Diagnose.cmd')
         shutil.copy2(source / 'lan_wizard.ps1', bundle / 'lan_wizard.ps1')
         (bundle / 'wizard.json').write_text(json.dumps({'schema_version': 1, 'session': self.session, 'token': self.token}), encoding='utf-8')
         with zipfile.ZipFile(destination, 'x', compression=zipfile.ZIP_DEFLATED) as archive:
-            for name in ('LAN_Client.cmd', 'check_lan_https.ps1', 'browser_trust.ps1', 'lan_wizard.ps1',
+            for name in ('LAN_Client.cmd', 'LAN_Diagnose.cmd', 'check_lan_https.ps1', 'browser_trust.ps1', 'lan_wizard.ps1',
                          'session.json', 'wizard.json', 'authority.pem', 'fixture.png'):
                 archive.write(bundle / name, name)
 

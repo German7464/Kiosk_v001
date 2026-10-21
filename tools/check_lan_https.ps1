@@ -3,7 +3,8 @@ param(
     [string]$ExpectedSha256,
     [string]$ReportFile = "$PSScriptRoot/client-report.json",
     [switch]$LibraryOnly,
-    [switch]$Wizard
+    [switch]$Wizard,
+    [switch]$PreflightOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -116,7 +117,82 @@ function Test-LanPortClosed {
     } finally { $tcp.Dispose() }
 }
 
+function Get-LanClientSession {
+    $script:LanStage = 'manifest_file'
+    $sessionPath = (Resolve-Path -LiteralPath $SessionFile).Path
+    if ((Get-Item -LiteralPath $sessionPath).Length -gt 16384) { throw 'Manifest too large' }
+    $manifest = Get-Content -Raw -LiteralPath $sessionPath | ConvertFrom-Json
+    $script:LanStage = 'manifest_schema'
+    $fields = @($manifest.PSObject.Properties.Name | Sort-Object)
+    if (($fields -join ',') -ne 'admin_port,backend_port,client_ip,origin,schema_version,session' -or
+        $manifest.schema_version -ne 1 -or $manifest.session -cnotmatch '^[a-f0-9]{32}$') { throw 'Invalid session manifest' }
+    $script:LanStage = 'origin'
+    $originUri = [uri]$manifest.origin
+    if ($originUri.Scheme -ne 'https' -or $originUri.AbsolutePath -ne '/' -or $originUri.Query -or $originUri.Fragment -or $originUri.UserInfo -or
+        $originUri.HostNameType -ne [UriHostNameType]::IPv4 -or [Net.IPAddress]::IsLoopback([Net.IPAddress]::Parse($originUri.Host))) { throw 'LAN IPv4 HTTPS origin required' }
+    $script:LanStage = 'internal_ports'
+    foreach ($port in @($manifest.backend_port, $manifest.admin_port)) {
+        if ($port -lt 1 -or $port -gt 65535 -or $port -eq $originUri.Port) { throw 'Invalid internal port' }
+    }
+    $script:LanStage = 'client_address'
+    $clientAddress = [Net.IPAddress]::Parse($manifest.client_ip)
+    $localAddresses = @([Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() |
+        ForEach-Object { $_.GetIPProperties().UnicastAddresses } |
+        ForEach-Object { $_.Address.IPAddressToString })
+    Write-Host "Сервер из настроек: $($originUri.Host)"
+    Write-Host "Ожидаемый IP второго ПК: $($manifest.client_ip)"
+    Write-Host "Адреса этого компьютера: $($localAddresses -join ', ')"
+    if ($clientAddress.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or $manifest.client_ip -notin $localAddresses -or $manifest.client_ip -eq $originUri.Host) { throw 'Run on the selected second PC' }
+    return @{Manifest=$manifest; Origin=$originUri; Bundle=(Split-Path -Parent $sessionPath)}
+}
+
+function Write-LanFailure {
+    param([Management.Automation.ErrorRecord]$Failure)
+    $reasons = @{
+        'Run on the selected second PC' = @('wrong_client_pc','IP этого компьютера не совпадает с IP второго ПК, указанным на сервере. Создайте новый архив с правильным IP.')
+        'Invalid session manifest' = @('invalid_manifest','Файл session.json не соответствует ожидаемому формату. Получите новый архив с сервера и распакуйте в отдельную папку.')
+        'Manifest too large' = @('invalid_manifest','Файл session.json слишком большой. Используйте исходный архив сервера.')
+        'LAN IPv4 HTTPS origin required' = @('invalid_origin','В настройках указан неподходящий адрес сервера. Нужен HTTPS-адрес его локального IPv4.')
+        'Invalid internal port' = @('invalid_ports','В архиве некорректные номера внутренних портов. Получите новый архив сервера.')
+        'invalid_wizard_bundle' = @('invalid_wizard_bundle','Настройки мастера не совпадают с сеансом. Не смешивайте файлы из разных архивов.')
+        'invalid_cleanup_state' = @('invalid_cleanup_state','Данные предыдущей очистки не соответствуют этому архиву. Сохраните папку и сообщите код ошибки.')
+        'operator_check_failed' = @('operator_rejected','Вы выбрали «нет» на контрольном вопросе. Этап остановлен без обхода проверки.')
+        'Report already exists; choose a new report path' = @('report_exists','В папке уже есть отчёт предыдущей попытки. Для новой проверки нужен новый архив и отдельная папка.')
+        'Independent lowercase SHA-256 required' = @('invalid_fingerprint','Мастер получил некорректный отпечаток сертификата. Сохраните диагностический файл.')
+        'Authority digest mismatch' = @('fingerprint_mismatch','Отпечаток сертификата не совпал. Проверка остановлена; не обходите её.')
+        'Expected an unknown-authority TLS rejection before browser trust' = @('untrusted_tls_probe_failed','Не подтверждён ожидаемый отказ TLS до установки доверия. Сервер может быть недоступен либо сертификат уже доверенный.')
+        'Unexpected HTTP status' = @('unexpected_http_status','Сервер вернул неожиданный HTTP-код. Он записан в диагностике.')
+        'server_stage_failed' = @('server_stage_failed','Сервер не завершил запрошенный этап. Сохраните вывод обоих мастеров.')
+        'server_stage_timeout' = @('server_stage_timeout','Сервер не подтвердил этап за отведённое время. Сохраните вывод обоих мастеров.')
+    }
+    $reason = 'unexpected_error'
+    $message = 'Неожиданная ошибка. Пришлите диагностический файл: в нём указан этап и номер строки, без паролей и ключей.'
+    if ($reasons.ContainsKey($Failure.Exception.Message)) { $reason, $message = $reasons[$Failure.Exception.Message] }
+    $stage = if (Get-Variable -Name LanStage -Scope Script -ErrorAction SilentlyContinue) { $script:LanStage } else { 'startup' }
+    $source = [IO.Path]::GetFileName($Failure.InvocationInfo.ScriptName)
+    if ($source -notin @('check_lan_https.ps1','lan_wizard.ps1')) { $source = 'unknown' }
+    $diagnostic = @{schema_version=1;stage=$stage;reason=$reason;error=$Failure.Exception.GetType().Name;
+        source=$source;line=[int]$Failure.InvocationInfo.ScriptLineNumber}
+    $status = Get-Variable -Name LanResponseStatus -Scope Script -ErrorAction SilentlyContinue
+    if ($null -ne $status) { $diagnostic.http_status = [int]$status.Value }
+    Write-Host "`nЭтап: $stage. Причина: $reason." -ForegroundColor Red
+    Write-Host $message
+    $destination = Join-Path (Split-Path -Parent ([IO.Path]::GetFullPath($ReportFile))) ('client-diagnostics-' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '.json')
+    try {
+        $stream = [IO.File]::Open($destination, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write)
+        try { $bytes = [Text.Encoding]::UTF8.GetBytes(($diagnostic | ConvertTo-Json)); $stream.Write($bytes,0,$bytes.Length) } finally { $stream.Dispose() }
+        Write-Host "Диагностика сохранена: $destination"
+    } catch { Write-Host 'Не удалось сохранить диагностику. Сфотографируйте сообщение с этапом и причиной.' }
+}
+
 if ($LibraryOnly) { return }
+if ($PreflightOnly) {
+    try {
+        $null = Get-LanClientSession
+        Write-Host 'Настройки и IP этого ПК подходят. Сеть, TLS и пароль этой командой не проверялись.' -ForegroundColor Green
+    } catch { Write-LanFailure $_; exit 1 }
+    return
+}
 if ($Wizard) { . "$PSScriptRoot/lan_wizard.ps1" }
 
 $report = @{ schema_version = 1; session = ''; success = $false; checks = @(); http_statuses = @{}; error = $null }
@@ -127,35 +203,26 @@ $plain = $null
 $authority = $null
 $cleanupOnly = $false
 try {
+    $script:LanStage = 'wizard_initialization'
     if ($Wizard) {
         $ExpectedSha256 = Initialize-LanWizard
         if (-not $ExpectedSha256) { $cleanupOnly = $true; return }
     }
+    $script:LanStage = 'report_file'
     if (Test-Path -LiteralPath $ReportFile) { throw 'Report already exists; choose a new report path' }
+    $script:LanStage = 'fingerprint_format'
     if ($ExpectedSha256 -cnotmatch '^[a-f0-9]{64}$') { throw 'Independent lowercase SHA-256 required' }
-    $sessionPath = (Resolve-Path -LiteralPath $SessionFile).Path
-    $bundle = Split-Path -Parent $sessionPath
-    if ((Get-Item -LiteralPath $sessionPath).Length -gt 16384) { throw 'Manifest too large' }
-    $manifest = Get-Content -Raw -LiteralPath $sessionPath | ConvertFrom-Json
-    $fields = @($manifest.PSObject.Properties.Name | Sort-Object)
-    if (($fields -join ',') -ne 'admin_port,backend_port,client_ip,origin,schema_version,session' -or
-        $manifest.schema_version -ne 1 -or $manifest.session -cnotmatch '^[a-f0-9]{32}$') { throw 'Invalid session manifest' }
-    $originUri = [uri]$manifest.origin
-    if ($originUri.Scheme -ne 'https' -or $originUri.AbsolutePath -ne '/' -or $originUri.Query -or $originUri.Fragment -or $originUri.UserInfo -or
-        $originUri.HostNameType -ne [UriHostNameType]::IPv4 -or [Net.IPAddress]::IsLoopback([Net.IPAddress]::Parse($originUri.Host))) { throw 'LAN IPv4 HTTPS origin required' }
-    foreach ($port in @($manifest.backend_port, $manifest.admin_port)) {
-        if ($port -lt 1 -or $port -gt 65535 -or $port -eq $originUri.Port) { throw 'Invalid internal port' }
-    }
-    $clientAddress = [Net.IPAddress]::Parse($manifest.client_ip)
-    $localAddresses = @([Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() | ForEach-Object { $_.GetIPProperties().UnicastAddresses.Address.IPAddressToString })
-    if ($clientAddress.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or $manifest.client_ip -notin $localAddresses -or $manifest.client_ip -eq $originUri.Host) { throw 'Run on the selected second PC' }
+    $settings = Get-LanClientSession
+    $manifest, $originUri, $bundle = $settings.Manifest, $settings.Origin, $settings.Bundle
     $report.session = $manifest.session
     $script:origin = $originUri.GetLeftPart([UriPartial]::Authority)
     $script:codes = $report.http_statuses
+    $script:LanStage = 'authority'
     $pem = [IO.File]::ReadAllText((Join-Path $bundle 'authority.pem'))
     $authority = [Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($pem)
     $actualDigest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($authority.RawData)).ToLowerInvariant()
     if ($actualDigest -cne $ExpectedSha256) { throw 'Authority digest mismatch' }
+    $script:LanStage = 'unknown_authority'
     $untrusted = [KioskLanTls]::new($pem, $ExpectedSha256, $false)
     $failed = $false
     try { $null = Invoke-LanRequest $untrusted '/api/version' } catch {
@@ -165,12 +232,14 @@ try {
     $report.checks += 'unknown_authority'
     $trusted = [KioskLanTls]::new($pem, $ExpectedSha256, $true)
     $stale = [KioskLanTls]::new($pem, $ExpectedSha256, $true)
+    $script:LanStage = 'routes'
     foreach ($path in @('/kiosk', '/kiosk/events', '/tv', '/preview', '/admin/login', '/api/version', '/api/events', '/api/tags')) {
         $response = Invoke-LanRequest $trusted $path
         if ($path -in @('/kiosk', '/kiosk/events', '/tv', '/preview') -and $response.Text.Contains('http://')) { throw 'Plaintext display URL' }
     }
     $null = Invoke-LanRequest $trusted '/admin' 302
     $report.checks += 'routes'
+    $script:LanStage = 'login'
     $loginPage = Invoke-LanRequest $trusted '/admin/login'
     if (-not $loginPage.Headers.ContainsKey('Set-Cookie') -or $loginPage.Headers['Set-Cookie'] -notmatch '(?i)secure' -or
         $loginPage.Headers['Set-Cookie'] -notmatch '(?i)httponly' -or $loginPage.Headers['Set-Cookie'] -notmatch '(?i)samesite=lax') { throw 'Secure cookie attributes missing' }
@@ -191,6 +260,7 @@ try {
     }
     $null = Invoke-LanRequest $trusted '/admin'
     $report.checks += 'csrf_cookie_login'
+    $script:LanStage = 'upload'
     $before = (Invoke-LanRequest $trusted '/api/version').Text | ConvertFrom-Json
     $multipart = [Net.Http.MultipartFormDataContent]::new()
     foreach ($item in @{title = 'LAN fixture'; short_description = 'Temporary event'; full_description = 'LAN image verification'; status = 'active'; sort_order = '0'}.GetEnumerator()) {
@@ -211,6 +281,7 @@ try {
     $fullscreen = (Send-LanForm $trusted '/admin/fullscreen/validate' @{username = 'admin'; password = $password} 200).Text | ConvertFrom-Json
     if ($fullscreen.success -ne $true) { throw 'Fullscreen authentication failed' }
     $report.checks += 'upload_images_version_fullscreen'
+    $script:LanStage = 'password_revocation'
     foreach ($cookie in $trusted.Cookies.GetCookies($originUri)) { $stale.Cookies.Add($originUri, [Net.Cookie]::new($cookie.Name, $cookie.Value, $cookie.Path)) }
     if ($Wizard) { $newPassword = Read-LanReplacementPassword }
     else {
@@ -229,8 +300,10 @@ try {
     $null = Invoke-LanRequest $trusted '/admin'
     $newPassword = $null
     $report.checks += 'password_revocation'
+    $script:LanStage = 'internal_ports_probe'
     foreach ($port in @($manifest.backend_port, $manifest.admin_port)) { Test-LanPortClosed $originUri.Host $port }
     $report.checks += 'internal_ports_closed'
+    $script:LanStage = 'plaintext_probe'
     $plainHandler = [Net.Http.HttpClientHandler]::new()
     $plainHandler.UseProxy = $false
     $plainHandler.AllowAutoRedirect = $false
@@ -242,6 +315,7 @@ try {
         $report.http_statuses['400'] = 1
     } finally { $plaintext.Dispose() }
     $report.checks += 'plaintext_rejected'
+    $script:LanStage = 'restart'
     $identity = (Invoke-LanRequest $trusted '/api/version').Headers['X-Kiosk-Instance']
     if (-not $identity) { throw 'Managed identity missing' }
     if ($Wizard) {
@@ -252,11 +326,13 @@ try {
     $newIdentity = (Invoke-LanRequest $trusted '/api/version').Headers['X-Kiosk-Instance']
     if (-not $newIdentity -or $newIdentity -eq $identity) { throw 'Managed restart not observed' }
     $report.checks += 'restart_session'
+    $script:LanStage = 'forwarding'
     $spoof = @{'Forwarded' = 'for=198.51.100.1;proto=http;host=evil.invalid'; 'X-Forwarded-For' = '198.51.100.2';
         'X-Forwarded-Proto' = 'http'; 'X-Forwarded-Host' = 'evil.invalid'; 'X-Forwarded-Port' = '80'; 'X-Real-IP' = '198.51.100.3'}
     $null = Invoke-LanRequest $trusted '/api/version' 200 $null $spoof
     $null = Invoke-LanRequest $trusted '/api/version' 400 $null @{Host = 'evil.invalid'}
     $report.checks += 'forwarding_host'
+    $script:LanStage = 'authentication_budgets'
     if ($Wizard) { Write-Host 'Проверяю защиту входа и независимость двух компьютеров…' }
     else { $null = Read-Host 'Prepare SERVER budget command; press Enter to run remote authentication limits' }
     for ($index = 0; $index -lt 10; $index++) { $null = Send-LanForm $trusted '/admin/login' @{username = 'lan-pair'; password = 'invalid'} 401 }
@@ -280,6 +356,7 @@ try {
     $report.success = $true
 } catch {
     $report.error = $_.Exception.GetType().Name
+    Write-LanFailure $_
     if ($Wizard) {
         Write-Host "`nЭтап не пройден. Не продолжайте проверку. Код: $($report.error)." -ForegroundColor Red
         Write-Host 'Проверьте адреса, пароль и доступ по сети. Сохраните это сообщение.'
@@ -300,7 +377,8 @@ try {
     }
 }
 if ($Wizard -and $report.success) {
-    try { Complete-LanWizard $report $pem $ExpectedSha256 } catch {
+    try { $script:LanStage = 'browser_wizard'; Complete-LanWizard $report $pem $ExpectedSha256 } catch {
+        Write-LanFailure $_
         Write-Host 'Мастер не завершён. Сохраните папку клиента; повторный запуск предложит очистку.' -ForegroundColor Red
         exit 1
     }

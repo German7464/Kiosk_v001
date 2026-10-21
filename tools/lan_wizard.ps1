@@ -63,6 +63,7 @@ function Clear-LanWizard {
 }
 
 function Initialize-LanWizard {
+    $script:LanStage = 'wizard_files'
     Write-Host "`nПРОВЕРКА KIOSK — ВТОРОЙ КОМПЬЮТЕР" -ForegroundColor Cyan
     $configuration = Get-Content -Raw -LiteralPath "$PSScriptRoot/wizard.json" | ConvertFrom-Json
     $sessionData = Get-Content -Raw -LiteralPath $SessionFile | ConvertFrom-Json
@@ -73,6 +74,7 @@ function Initialize-LanWizard {
     $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem([IO.File]::ReadAllText("$PSScriptRoot/authority.pem"))
     try { $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($certificate.RawData)).ToLowerInvariant() } finally { $certificate.Dispose() }
     if (Test-Path -LiteralPath $script:LanStateFile) {
+        $script:LanStage = 'cleanup_recovery'
         $saved = Get-Content -Raw -LiteralPath $script:LanStateFile | ConvertFrom-Json
         if ($saved.session -cne $configuration.session -or $saved.digest -cne $digest -or $saved.root_owned -isnot [bool]) { throw 'invalid_cleanup_state' }
         $script:LanWizardState = $saved
@@ -83,6 +85,7 @@ function Initialize-LanWizard {
         return $null
     }
     Write-Host "`nШАГ 1. Сравните эту строку со строкой в окне сервера. Копировать её не нужно:"
+    $script:LanStage = 'fingerprint_comparison'
     Write-Host (([regex]::Matches($digest, '.{8}') | ForEach-Object Value) -join ' ') -ForegroundColor Yellow
     Confirm-LanStep 'Все восемь групп цифр и букв полностью совпадают с окном сервера?'
     $script:LanWizardState = [pscustomobject]@{session=$configuration.session; digest=$digest; root_owned=$false}

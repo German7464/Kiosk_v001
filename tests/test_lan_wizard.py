@@ -80,7 +80,7 @@ class LanWizardTests(unittest.TestCase):
             output = root / 'client.zip'
             fixture.bundle(output)
             with zipfile.ZipFile(output) as archive:
-                self.assertEqual(set(archive.namelist()), {'LAN_Client.cmd', 'check_lan_https.ps1', 'browser_trust.ps1',
+                self.assertEqual(set(archive.namelist()), {'LAN_Client.cmd', 'LAN_Diagnose.cmd', 'check_lan_https.ps1', 'browser_trust.ps1',
                     'lan_wizard.ps1', 'wizard.json', 'session.json', 'authority.pem', 'fixture.png'})
                 self.assertEqual(json.loads(archive.read('wizard.json'))['token'], fixture.token)
                 self.assertNotIn('server secret', ''.join(archive.read(name).decode(errors='ignore') for name in archive.namelist()))
@@ -281,6 +281,65 @@ try { Complete-LanWizard @{success=$true} $pem $digest } catch { $success = $fal
                 '-Action', 'remove', '-ServerAddress', server, '-ClientAddress', client, '-Port', '8443', '-Session', session],
                 capture_output=True, timeout=15)
             self.assertNotEqual(result.returncode, 0)
+
+    def preflight(self, client_ip='127.0.0.1', malformed=False):
+        with tempfile.TemporaryDirectory(prefix='kiosk-client-preflight-') as directory:
+            root = Path(directory)
+            manifest = {'schema_version': 1, 'session': 'e' * 32, 'origin': 'https://192.0.2.10:8443',
+                        'client_ip': client_ip, 'backend_port': 41001, 'admin_port': 41002}
+            if malformed:
+                manifest['schema_version'] = 999
+            filename = root / 'session.json'
+            filename.write_text(json.dumps(manifest), encoding='utf-8')
+            report = root / 'client-report.json'
+            report.write_text('retain existing evidence', encoding='utf-8')
+            result = subprocess.run([self.pwsh, '-NoProfile', '-NonInteractive', '-File',
+                str(self.repository / 'tools/check_lan_https.ps1'), '-PreflightOnly', '-SessionFile', str(filename),
+                '-ReportFile', str(report)], capture_output=True, timeout=20)
+            self.assertEqual(report.read_text(encoding='utf-8'), 'retain existing evidence')
+            self.assertFalse((root / 'wizard-cleanup.json').exists())
+            diagnostics = [json.loads(path.read_text(encoding='utf-8')) for path in root.glob('client-diagnostics-*.json')]
+            return result, diagnostics
+
+    def test_preflight_runs_without_ca_network_password_or_overwriting_evidence(self):
+        result, diagnostics = self.preflight()
+        self.assertEqual(result.returncode, 0, (diagnostics, result.stdout.decode(errors='replace'), result.stderr.decode(errors='replace')))
+        self.assertEqual(diagnostics, [])
+
+    def test_preflight_explains_wrong_pc_before_any_network_requests(self):
+        result, diagnostics = self.preflight(client_ip='192.0.2.250')
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(len(diagnostics), 1)
+        self.assertEqual(diagnostics[0]['stage'], 'client_address')
+        self.assertEqual(diagnostics[0]['reason'], 'wrong_client_pc')
+        self.assertGreater(diagnostics[0]['line'], 0)
+
+    def test_preflight_explains_invalid_manifest(self):
+        result, diagnostics = self.preflight(malformed=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(diagnostics[0]['stage'], 'manifest_schema')
+        self.assertEqual(diagnostics[0]['reason'], 'invalid_manifest')
+
+    def test_unexpected_diagnostic_never_echoes_exception_secrets(self):
+        with tempfile.TemporaryDirectory(prefix='kiosk-client-diagnostic-') as directory:
+            root = Path(directory)
+            script = root / 'sanitize.ps1'
+            script.write_text('''param($Library,$Directory)
+. $Library -LibraryOnly
+$ReportFile = Join-Path $Directory 'client-report.json'
+$script:LanStage = 'login'
+$script:LanResponseStatus = 401
+try { throw 'password=private-secret; token=private-secret; https://private-secret.invalid' } catch { Write-LanFailure $_ }
+''', encoding='utf-8')
+            result = subprocess.run([self.pwsh, '-NoProfile', '-NonInteractive', '-File', str(script),
+                str(self.repository / 'tools/check_lan_https.ps1'), str(root)], capture_output=True, timeout=20)
+            self.assertEqual(result.returncode, 0, result.stderr.decode(errors='replace'))
+            diagnostic = next(root.glob('client-diagnostics-*.json')).read_text(encoding='utf-8')
+            self.assertNotIn('private-secret', diagnostic)
+            self.assertNotIn('private-secret', result.stdout.decode(errors='replace'))
+            parsed = json.loads(diagnostic)
+            self.assertEqual(parsed['reason'], 'unexpected_error')
+            self.assertEqual(parsed['http_status'], 401)
 
 
 if __name__ == '__main__':
