@@ -2,6 +2,8 @@
 
 Source: [TZ.md](TZ.md). Updated: 2026-10-21. This ledger records evidence, not promises.
 
+Conversation continuation: [CHAT_HANDOFF.md](CHAT_HANDOFF.md) records the current implementation, verification checkpoint, pending fresh two-PC run and a ready-to-paste new-chat prompt. This documentation checkpoint does not change requirement statuses.
+
 ## Status rules
 
 - **Not started**: no implementation of the required capability.
