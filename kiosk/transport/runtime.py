@@ -14,6 +14,7 @@ from waitress import create_server
 from kiosk.app import create_app
 from kiosk.config import Config
 from kiosk.transport.profile import CADDY_VERSION, load_profile, proxy_configuration
+from kiosk.transport.profile_operations import ProfileLease, recover_profile
 from kiosk.transport.windows import OwnedJob
 
 
@@ -222,8 +223,12 @@ class ManagedHttps:
 
 def run_https(filename, path="/kiosk", auto_launch=True):
     runtime = None
+    lease = None
     code = 0
     try:
+        lease = ProfileLease(filename).acquire()
+        if recover_profile(filename):
+            print("Recovered the previous HTTPS profile after an interrupted certificate activation.", flush=True)
         profile = load_profile(filename)
         runtime = ManagedHttps(profile)
         runtime.start()
@@ -254,4 +259,6 @@ def run_https(filename, path="/kiosk", auto_launch=True):
             except Exception as error:
                 print(f"HTTPS cleanup failed ({type(error).__name__}).", flush=True)
                 code = 1
+        if lease is not None:
+            lease.close()
     return code

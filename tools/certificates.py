@@ -208,7 +208,7 @@ def receive_certificate(arguments):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Offline server CSR and separate-PC certificate signing. No trust enrollment or active-profile replacement.")
+    parser = argparse.ArgumentParser(description="Offline CSR signing and optional controlled same-CA HTTPS activation. No automatic trust enrollment.")
     commands = parser.add_subparsers(dest="command", required=True)
     request = commands.add_parser("request", help="Create a server request, or verify its returned certificate.")
     request.add_argument("--installation", required=True)
@@ -218,6 +218,7 @@ def main(argv=None):
     request.add_argument("--certificate")
     request.add_argument("--ca")
     request.add_argument("--fingerprint")
+    request.add_argument("--activate-profile", help="Activate after returned-certificate validation; stop the old server normally first. Runs HTTPS in the foreground.")
     sign = commands.add_parser("sign", help="Review and sign a request on the administrative PC.")
     sign.add_argument("--installation", required=True)
     sign.add_argument("--authority", required=True)
@@ -232,8 +233,12 @@ def main(argv=None):
             if not arguments.ca or not arguments.fingerprint or arguments.export or arguments.name:
                 raise CertificateError("Returned-certificate mode needs --ca and --fingerprint; omit --export and --name.")
             receive_certificate(arguments)
+            if arguments.activate_profile:
+                from tools.certificate_activation import run_activation
+
+                return run_activation(arguments.activate_profile, arguments.state, arguments.installation, arguments.fingerprint)
         else:
-            if not arguments.export or not arguments.name or arguments.ca or arguments.fingerprint:
+            if not arguments.export or not arguments.name or arguments.ca or arguments.fingerprint or arguments.activate_profile:
                 raise CertificateError("New request needs --export and --name; omit returned-certificate options.")
             create_request(arguments)
         return 0

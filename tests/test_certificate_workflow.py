@@ -225,6 +225,19 @@ try {
 
 
 class CertificateInputTests(unittest.TestCase):
+    def test_activation_is_only_available_after_returned_certificate_validation(self):
+        with tempfile.TemporaryDirectory() as directory, redirect_stderr(io.StringIO()), patch("tools.certificates.create_request") as create:
+            result = certificates.main(["request", "--installation", INSTALLATION, "--state", directory, "--export", directory + "-export", "--name", "localhost", "--activate-profile", "https.json"])
+            self.assertEqual(result, 1)
+            create.assert_not_called()
+
+    def test_activation_result_is_returned_by_the_request_workflow(self):
+        with patch("tools.certificates.receive_certificate") as receive, patch("tools.certificate_activation.run_activation", return_value=7) as activate:
+            result = certificates.main(["request", "--installation", INSTALLATION, "--state", "generation", "--certificate", "returned.pem", "--ca", "ca.pem", "--fingerprint", "0" * 64, "--activate-profile", "https.json"])
+            self.assertEqual(result, 7)
+            receive.assert_called_once()
+            activate.assert_called_once_with("https.json", "generation", INSTALLATION, "0" * 64)
+
     def test_invalid_names_and_directory_overlap_are_rejected(self):
         for names in ([], ["*.example"], ["::1"], ["0.0.0.0"], ["224.1.1.1"], ["bad_name"], ["LOCALHOST", "localhost"]):
             with self.subTest(names=names), self.assertRaises(certificates.CertificateError):

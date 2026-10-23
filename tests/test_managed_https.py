@@ -160,7 +160,7 @@ class ManagedHttpsTests(unittest.TestCase):
     def test_errors_are_sanitized_and_never_open_browser_or_http_fallback(self):
         output = io.StringIO()
         with patch("kiosk.transport.runtime.load_profile", side_effect=ValueError("private secret")), patch("kiosk.server.launch_browser") as browser, redirect_stdout(output):
-            self.assertEqual(run_https("missing.json"), 1)
+            self.assertEqual(run_https(self.filename), 1)
         browser.assert_not_called()
         self.assertNotIn("private secret", output.getvalue())
         self.assertIn("no HTTP fallback", output.getvalue())
@@ -189,7 +189,7 @@ class ManagedHttpsTests(unittest.TestCase):
         runtime.close.return_value = {"proxy_forced": False, "backend_stopped": True, "temporary_removed": True, "proxy_exit_code": 0}
         output = io.StringIO()
         with patch("kiosk.transport.runtime.load_profile", return_value=self.load()), patch("kiosk.transport.runtime.ManagedHttps", return_value=runtime), redirect_stdout(output):
-            self.assertEqual(run_https("profile.json", auto_launch=False), 1)
+            self.assertEqual(run_https(self.filename, auto_launch=False), 1)
         runtime.close.assert_called_once()
         self.assertNotIn("private details", output.getvalue())
 
@@ -198,7 +198,7 @@ class ManagedHttpsTests(unittest.TestCase):
         runtime.check_running.side_effect = KeyboardInterrupt
         runtime.close.return_value = {"proxy_forced": False, "backend_stopped": True, "temporary_removed": True, "proxy_exit_code": 0}
         with patch("kiosk.transport.runtime.load_profile", return_value=self.load()), patch("kiosk.transport.runtime.ManagedHttps", return_value=runtime), redirect_stdout(io.StringIO()):
-            self.assertEqual(run_https("profile.json", auto_launch=False), 0)
+            self.assertEqual(run_https(self.filename, auto_launch=False), 0)
         runtime.close.assert_called_once()
 
 

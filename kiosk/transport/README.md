@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provide opt-in Windows source startup with a supervised Caddy TLS proxy, loopback-only Waitress, explicit certificate trust, and bounded cleanup. Existing HTTP startup remains separate. Local integration, a bounded Windows Chrome trust lifecycle and the selected physical two-PC Windows/Chrome HTTPS run are verified. Android, other platform/browser trust, production certificate operations and a packaged service remain pending; stage 2 is incomplete.
+Provide opt-in Windows source startup with a supervised Caddy TLS proxy, loopback-only Waitress, explicit certificate trust, and bounded cleanup. Existing HTTP startup remains separate. Local integration, a bounded Windows Chrome trust lifecycle and the selected physical two-PC Windows/Chrome HTTPS run are verified. Android, other platform/browser trust, physical production certificate custody/enrollment/recovery acceptance and a packaged service remain pending; stage 2 is incomplete.
 
 ## Related Files
 
@@ -10,6 +10,8 @@ Provide opt-in Windows source startup with a supervised Caddy TLS proxy, loopbac
 - `kiosk/transport/profile.py`: strict versioned JSON profile, input validation, explicit CA trust, and generated proxy JSON.
 - `kiosk/transport/runtime.py`: readiness, supervision, shutdown, and sanitized failures.
 - `kiosk/transport/windows.py`: owned Windows Job Object.
+- `kiosk/transport/profile_operations.py`: profile ownership lock, DACL-preserving atomic replacement and interrupted-activation journal recovery.
+- `tools/certificate_activation.py` and `tests/test_certificate_activation.py`: opt-in same-CA activation, real HTTPS readiness, rollback and process-crash checks.
 - `tests/test_managed_https.py`: isolated profile, CLI, ownership, and failure checks.
 - `tools/check_managed_https.py`: disposable real HTTPS and CLI verification.
 - `tools/check_browser_https.py` and `tools/browser_trust.ps1`: explicit, operator-observed disposable Chrome trust lifecycle, requiring permission to modify CurrentUser root trust.
@@ -77,8 +79,14 @@ This avoids the observed default/dual-stack loopback 10049 failure without chang
 
 ## Selected Production Certificate Architecture
 
-The owner selected a separate administrative PC holding the encrypted installation CA key. Server-local leaf keys stay on the server; text PKCS#10 CSRs go to the signer and only public signed certificates return. Two planned routine workflows create a request and sign a reviewed request; the request workflow resumes to validate and stage the returned certificate for controlled activation/rollback. CA initialization is explicit and never silently repeated during renewal. Name authorization and independent root fingerprint verification remain operator responsibilities.
+The owner selected a separate administrative PC holding the encrypted installation CA key. Server-local leaf keys stay on the server; text PKCS#10 CSRs go to the signer and only public signed certificates return. Two routine workflows create a request and sign a reviewed request; the request workflow resumes to validate and stage the returned certificate for controlled activation/rollback. CA initialization is explicit and never silently repeated during renewal. Name authorization and independent root fingerprint verification remain operator responsibilities.
 
 Source request/sign/returned-certificate verification is implemented in tools/certificates.py with a PowerShell 7.6/.NET 10 crypto backend. See docs/LAN_TRANSPORT.md for commands and policy: RSA-3072/SHA-256, encrypted PKCS#8 CA key with hidden password entry, protected current-user/SYSTEM/Administrators Windows directories, explicit initial authority creation, reviewed exact SAN identities, no-overwrite transfers and strict returned-key/chain/fingerprint validation. The signer needs only the three trusted utility files and Python/PowerShell, not the application database or working credentials.
 
-A successful import prepares a verified private generation with active_profile_changed=false. It does not update an active HTTPS profile or enroll trust. Renewal uses a fresh server key and existing authority; CA loss never triggers silent replacement. Partial new directories can remain after interruption; preserve pending keys/authority and diagnose rather than automatically deleting/reinitializing them. Activation/rollback, service identity provisioning, physical separate-PC custody/enrollment and recovery-copy acceptance remain pending. Existing temporary certificate generators are still test-only. No route, API, table, content version, kiosk/TV behavior or admin-panel action changes.
+Without --activate-profile, a successful import prepares a verified private generation with active_profile_changed=false. The optional activation mode below can switch an existing profile; neither mode enrolls trust. Renewal uses a fresh server key and existing authority; CA loss never triggers silent replacement. Partial new directories can remain after interruption; preserve pending keys/authority and diagnose rather than automatically deleting/reinitializing them. Service identity provisioning, physical separate-PC custody/enrollment and CA recovery-copy acceptance remain pending. Existing temporary certificate generators are still test-only. No route, API, table, content version, kiosk/TV behavior or admin-panel action changes.
+
+## Controlled Certificate Activation
+
+Append --activate-profile <existing-profile> to returned-certificate request mode after stopping the current server normally. The command revalidates the generation and existing root/origin, holds the shared profile lock, rejects an occupied listener and starts the candidate under ManagedHttps. It checks the served leaf fingerprint in addition to existing readiness before atomically committing the profile. Old certificate/key files are retained. A failed startup/commit stops the candidate, restores exact prior profile bytes and starts the old service; failed cleanup/recovery stops the operation without HTTP fallback. The foreground command reports whether activation or rollback occurred and supervises the resulting service until Ctrl+C.
+
+Normal run_https startup also holds <profile>.lock and recovers an interrupted <profile>.certificate-transaction.json before loading/starting the application. A divergent profile or malformed journal requires operator review. Atomic replacement preserves Windows DACLs; configuration parent directories must remain operator-controlled. The persistent empty lock file is intentional. No trust enrollment, CA rotation, service-account provisioning or unrelated-process control is added. Process-crash behavior is tested; power-loss/corruption recovery is not claimed. The source activation and recovery change no application routes, database tables, content version or display/admin behavior. See docs/LAN_TRANSPORT.md for the precise commit point and failure/rollback limits.
