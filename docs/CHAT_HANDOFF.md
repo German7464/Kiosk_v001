@@ -1,8 +1,14 @@
 # Chat handoff — 2026-10-23
 
-## Latest increment: explicit IPv4 LAN-helper connections
+## Latest decision: separate administrative-PC certificate authority
 
-The helper now uses explicit IPv4 sockets consistently, retaining strict TLS checks, cookies and deadlines. Default/dual-stack loopback connections reproduced AddressNotAvailable/10049 while explicit IPv4 succeeded against the same listener. This identifies a connection-path difference, not the underlying Windows/VPN cause. The two previously failing TLS methods passed after the correction. Final full suite: 122 tests passed in 98.097 seconds, no skips; compilation, both JavaScript checks, PowerShell parsing and independent Flask checks passed. See the latest TZ_PROGRESS.md entry for the new HTTP/port/cancellation regressions and precise scope. No VPN, routes, IPv6 bindings, trust stores or working data changed. No physical/browser rerun was performed; the retained old Chrome profile was not touched. Next candidate remains production certificate operations, requiring a separately selected scope; stage 2 is incomplete.
+Owner selected variant 2: the CA private key is encrypted and held on a separate administrative PC; the server retains its own leaf private key and sends only text PKCS#10 CSRs for signing. Only public signed certificates/root certificates return. Two planned operator workflows are create request and sign request. First authority setup is explicit; renewal must not silently create a replacement CA. The request workflow resumes with the returned certificate for validation and staged activation/rollback. See LAN_TRANSPORT.md for trust boundaries, name review, independent fingerprint verification and acceptance gates.
+
+This is an architecture/documentation increment, not implemented commands or production enrollment. Next specify cryptographic parameters/lifetimes, encrypted format, Windows storage/ACL identity, precise CLI/resume and crash-safe activation, then implement/test the selected flow. Stage 2 is incomplete; no stage 3, production keys, trust stores or VPN changes were made.
+
+## Previous increment: explicit IPv4 LAN-helper connections
+
+The helper now uses explicit IPv4 sockets consistently, retaining strict TLS checks, cookies and deadlines. Default/dual-stack loopback connections reproduced AddressNotAvailable/10049 while explicit IPv4 succeeded against the same listener. This identifies a connection-path difference, not the underlying Windows/VPN cause. The two previously failing TLS methods passed after the correction. Final full suite: 122 tests passed in 98.097 seconds, no skips; compilation, both JavaScript checks, PowerShell parsing and independent Flask checks passed. See the latest TZ_PROGRESS.md entry for the new HTTP/port/cancellation regressions and precise scope. No VPN, routes, IPv6 bindings, trust stores or working data changed. No physical/browser rerun was performed; the retained old Chrome profile was not touched. The subsequent owner decision selects separate-PC CSR signing as the certificate architecture; implementation detail and acceptance remain pending.
 
 ## Previous increment: fullscreen CSRF recovery
 

@@ -39,6 +39,34 @@ Every installation uses its own local certificate authority; no shared product-w
 
 Only the server leaf private key is needed for daily serving. Keep the authority private key outside the running application/proxy account in protected offline custody, with a protected independent recovery copy. Keep the server key restricted to the proxy service identity. Store secrets separately from executable resources and logs; never commit or include keys in diagnostics. No exact platform paths or certificate-generation implementation are introduced here.
 
+## Selected Certificate Architecture: Separate Administrative PC
+
+Owner decision on 2026-10-23: use a separate administrative PC for authority custody and CSR signing. Transfer text PKCS#10 certificate signing requests and public certificates between machines. This is the selected production direction, not implemented certificate tooling or verified deployment acceptance. The existing temporary certificate generator and LAN/browser wizards remain test-only.
+
+### Roles and secret custody
+
+- The server generates its own leaf private key and PKCS#10 CSR locally. The leaf key stays on that server with access restricted to the serving identity. It is not transferred to the administrative PC, clients, reports or source repository.
+- The administrative PC stores each installation's distinct CA private key encrypted at rest, outside the application/proxy account. Signing is a controlled local operation with a manually entered password; passwords are not command-line arguments, environment variables or logs. The signer does not need a network service or Internet access.
+- Keep a protected independent recovery copy of the encrypted authority and the public installation/authority identity record. The administrative PC is a privileged signing boundary; file encryption does not protect against compromise while the key is unlocked. The running server never receives the authority key or its password.
+- Only the CSR travels from the server to the signer. The signed leaf certificate and public CA certificate travel back. A separate trusted fingerprint record establishes authority identity; a root and its fingerprint received through the same untrusted transfer are insufficient.
+
+### Two routine commands
+
+The planned utility exposes two simple operator workflows, provisionally named `request` (create request) and `sign` (sign request). These are interface descriptions, not runnable commands in the current release.
+
+1. **Create request, on the server:** show the intended installation and exact DNS/IP names, generate a fresh server key in protected server storage, and export a text CSR to a transfer location. Output a nonsecret request digest and public-key identity so the operator can match the returned certificate to the pending request. Request creation does not replace the active certificate or alter working application data.
+2. **Sign request, on the administrative PC:** select the correct installation authority, validate the CSR signature and allowed public-key parameters, show the CSR digest and complete requested SAN list, and obtain explicit operator confirmation of installation and names. A valid CSR signature proves possession of the requesting key, not entitlement to a name. Reject CA requests and unsupported/unsafe input; construct server-authentication-only certificate extensions instead of copying arbitrary CSR extensions. Unlock the authority locally and export the signed leaf and public authority certificate, without private keys or passwords.
+
+First-time authority creation is an explicit one-time setup in the administrative signing workflow. Missing/unreadable authority material during renewal must fail rather than silently create a different authority. CSR creation, signing and later activation are separate checkpoints; a signed certificate alone does not authorize unattended installation or client enrollment.
+
+The server's request workflow must support resuming a pending request with the returned certificate. Before activation, verify the independently established authority, chain, validity, server-authentication usage, exact approved identities, and correspondence to the locally retained pending key. Invalid input leaves the active profile unchanged. The implementation must stage an immutable certificate/key generation and switch the active profile only after validation, preserving a valid previous generation for rollback. The source-runtime implementation should use a controlled stop/start with readiness validation; hot reload and automatic deployment are not assumed. This completion step belongs to the request workflow rather than requiring a third routine operator command.
+
+### Renewal, enrollment and acceptance boundary
+
+Routine renewal repeats the same request/sign flow with a fresh server key under the existing authority. Existing client root trust is retained only if the authority is unchanged; changed names need explicit client URL updates. Initial enrollment, authority replacement and compromise recovery still require independent fingerprint verification and explicit client trust operations. No automatic revocation guarantee is introduced for offline clients; the compromise policy below remains mandatory.
+
+Before implementing this workflow, specify cryptographic parameters and validity periods, encrypted-key format, Windows storage/access-control locations and identity, exact CLI/resume contract, and crash-safe profile activation/recovery. These details remain open; this decision does not approve arbitrary defaults. Acceptance must cover encrypted-key round trips and wrong passwords, CSR tampering/identity review/extension rejection, no secret transfer or logging, request/certificate/key mismatches, renewal under the same CA, invalid activation and rollback, authority loss/compromise, and offline execution. Physical administrative-PC and client enrollment checks remain separate from automated temporary-fixture tests.
+
 ## Renewal and Recovery
 
 - Renew the server certificate before expiry using the same authority and validated address list. Stage and validate the certificate/key pair before switching; retain the last valid pair for rollback. Reject mismatched keys, invalid chains, and expired certificates without falling back to HTTP. Scheduling, cryptographic parameters, validity periods, and proxy reload mechanics must be specified with the selected implementation.
