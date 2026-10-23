@@ -1,10 +1,16 @@
 # Chat handoff — 2026-10-23
 
-## Latest decision: separate administrative-PC certificate authority
+## Latest increment: source CSR request/sign/returned-certificate validation
+
+Implemented python -m tools.certificates request/sign with tools/certificate_crypto.ps1 and tools/certificate_crypto.cs; requires Windows, Python and PowerShell 7.6/.NET 10. Signer uses a trusted copy of these three files and no app database. New requests keep leaf keys local and export only CSR; sign explicitly initializes an encrypted CA or uses the existing one, requires digest/name confirmation and hidden password, and exports only public certificates. Resume request verifies pending key/metadata, names/usage/validity, exact independently supplied root fingerprint and offline chain. It prepares a new private generation and reports active_profile_changed=false; no live profile is replaced or trust enrolled.
+
+Parameters and CLI examples are in LAN_TRANSPORT.md. All 131 Python tests passed in 155.712 seconds, no skips, including nine new regressions; the actual hidden-input terminal flow, compilation, both JavaScript checks, PowerShell parsing and independent Flask checks also passed. See the latest ledger entry for exact scope. Next implement controlled active-profile activation/readiness/rollback. Physical separate-PC custody/enrollment, protected recovery-copy restore and packaging remain pending. Partial new directories can remain after interruption; preserve pending key/CA and investigate, never silently initialize a replacement authority. No working data, credentials, certificates, VPN/network/trust settings changed. Stage 2 remains incomplete; no stage 3 work began.
+
+## Previous decision: separate administrative-PC certificate authority
 
 Owner selected variant 2: the CA private key is encrypted and held on a separate administrative PC; the server retains its own leaf private key and sends only text PKCS#10 CSRs for signing. Only public signed certificates/root certificates return. Two planned operator workflows are create request and sign request. First authority setup is explicit; renewal must not silently create a replacement CA. The request workflow resumes with the returned certificate for validation and staged activation/rollback. See LAN_TRANSPORT.md for trust boundaries, name review, independent fingerprint verification and acceptance gates.
 
-This is an architecture/documentation increment, not implemented commands or production enrollment. Next specify cryptographic parameters/lifetimes, encrypted format, Windows storage/ACL identity, precise CLI/resume and crash-safe activation, then implement/test the selected flow. Stage 2 is incomplete; no stage 3, production keys, trust stores or VPN changes were made.
+This preceding entry recorded architecture only. The subsequent source increment implements request/sign/validation with explicit parameters; active rollout, production enrollment and crash-safe deployment remain pending. Stage 2 is incomplete; no stage 3, production keys, trust stores or VPN changes were made.
 
 ## Previous increment: explicit IPv4 LAN-helper connections
 

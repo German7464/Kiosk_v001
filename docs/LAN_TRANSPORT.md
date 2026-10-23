@@ -41,7 +41,7 @@ Only the server leaf private key is needed for daily serving. Keep the authority
 
 ## Selected Certificate Architecture: Separate Administrative PC
 
-Owner decision on 2026-10-23: use a separate administrative PC for authority custody and CSR signing. Transfer text PKCS#10 certificate signing requests and public certificates between machines. This is the selected production direction, not implemented certificate tooling or verified deployment acceptance. The existing temporary certificate generator and LAN/browser wizards remain test-only.
+Owner decision on 2026-10-23: use a separate administrative PC for authority custody and CSR signing. Transfer text PKCS#10 certificate signing requests and public certificates between machines. This is the selected production direction; the bounded source implementation below does not establish production deployment acceptance. The existing temporary certificate generator and LAN/browser wizards remain test-only.
 
 ### Roles and secret custody
 
@@ -52,7 +52,7 @@ Owner decision on 2026-10-23: use a separate administrative PC for authority cus
 
 ### Two routine commands
 
-The planned utility exposes two simple operator workflows, provisionally named `request` (create request) and `sign` (sign request). These are interface descriptions, not runnable commands in the current release.
+The utility uses two operator workflows, `request` (create request) and `sign` (sign request). The source implementation below supports creation, signing and returned-certificate validation; active-profile activation remains a planned completion step.
 
 1. **Create request, on the server:** show the intended installation and exact DNS/IP names, generate a fresh server key in protected server storage, and export a text CSR to a transfer location. Output a nonsecret request digest and public-key identity so the operator can match the returned certificate to the pending request. Request creation does not replace the active certificate or alter working application data.
 2. **Sign request, on the administrative PC:** select the correct installation authority, validate the CSR signature and allowed public-key parameters, show the CSR digest and complete requested SAN list, and obtain explicit operator confirmation of installation and names. A valid CSR signature proves possession of the requesting key, not entitlement to a name. Reject CA requests and unsupported/unsafe input; construct server-authentication-only certificate extensions instead of copying arbitrary CSR extensions. Unlock the authority locally and export the signed leaf and public authority certificate, without private keys or passwords.
@@ -65,7 +65,50 @@ The server's request workflow must support resuming a pending request with the r
 
 Routine renewal repeats the same request/sign flow with a fresh server key under the existing authority. Existing client root trust is retained only if the authority is unchanged; changed names need explicit client URL updates. Initial enrollment, authority replacement and compromise recovery still require independent fingerprint verification and explicit client trust operations. No automatic revocation guarantee is introduced for offline clients; the compromise policy below remains mandatory.
 
-Before implementing this workflow, specify cryptographic parameters and validity periods, encrypted-key format, Windows storage/access-control locations and identity, exact CLI/resume contract, and crash-safe profile activation/recovery. These details remain open; this decision does not approve arbitrary defaults. Acceptance must cover encrypted-key round trips and wrong passwords, CSR tampering/identity review/extension rejection, no secret transfer or logging, request/certificate/key mismatches, renewal under the same CA, invalid activation and rollback, authority loss/compromise, and offline execution. Physical administrative-PC and client enrollment checks remain separate from automated temporary-fixture tests.
+The source increment below specifies its cryptographic parameters, encrypted-key format, current-user Windows access controls and request/sign/validation CLI. Service-account provisioning and crash-safe active-profile activation/recovery remain open implementation work. Acceptance must cover encrypted-key round trips and wrong passwords, CSR tampering/identity review/extension rejection, no secret transfer or logging, request/certificate/key mismatches, renewal under the same CA, invalid activation and rollback, authority loss/compromise, and offline execution. Physical administrative-PC and client enrollment checks remain separate from automated temporary-fixture tests.
+
+## Source CSR Utility: Request, Sign and Validate
+
+Implemented bounded source tooling: `python -m tools.certificates request` and `python -m tools.certificates sign`. Requires Windows, Python (verified with 3.14.5) and PowerShell 7.6/.NET 10; no new Python package, service or Internet dependency. The administrative PC needs a trusted copy of tools/certificates.py, tools/certificate_crypto.ps1 and tools/certificate_crypto.cs, preserving their directory layout; it does not need application data, administrator credentials, Caddy or server private keys. A packaged signer is not provided.
+
+This increment prepares and verifies a new certificate generation. **It does not activate it, edit an existing HTTPS profile, reload a server, install trust, copy a CA to a real administrative PC or complete production deployment.** Controlled active-profile switching/rollback and physical signing/enrollment acceptance remain separate work. The earlier architecture describes the intended completed request workflow, not additional implemented behavior.
+
+### Parameters and storage
+
+- Each operation requires the same explicit canonical lowercase installation UUID. Record it once and reuse it; requesting a new certificate does not create a new installation identity.
+- RSA-3072 keys, SHA-256 signatures, root path length zero, root signing-only usage, and server-authentication-only leaf certificates. CA lifetime: 3650 days; leaf lifetime: 365 days, with a five-minute not-before allowance. Signing fails if the authority cannot cover the complete requested leaf lifetime; it never silently changes the authority or clamps expiry.
+- The CA private key is encrypted PKCS#8 PEM using AES-256-CBC and PBKDF2-HMAC-SHA256 with 600,000 iterations. Password length is 16–1024 characters, entered with hidden terminal input and confirmation for initial creation. No password argument/environment option exists. Signing rejects noninteractive input; hidden-input fallback is disabled. The Python/.NET process must temporarily hold decrypted material in memory; reliable whole-process memory erasure is not claimed.
+- New private directories receive a protected Windows DACL allowing only the current account, SYSTEM and local Administrators, inherited by new files. Source serving must run under that current account; service-account provisioning and packaging are not implemented. Parent directories must already exist; private and transfer directories must be disjoint. Reparse paths, existing new-generation/output directories and file overwrites are rejected.
+- Server private generation: server.key, request.pem, request.json; the last file stores public pending-request metadata. Outbound transfer: request.pem only. Administrative private directory: encrypted authority.key and public authority.pem. Return transfer: server.pem and authority.pem only. No CA private key or server key is exported by the transfer workflow.
+- On interruption, partial new directories can remain; no active profile is changed. Preserve the existing pending key and request for diagnosis. A partial authority initialization fails closed on retry: recover the exact authority from its protected recovery copy or inspect the partial generation before explicitly choosing a new authority. Never delete/reinitialize it as an automatic renewal fallback. There is no transactional deployment or automatic recovery manager in this increment.
+
+### Operator flow
+
+Select private storage and transfer paths, with existing parents, outside the source repository and logs. Paths in the examples are placeholders chosen by the operator. On the server:
+
+```powershell
+python -m tools.certificates request --installation <installation-uuid> --state <new-private-generation> --export <new-outbound-directory> --name kiosk.example --name 192.168.1.165
+```
+
+Transfer only request.pem to the administrative PC. Check the installation UUID, complete name list and request digest through an independent channel. On first use only, create the installation authority explicitly while signing:
+
+```powershell
+python -m tools.certificates sign --installation <installation-uuid> --authority <new-private-authority-directory> --csr <received-request.pem> --output <new-return-directory> --initialize-authority
+```
+
+For renewal, omit --initialize-authority and select the existing authority directory. The utility validates the [PKCS#10 signature](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.x509certificates.certificaterequest.loadsigningrequestpem?view=net-10.0), exact installation subject, RSA/SHA-256 profile and SAN-only request. It rejects CA/unsupported extensions, attributes, wildcard/unsupported names, additional PEM blocks and malformed/tampered requests. Supported identities: one to sixteen distinct ASCII DNS names/unicast IPv4 addresses. The signer reconstructs safe leaf extensions rather than copying arbitrary requested extensions. The operator types SIGN followed by the complete displayed request digest to authorize the installation and names; signature verification alone does not authorize an identity.
+
+Return only server.pem and authority.pem. Independently verify the full public CA SHA-256 fingerprint. Resume on the server:
+
+```powershell
+python -m tools.certificates request --installation <installation-uuid> --state <existing-private-generation> --certificate <received-server.pem> --ca <received-authority.pem> --fingerprint <independently-verified-64-character-lowercase-sha256>
+```
+
+The utility checks pending metadata, locally retained key, certificate identity and exact names, leaf usage, current validity and offline CustomRootTrust chain to that exact public CA. Network certificate downloads are disabled. Revocation is not enforced; the compromise policy below remains mandatory. Wrong fingerprints/keys/CA, expired certificates and changed identities are rejected before adding received files. Successful verification writes server.pem, authority.pem and verified.json inside the private generation and reports active_profile_changed=false. Repeating the same verified import is safe; different existing import files are rejected. The verified.json marker is written last, but subsequent consumers must revalidate files rather than treating the marker as a signed authorization or active-deployment record.
+
+### Verified scope and pending acceptance
+
+Temporary-fixture tests cover encrypted authority round trips/wrong passwords, installation mismatch, CSR signature tampering and unsafe extensions, transfer allowlists, Windows directory ACLs, cancellation/noninteractive/overwrite refusal, invalid imports, idempotent validation, real offline TLS, and fresh-key renewal under the same root. A real terminal test verifies hidden password entry and full request/sign/validation without active-profile changes. This is not physical administrative-PC custody, independent human fingerprint comparison, recovery-copy restoration, client enrollment or active certificate rollout acceptance. See TZ_PROGRESS.md for exact test counts and current results.
 
 ## Renewal and Recovery
 
