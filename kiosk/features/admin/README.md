@@ -56,6 +56,7 @@ Provides MVP admin authentication, event management, event image upload, tag man
 - `GET /admin/password/change`
 - `POST /admin/password/change`
 - `POST /admin/fullscreen/validate`
+- `GET /admin/fullscreen/csrf`
 - `GET /admin/events`
 - `GET /admin/events/create`
 - `POST /admin/events/create`
@@ -76,7 +77,7 @@ Provides MVP admin authentication, event management, event image upload, tag man
 
 ## Related API Endpoints
 
-- No API endpoints.
+- `GET /admin/fullscreen/csrf`: same-origin JSON containing the current session CSRF token; `Cache-Control: no-store`, no CORS permission, and no administrator authorization.
 
 ## How the Feature Updates Content Version
 
@@ -133,3 +134,11 @@ Stage 2 defaults: MAX_CONTENT_LENGTH = 20 MiB per request, MAX_UPLOAD_FILE_BYTES
 Event images and system icons share bounded stream copying and image verification, including a complete decode before derivatives. Declared file lengths and extensions are not trusted. Limits return 413; invalid images return 400. Application responses are translated (fullscreen errors remain JSON). Failed processing removes only the current upload and its partial derivatives; database rows, content version, and earlier images remain unchanged. Storage failures still propagate as server errors after cleanup. Existing media is not reprocessed at startup.
 
 These are owner-selected provisional image safety limits, not tested video profiles, total storage quotas, or a guarantee against aggregate memory exhaustion. Video remains unimplemented. No database schema or public API success format changes are introduced.
+
+## Fullscreen Form Recovery
+
+An old kiosk page can retain a CSRF token after another tab replaces the shared session cookie or login/logout rotates the session. Fullscreen validation rejects that token with HTTP 403 and JSON `success: false`, translated `error`, and `code: csrf_expired`. Other error formats and successful validation remain unchanged.
+
+The kiosk clears the password, fetches GET /admin/fullscreen/csrf once, validates and replaces the page token, and asks for a fresh password entry without reloading or exiting fullscreen. Credentials are never automatically replayed. A failed refresh leaves fullscreen active and displays a translated retry message. Duplicate submissions are blocked while validation/recovery is pending. Refresh does not authenticate a user, reset password-attempt budgets, update content version, alter database schema, or change TV display.
+
+Regression coverage includes cookie replacement, login/logout rotation, foreign/missing token rejection, no-store/no-CORS responses, unchanged throttling, refresh failures and malformed payloads, no credential replay, duplicate submission, and authorization before fullscreen exit. Browser evidence and full-suite limitations are recorded in TZ_PROGRESS.md.

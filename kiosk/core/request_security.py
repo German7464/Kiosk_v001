@@ -59,6 +59,8 @@ def security_error(message, status, retry_after=None):
     language = row["value"] if row is not None else "en"
     if request.endpoint == "admin.fullscreen_validate":
         response = jsonify(success=False, error=translate(message, language))
+        if status == 403 and message == "security.request_expired":
+            response = jsonify(success=False, error=translate(message, language), code="csrf_expired")
         response.status_code = status
     else:
         response = current_app.make_response((render_template("admin_security_error.html", message=message), status))

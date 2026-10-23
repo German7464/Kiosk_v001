@@ -9,6 +9,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from kiosk.core.credentials import session_credential_token, uses_default_credentials, validate_password
 from kiosk.core.i18n import translate
 from kiosk.core.images import process_event_image, process_system_icon
+from kiosk.core.request_security import csrf_token
 from kiosk.database import get_database, increase_content_version
 
 
@@ -592,6 +593,13 @@ def fullscreen_validate():
     user = authenticate_admin_credentials(username, password)
 
     return jsonify({"success": user is not None})
+
+
+@admin_blueprint.get("/fullscreen/csrf")
+def fullscreen_csrf():
+    response = jsonify(csrf_token=csrf_token())
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @admin_blueprint.post("/logout")

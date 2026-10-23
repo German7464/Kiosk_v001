@@ -1,4 +1,6 @@
 {
+    "kiosk.fullscreen_form_refreshed": "Das Formular wurde aktualisiert. Geben Sie Ihr Passwort erneut ein.",
+    "kiosk.fullscreen_form_refresh_failed": "Das Formular konnte nicht aktualisiert werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
     "admin.assigned_events": "Zugeordnete Veranstaltungen",
     "admin.change_password": "Passwort ändern",
     "admin.confirm_new_password": "Neues Passwort bestätigen",

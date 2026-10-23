@@ -1,5 +1,13 @@
 # Chat handoff — 2026-10-23
 
+## Latest increment: fullscreen CSRF recovery
+
+Implemented stale fullscreen form recovery; see the final dated entry in TZ_PROGRESS.md. Cookie replacement and login/logout rotation reproduce stale tokens deterministically; the exact cause of the historical physical run is still unproven. Fullscreen rejection now includes code=csrf_expired. GET /admin/fullscreen/csrf returns a no-store token without authentication or CORS permission. The kiosk clears the password, refreshes once and requests fresh entry without page reload, fullscreen exit or credential replay. Duplicate submissions are blocked.
+
+Actual local Chrome through Windows-MCP verified kiosk -> second-tab admin login -> stale fullscreen form -> refreshed-form message with empty password and fullscreen retained -> second entry exits fullscreen. Temporary server on port 5003 stopped and owned browser window closed; no working data/credentials/VPN changed. The temporary Chrome profile at %TEMP%/kiosk-csrf-20261023 remains because automatic approval review rejected bounded recursive deletion with only "blocked by policy".
+
+The final full Python run executed 119 tests in 86.015 seconds, with four .NET loopback TLS socket 10049 failures across two methods and no skips; the other 117 methods passed. The separate 28-test security run, compilation and both JavaScript checks passed. Socket failures were reproduced separately before HTTP; do not report the earlier 117-test checkpoint as a new green result. See the ledger for final counts. Next investigate current loopback test connectivity without disconnecting VPN or weakening TLS; permanent certificate operations remain separate scope. The sections below describe the preceding completed physical run and its historical verification checkpoint.
+
 ## Scope and current state
 
 The selected stage 2 disposable two-PC Windows/Chrome HTTPS LAN increment is **completed and Verified** within the evidence in [TZ Progress](TZ_PROGRESS.md#physical-two-pc-https-verification---2026-10-23). Stage 2 as a whole, section 18 and overall system acceptance remain incomplete. No stage 3 Launcher, packaging, replication or failover was started.
@@ -39,7 +47,7 @@ Read [../AGENTS.md](../AGENTS.md), [TZ.md](TZ.md), [TZ_PROGRESS.md](TZ_PROGRESS.
 
 ## Next work and limits
 
-The next candidate transport increment is production certificate custody, explicit enrollment, renewal and recovery design/validation; owner selection is still required. The first-attempt multi-tab form-token observation needs targeted reproduction before choosing a fix. Do not silently broaden this completed physical-test scope.
+The next candidate transport increment is production certificate custody, explicit enrollment, renewal and recovery design/validation; owner selection is still required. The subsequent fullscreen recovery increment reproduces token staleness mechanisms and handles them; the exact historical cause remains unproven. Do not silently broaden this completed physical-test scope.
 
 Shared-NAT budgets, fully Internet-disconnected operation, physical Android TV, clean-machine EXE installation, endurance, total storage controls and 100-device acceptance remain pending. Two distinct source addresses do not verify those cases or section 21.2 replication/failover. Stage 2 must remain incomplete while applicable required checks/decisions remain. Do not begin stage 3 automatically.
 

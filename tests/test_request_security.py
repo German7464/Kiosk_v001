@@ -89,6 +89,56 @@ class RequestSecurityTests(unittest.TestCase):
         self.assertEqual(self.client.post("/admin/logout", headers={"X-CSRF-Token": after_login}).status_code, 302)
         self.assertNotEqual(after_login, self.token())
 
+    def test_fullscreen_token_recovery_after_cookie_replacement_and_login_logout(self):
+        payload = {"username": "admin", "password": "security-test-password"}
+        original = self.token()
+        other = self.app.test_client()
+        foreign = self.token(other)
+        cookie_name = self.app.config["SESSION_COOKIE_NAME"]
+        self.client.set_cookie(cookie_name, other.get_cookie(cookie_name).value)
+        for scenario in ("cookie_replacement", "login", "logout"):
+            with self.subTest(scenario=scenario):
+                stale = original
+                if scenario == "login":
+                    original = self.token()
+                    stale = original
+                    self.assertEqual(self.login().status_code, 302)
+                elif scenario == "logout":
+                    stale = self.token()
+                    self.assertEqual(self.client.post("/admin/logout", headers={"X-CSRF-Token": stale}).status_code, 302)
+                response = self.client.post("/admin/fullscreen/validate", json=payload, headers={"X-CSRF-Token": stale})
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(response.json["code"], "csrf_expired")
+                refresh = self.client.get("/admin/fullscreen/csrf")
+                self.assertEqual(refresh.status_code, 200)
+                self.assertEqual(refresh.headers["Cache-Control"], "no-store")
+                self.assertNotIn("Access-Control-Allow-Origin", refresh.headers)
+                token = refresh.json["csrf_token"]
+                self.assertEqual(len(token), 64)
+                self.assertNotEqual(token, stale)
+                success = self.client.post("/admin/fullscreen/validate", json=payload, headers={"X-CSRF-Token": token})
+                self.assertEqual(success.status_code, 200)
+                self.assertEqual(success.json, {"success": True})
+        fresh = self.app.test_client()
+        self.assertEqual(fresh.get("/admin/fullscreen/csrf").status_code, 200)
+        self.assertEqual(fresh.get("/admin").status_code, 302)
+        for value in (None, foreign):
+            response = self.client.post("/admin/fullscreen/validate", json=payload, headers={} if value is None else {"X-CSRF-Token": value})
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.json["code"], "csrf_expired")
+
+    def test_fullscreen_token_refresh_does_not_reset_password_budget(self):
+        for index in range(10):
+            token = self.client.get("/admin/fullscreen/csrf").json["csrf_token"]
+            response = self.client.post("/admin/fullscreen/validate", json={"username": "admin", "password": "wrong"}, headers={"X-CSRF-Token": token})
+            self.assertEqual(response.status_code, 200)
+            self.assertFalse(response.json["success"])
+        token = self.client.get("/admin/fullscreen/csrf").json["csrf_token"]
+        response = self.client.post("/admin/fullscreen/validate", json={"username": "admin", "password": "security-test-password"}, headers={"X-CSRF-Token": token})
+        self.assertEqual(response.status_code, 429)
+        self.assertIn("Retry-After", response.headers)
+        self.assertNotIn("code", response.json)
+
     def test_rendered_forms_include_working_tokens(self):
         parser = FormParser()
         parser.feed(self.client.get("/admin/login").get_data(as_text=True))

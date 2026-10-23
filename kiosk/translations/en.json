@@ -1,4 +1,6 @@
 {
+    "kiosk.fullscreen_form_refreshed": "The form was updated. Enter your password again.",
+    "kiosk.fullscreen_form_refresh_failed": "Could not update the form. Check the connection and try again.",
     "admin.setup_required": "Administrator setup is required. On this server, run python serve.py --setup-admin in a local terminal.",
     "admin.default_blocked": "Default administrator credentials are blocked. On this server, run python serve.py --reset-admin-password in a local terminal.",
     "admin.password_length": "Password must contain 12 to 128 characters.",

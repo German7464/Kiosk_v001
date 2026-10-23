@@ -1,4 +1,6 @@
 {
+    "kiosk.fullscreen_form_refreshed": "Форма обновлена. Введите пароль ещё раз.",
+    "kiosk.fullscreen_form_refresh_failed": "Не удалось обновить форму. Проверьте соединение и повторите попытку.",
     "admin.assigned_events": "Назначенные события",
     "admin.change_password": "Изменить пароль",
     "admin.confirm_new_password": "Подтвердите новый пароль",

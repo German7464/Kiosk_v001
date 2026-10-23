@@ -96,32 +96,71 @@ function enterKioskFullscreen() {
     handleFullscreenResult(fullscreenRequestHandler().call(fullscreenTarget()));
 }
 
-async function requestKioskFullscreenExit() {
-    const response = await fetch("/admin/fullscreen/validate", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content,
-        },
-        body: JSON.stringify({
-            username: kioskUnlockUsername.value,
-            password: kioskUnlockPassword.value,
-        }),
-    });
+let kioskUnlockPending = false;
 
-    const data = await response.json();
-
-    if (data.success && kioskFullscreenExitAllowed()) {
-        hideKioskUnlockModal();
-        handleFullscreenResult(fullscreenExitHandler().call(document));
-        return true;
-    }
-
-    kioskUnlockError.textContent = data.error || kioskUnlockError.dataset.invalidMessage;
+function showKioskUnlockError(message) {
+    kioskUnlockError.textContent = message;
     kioskUnlockError.hidden = false;
     kioskUnlockPassword.value = "";
     kioskUnlockPassword.focus();
-    return false;
+}
+
+async function refreshKioskUnlockToken() {
+    const response = await fetch("/admin/fullscreen/csrf", { cache: "no-store", credentials: "same-origin" });
+    if (!response.ok) {
+        throw new Error("Token refresh failed");
+    }
+    const data = await response.json();
+    if (typeof data.csrf_token !== "string" || !/^[a-f0-9]{64}$/.test(data.csrf_token)) {
+        throw new Error("Invalid token response");
+    }
+    document.querySelector('meta[name="csrf-token"]').content = data.csrf_token;
+}
+
+async function requestKioskFullscreenExit() {
+    if (kioskUnlockPending) {
+        return false;
+    }
+    kioskUnlockPending = true;
+    const submit = kioskUnlockForm.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+        const response = await fetch("/admin/fullscreen/validate", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({
+                username: kioskUnlockUsername.value,
+                password: kioskUnlockPassword.value,
+            }),
+        });
+        const data = await response.json();
+        if (response.status === 403 && data.code === "csrf_expired") {
+            kioskUnlockPassword.value = "";
+            try {
+                await refreshKioskUnlockToken();
+                showKioskUnlockError(kioskUnlockError.dataset.refreshedMessage);
+            } catch {
+                showKioskUnlockError(kioskUnlockError.dataset.refreshFailedMessage);
+            }
+            return false;
+        }
+        if (response.ok && data.success && kioskFullscreenExitAllowed()) {
+            hideKioskUnlockModal();
+            handleFullscreenResult(fullscreenExitHandler().call(document));
+            return true;
+        }
+        showKioskUnlockError(data.error || kioskUnlockError.dataset.invalidMessage);
+        return false;
+    } catch {
+        showKioskUnlockError(kioskUnlockError.dataset.invalidMessage);
+        return false;
+    } finally {
+        kioskUnlockPending = false;
+        submit.disabled = false;
+    }
 }
 
 function toggleKioskFullscreen() {
