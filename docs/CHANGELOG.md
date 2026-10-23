@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-23
+
+- Completed the selected physical two-PC Windows/Chrome HTTPS LAN verification using isolated data and temporary certificates. All eleven client groups, four actual browser observations, restart/session continuity, hostile Host rejection, independent-source authentication limits, automatic kiosk/TV event update, temporary trust removal and owned cleanup passed. Retained sanitized reports under ignored logs/https; updated current scope, transport documentation and continuation notes. Stage 2 and overall security remain Partial; no later stage was started.
+- Diagnosed startup failures with route/socket evidence and completed the successful run after owner-configured Amnezia application exclusions plus temporary test host-route adjustments. VPN stayed connected; task route changes were restored. RustDesk clipboard blocks with exact ZIP SHA-256 verification replaced the unavailable file-transfer/SMB path. Removed the transferred test bundle and retained reports. Recorded the first fullscreen form-token failure and successful normal-reload retry without claiming its multi-tab root cause resolved.
+- All 117 Python tests passed in 87.087 seconds; compilation, both JS checks and independent isolated Flask route/authentication/CSRF checks passed. No application code, API, schema, dependency or working data changed. Production certificate operations, the multi-tab follow-up and remaining hardware/disconnected/endurance/load checks still require work.
+
 ## 2026-10-21
 
 - Clarified AGENTS.md: read TZ.md and TZ_PROGRESS.md at task start, explicitly record and report full stage completion and the next available stage, and retain incomplete status while required acceptance checks remain. Starting a later stage still requires owner-selected scope.
