@@ -225,6 +225,112 @@ class LanPowerShellTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(invalid.exists())
 
+    def test_ipv4_http_handler_and_address_rejection(self):
+        source = '''param($Library, $Origin)
+. $Library -LibraryOnly
+$handler = [KioskLanTls]::CreateIPv4Handler()
+$client = [Net.Http.HttpClient]::new($handler)
+$client.Timeout = [TimeSpan]::FromSeconds(3)
+try {
+    $response = $client.GetAsync($Origin + '/api/version').GetAwaiter().GetResult()
+    try { if ([int]$response.StatusCode -ne 200) { throw 'IPv4 HTTP failed' } } finally { $response.Dispose() }
+    foreach ($hostValue in @('localhost', '::1', 'host.invalid')) {
+        $rejected = $false
+        try { $null = [KioskLanTls]::ParseIPv4($hostValue) } catch { $rejected = $true }
+        if (-not $rejected) { throw 'Unsupported address accepted' }
+    }
+    foreach ($invalid in @('http://localhost:9/', 'http://[::1]:9/')) {
+        $rejected = $false
+        try { $null = $client.GetAsync($invalid).GetAwaiter().GetResult() } catch {
+            $leaf = $_.Exception
+            while ($leaf.InnerException) { $leaf = $leaf.InnerException }
+            $rejected = $leaf -is [ArgumentException]
+        }
+        if (-not $rejected) { throw 'Unsupported HTTP address reached connector' }
+    }
+} finally { $client.Dispose() }
+'''
+        with tempfile.TemporaryDirectory() as installation:
+            app = fixture_factory(Path(installation), 'disposable-test-password')({})
+            server = make_server('127.0.0.1', 0, app)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                result = self.powershell(source, [str(self.repository / 'tools/check_lan_https.ps1'), f'http://127.0.0.1:{server.server_port}'])
+                self.assertEqual(result.returncode, 0, result.stderr.decode(errors='replace'))
+            finally:
+                server.shutdown()
+                thread.join(timeout=3)
+                server.server_close()
+
+    def test_port_probe_distinguishes_open_closed_and_invalid_addresses(self):
+        source = '''param($Library, $OpenPort, $ClosedPort)
+. $Library -LibraryOnly
+$rejected = $false
+try { Test-LanPortClosed '127.0.0.1' $OpenPort } catch { $rejected = $_.Exception.Message -eq 'Internal port accessible over LAN' }
+if (-not $rejected) { throw 'Open internal port accepted as closed' }
+Test-LanPortClosed '127.0.0.1' $ClosedPort
+foreach ($address in @('localhost', '::1', 'invalid')) {
+    $rejected = $false
+    try { Test-LanPortClosed $address $ClosedPort } catch { $rejected = $true }
+    if (-not $rejected) { throw 'Invalid address accepted as closed' }
+}
+$rejected = $false
+try { Test-LanPortClosed '127.0.0.1' -1 } catch { $rejected = $true }
+if (-not $rejected) { throw 'Invalid port accepted as closed' }
+'''
+        with socket.socket() as listener, socket.socket() as closed:
+            listener.bind(('127.0.0.1', 0))
+            listener.listen()
+            closed.bind(('127.0.0.1', 0))
+            closed_port = closed.getsockname()[1]
+            result = self.powershell(source, [str(self.repository / 'tools/check_lan_https.ps1'), str(listener.getsockname()[1]), str(closed_port)])
+            self.assertEqual(result.returncode, 0, result.stderr.decode(errors='replace'))
+
+    def test_ipv4_cancellation_timeout_and_stream_ownership(self):
+        source = '''param($Library, $Port)
+. $Library -LibraryOnly
+$cancel = [Threading.CancellationTokenSource]::new()
+try {
+    $cancel.Cancel()
+    $rejected = $false
+    try { $null = [KioskLanTls]::ConnectIPv4('127.0.0.1', [int]$Port, $cancel.Token).AsTask().GetAwaiter().GetResult() } catch {
+        $leaf = $_.Exception
+        while ($leaf.InnerException) { $leaf = $leaf.InnerException }
+        $rejected = $leaf -is [OperationCanceledException]
+    }
+    if (-not $rejected) { throw 'Cancelled connection accepted' }
+} finally { $cancel.Dispose() }
+$handler = [KioskLanTls]::CreateIPv4Handler()
+$client = [Net.Http.HttpClient]::new($handler)
+$client.Timeout = [TimeSpan]::FromMilliseconds(400)
+try {
+    $rejected = $false
+    try { $null = $client.GetAsync("http://127.0.0.1:$Port/").GetAwaiter().GetResult() } catch {
+        $leaf = $_.Exception
+        while ($leaf) {
+            if ($leaf -is [OperationCanceledException] -or $leaf -is [TimeoutException]) { $rejected = $true }
+            $leaf = $leaf.InnerException
+        }
+    }
+    if (-not $rejected) { throw 'HTTP timeout not enforced' }
+} finally { $client.Dispose() }
+'''
+        with socket.socket() as listener:
+            listener.bind(('127.0.0.1', 0))
+            listener.listen()
+            listener.settimeout(3)
+            result = self.powershell(source, [str(self.repository / 'tools/check_lan_https.ps1'), str(listener.getsockname()[1])])
+            self.assertEqual(result.returncode, 0, result.stderr.decode(errors='replace'))
+            with listener.accept()[0] as stream:
+                stream.settimeout(3)
+                data = stream.recv(4096)
+                self.assertIn(b'GET / HTTP/1.1', data)
+                try:
+                    self.assertEqual(stream.recv(1), b'')
+                except ConnectionResetError:
+                    pass
+
     def test_powershell_real_tls_login_and_rejection_with_explicit_ca(self):
         source = '''param($Library, $Authority, $Digest, $Origin, $Mode)
 . $Library -LibraryOnly

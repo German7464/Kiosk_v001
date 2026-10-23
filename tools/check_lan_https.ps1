@@ -19,6 +19,8 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -37,13 +39,34 @@ public sealed class KioskLanTls : IDisposable {
         var constraints = root.Extensions["2.5.29.19"] as X509BasicConstraintsExtension;
         if (constraints == null || !constraints.CertificateAuthority) throw new ArgumentException("Authority required");
         trustRoot = trusted;
-        var handler = new HttpClientHandler();
-        handler.UseProxy = false;
-        handler.AllowAutoRedirect = false;
+        var handler = CreateIPv4Handler();
         handler.CookieContainer = Cookies;
-        handler.ServerCertificateCustomValidationCallback = Validate;
+        handler.SslOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, errors) =>
+            Validate(null, certificate as X509Certificate2, chain, errors);
         Client = new HttpClient(handler);
         Client.Timeout = TimeSpan.FromSeconds(15);
+    }
+    public static IPAddress ParseIPv4(string host) {
+        IPAddress address;
+        if (!IPAddress.TryParse(host, out address) || address.AddressFamily != AddressFamily.InterNetwork)
+            throw new ArgumentException("Numeric IPv4 required");
+        return address;
+    }
+    public static async ValueTask<Stream> ConnectIPv4(string host, int port, CancellationToken cancellation) {
+        var address = ParseIPv4(host);
+        var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        try {
+            await socket.ConnectAsync(address, port, cancellation);
+            return new NetworkStream(socket, true);
+        } catch { socket.Dispose(); throw; }
+    }
+    public static SocketsHttpHandler CreateIPv4Handler() {
+        var handler = new SocketsHttpHandler();
+        handler.UseProxy = false;
+        handler.AllowAutoRedirect = false;
+        handler.ConnectCallback = (context, cancellation) =>
+            ConnectIPv4(context.DnsEndPoint.Host, context.DnsEndPoint.Port, cancellation);
+        return handler;
     }
     private bool Validate(HttpRequestMessage request, X509Certificate2 leaf, X509Chain unused, SslPolicyErrors errors) {
         LastErrors = errors;
@@ -62,8 +85,9 @@ public sealed class KioskLanTls : IDisposable {
     public int ProbeHost(Uri origin) {
         if (origin.Scheme != "https" || origin.UserInfo.Length != 0 || origin.AbsolutePath != "/" || origin.Query.Length != 0 || origin.Fragment.Length != 0)
             throw new ArgumentException("HTTPS origin required");
-        using (var tcp = new TcpClient()) {
-            var connecting = tcp.ConnectAsync(origin.DnsSafeHost, origin.Port);
+        var address = ParseIPv4(origin.DnsSafeHost);
+        using (var tcp = new TcpClient(AddressFamily.InterNetwork)) {
+            var connecting = tcp.ConnectAsync(address, origin.Port);
             if (!connecting.Wait(15000)) throw new TimeoutException("TCP connection timed out");
             connecting.GetAwaiter().GetResult();
             using (var tls = new SslStream(tcp.GetStream(), false, (sender, certificate, chain, errors) =>
@@ -161,10 +185,16 @@ function Send-LanForm {
 
 function Test-LanPortClosed {
     param([string]$Address, [int]$Port)
-    $tcp = [Net.Sockets.TcpClient]::new()
+    $ipv4 = [KioskLanTls]::ParseIPv4($Address)
+    $tcp = [Net.Sockets.TcpClient]::new([Net.Sockets.AddressFamily]::InterNetwork)
     try {
-        $task = $tcp.ConnectAsync($Address, $Port)
-        try { $connected = $task.Wait(3000) -and $tcp.Connected } catch { $connected = $false }
+        $task = $tcp.ConnectAsync($ipv4, $Port)
+        try { $connected = $task.Wait(3000) -and $tcp.Connected } catch {
+            $leaf = $_.Exception
+            while ($null -ne $leaf.InnerException) { $leaf = $leaf.InnerException }
+            if ($leaf -isnot [Net.Sockets.SocketException] -or $leaf.SocketErrorCode -notin @([Net.Sockets.SocketError]::ConnectionRefused, [Net.Sockets.SocketError]::TimedOut)) { throw }
+            $connected = $false
+        }
         if ($connected) { throw 'Internal port accessible over LAN' }
     } finally { $tcp.Dispose() }
 }
@@ -356,9 +386,7 @@ try {
     foreach ($port in @($manifest.backend_port, $manifest.admin_port)) { Test-LanPortClosed $originUri.Host $port }
     $report.checks += 'internal_ports_closed'
     $script:LanStage = 'plaintext_probe'
-    $plainHandler = [Net.Http.HttpClientHandler]::new()
-    $plainHandler.UseProxy = $false
-    $plainHandler.AllowAutoRedirect = $false
+    $plainHandler = [KioskLanTls]::CreateIPv4Handler()
     $plain = [Net.Http.HttpClient]::new($plainHandler)
     $plain.Timeout = [TimeSpan]::FromSeconds(5)
     $plaintext = $plain.GetAsync("http://$($originUri.Authority)/admin/login").GetAwaiter().GetResult()

@@ -1,12 +1,16 @@
 # Chat handoff — 2026-10-23
 
-## Latest increment: fullscreen CSRF recovery
+## Latest increment: explicit IPv4 LAN-helper connections
+
+The helper now uses explicit IPv4 sockets consistently, retaining strict TLS checks, cookies and deadlines. Default/dual-stack loopback connections reproduced AddressNotAvailable/10049 while explicit IPv4 succeeded against the same listener. This identifies a connection-path difference, not the underlying Windows/VPN cause. The two previously failing TLS methods passed after the correction. Final full suite: 122 tests passed in 98.097 seconds, no skips; compilation, both JavaScript checks, PowerShell parsing and independent Flask checks passed. See the latest TZ_PROGRESS.md entry for the new HTTP/port/cancellation regressions and precise scope. No VPN, routes, IPv6 bindings, trust stores or working data changed. No physical/browser rerun was performed; the retained old Chrome profile was not touched. Next candidate remains production certificate operations, requiring a separately selected scope; stage 2 is incomplete.
+
+## Previous increment: fullscreen CSRF recovery
 
 Implemented stale fullscreen form recovery; see the final dated entry in TZ_PROGRESS.md. Cookie replacement and login/logout rotation reproduce stale tokens deterministically; the exact cause of the historical physical run is still unproven. Fullscreen rejection now includes code=csrf_expired. GET /admin/fullscreen/csrf returns a no-store token without authentication or CORS permission. The kiosk clears the password, refreshes once and requests fresh entry without page reload, fullscreen exit or credential replay. Duplicate submissions are blocked.
 
 Actual local Chrome through Windows-MCP verified kiosk -> second-tab admin login -> stale fullscreen form -> refreshed-form message with empty password and fullscreen retained -> second entry exits fullscreen. Temporary server on port 5003 stopped and owned browser window closed; no working data/credentials/VPN changed. The temporary Chrome profile at %TEMP%/kiosk-csrf-20261023 remains because automatic approval review rejected bounded recursive deletion with only "blocked by policy".
 
-The final full Python run executed 119 tests in 86.015 seconds, with four .NET loopback TLS socket 10049 failures across two methods and no skips; the other 117 methods passed. The separate 28-test security run, compilation and both JavaScript checks passed. Socket failures were reproduced separately before HTTP; do not report the earlier 117-test checkpoint as a new green result. See the ledger for final counts. Next investigate current loopback test connectivity without disconnecting VPN or weakening TLS; permanent certificate operations remain separate scope. The sections below describe the preceding completed physical run and its historical verification checkpoint.
+The preceding fullscreen increment's full Python run executed 119 tests in 86.015 seconds, with four .NET loopback TLS socket 10049 failures across two methods and no skips; the other 117 methods passed. The separate 28-test security run, compilation and both JavaScript checks passed. Socket failures were reproduced separately before HTTP; do not report the earlier 117-test checkpoint as a new green result. See the ledger for final counts. The subsequent explicit-IPv4 increment addresses this connection path; permanent certificate operations remain separate scope. The sections below describe the preceding completed physical run and its historical verification checkpoint.
 
 ## Scope and current state
 
