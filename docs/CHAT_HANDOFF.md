@@ -1,6 +1,10 @@
 # Chat handoff — 2026-10-24
 
-## Latest: stage 2 baseline stabilization completed
+## Latest: stage 3 selected; implementation in progress
+
+The owner approved the stage 3 plan and requested implementation. Selected boundaries: local installation only; background Windows service can start before sign-in, display starts after the user's sign-in; no automatic Windows sign-in or group operations. Stage 2 is retained by annotated tag `v2-stage2-baseline` at `9bbbc4e`. Current source implementation and acceptance evidence follow in TZ_PROGRESS.md. The owner asked to continue locally and will prepare the second PC later; do not reboot the current working PC. Do not mark stage 3 complete until package and physical checks pass. Preserve VPN and all working data/certificates.
+
+## Previous accepted checkpoint: stage 2 baseline stabilization completed
 
 The owner confirmed following TZ section 22 without expanding stage 2 into final-product acceptance. Stage 2 is complete within the baseline-security/resilience/measurement scope recorded in the new TZ_PROGRESS.md allocation and exit checkpoint. Stage 3 is available for owner selection: Launcher, installed storage paths, setup wizard and unattended startup. Do not implement it automatically. Persistent offline/Android TV belong to stage 4; full load, 72-hour endurance and installation matrix remain stage 10 obligations.
 

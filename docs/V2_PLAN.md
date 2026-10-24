@@ -10,7 +10,13 @@ The initial baseline passed compilation, eight isolated smoke tests, route check
 
 ## Priorities
 
-Stage 2 baseline stabilization is complete at the 2026-10-24 exit checkpoint in TZ_PROGRESS.md. The current source passed 166 Python tests, both JavaScript checks, compilation and independent Flask checks; the corrected 30-minute physical follow-up also verified the missing browser observations. The next selectable implementation stage is 3: Launcher, installed storage paths, setup wizard and unattended startup. It has not started. The detailed priorities below retain the technical history and later product obligations.
+Stage 2 baseline stabilization is complete at the 2026-10-24 exit checkpoint in TZ_PROGRESS.md and preserved by annotated tag `v2-stage2-baseline` at `9bbbc4e`. The owner selected stage 3 and approved its implementation: Windows Launcher, separate installed storage, local setup, service startup before sign-in and display startup after sign-in. Group operations remain stage 5 work. Stage 3 is in progress; source, package and physical acceptance must be recorded separately. The detailed priorities below retain the technical history and later product obligations.
+
+### Selected stage 3 implementation
+
+Use a native Tk/ttk desktop controller with a separate Windows SCM service under its own virtual identity. Derive binary and machine-data paths from ProgramFiles and ProgramData; keep per-user browser settings in LocalAppData. Preserve source/MVP startup and require explicit, verified import into a new installation. Keep CA signing on the administrative PC and integrate the existing request/sign workflow with installed server-local keys. No automatic Windows sign-in, network changes or group enrollment.
+
+Deliver a checked offline PyInstaller package, bounded logs and allowlisted diagnostics. Verify service permissions, duplicate ownership, shutdown and recovery; then verify installation, real boot-before-sign-in, display-after-sign-in, reinstall and uninstall on the second PC. The owner deferred second-PC preparation during this implementation, so physical checks remain pending. Persistent offline display/Android TV are stage 4; signed executable updates/product recovery remain stage 7. Do not mark stage 3 complete from a source-only checkpoint.
 
 ### Stage boundaries confirmed by the owner
 

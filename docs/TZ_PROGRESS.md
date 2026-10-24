@@ -2,7 +2,7 @@
 
 Source: [TZ.md](TZ.md). Updated: 2026-10-24. This ledger records evidence, not promises.
 
-Conversation continuation: [CHAT_HANDOFF.md](CHAT_HANDOFF.md) records the completed stage 2 baseline exit, bounded two-PC HTTPS verification, cleanup and the next selectable stage 3. Earlier dated entries retain their historical Pending statuses.
+Conversation continuation: [CHAT_HANDOFF.md](CHAT_HANDOFF.md) records stage 3 selection and ongoing implementation after the completed stage 2 baseline exit. Earlier dated entries retain their historical Pending statuses.
 
 ## Status rules
 
@@ -38,12 +38,18 @@ After every stage update requirement references, evidence, limitations, remainin
 | 19 | Diagnostics | Not started | No specified normal/safe/recovery modes. |
 | 20 | Performance | Partial | Fixed local synthetic HTTP baseline in MVP_BASELINE.md; no UI/LAN/hardware/100-device acceptance. |
 | 21 | Testing | Partial | Isolated Python/JS/TLS checks and the selected physical two-PC Windows/Chrome HTTPS run passed; see dated scopes/counts below. Other hardware, disconnected, load, endurance and failure-matrix checks pending. |
-| 22 | Development stages | Partial | Stage 2 baseline stabilization completed under the owner-confirmed allocation below; stage 3 remains unstarted. |
+| 22 | Development stages | Partial | Stage 2 baseline stabilization completed under the owner-confirmed allocation below; stage 3 selected and in progress, acceptance pending. |
 | 23 | Acceptance | Partial | Local checks only; system acceptance not achieved. |
 | 24 | Open decisions | Partial | See confirmed decisions below; hardware and limits remain unresolved. |
 | 25 | Excluded features | Implemented | No optional content modules added by this work. |
 | 26 | Development rules | Partial | Stage ledger and workflow established; maintain after every stage. |
 | 27 | Final product | Not started | Version 2 is not a completed release. |
+
+## Stage 3 selection — 2026-10-24
+
+References: TZ 4.2, 5.1–5.4, installed provisioning portion of 18.11, applicable parts of 16/19/21 and stage 22.3. Status: **In progress; not accepted**. Owner approved implementation of the presented stage 3 plan and selected service startup before Windows sign-in plus display startup after sign-in (D12 for this Windows increment), with local setup only until stage 5. Preserve accepted stage 2 at annotated tag `v2-stage2-baseline` (`9bbbc4e`); MVP tag remains unchanged.
+
+Use Windows-native Tk/ttk and SCM, separate machine/user storage, explicit stopped-source migration, per-installation identity, controlled credentials/provisioning and offline packaging. No automatic OS sign-in, group operations, persistent offline display, signed updater or product backup is authorized by this stage. Physical second-PC installation/boot checks are deferred at the owner's request; continue independent local work. Package verification and physical acceptance remain mandatory before completion.
 
 ## Completed increments
 

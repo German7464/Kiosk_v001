@@ -2,6 +2,8 @@
 
 ## 2026-10-24
 
+- Selected stage 3 under the owner's approved plan: local Windows Launcher/storage/setup, background service before sign-in and display after sign-in. Preserved stage 2 at annotated tag v2-stage2-baseline (9bbbc4e). Group operations and later-stage features remain deferred; the owner postponed physical second-PC preparation. Stage 3 implementation and acceptance remain in progress.
+
 - Completed stage 2 baseline stabilization following the owner's confirmed TZ section 22 boundaries. Recorded requirement/stage ownership and a baseline-security limitations review; Launcher/provisioning, persistent offline/Android TV, groups, updater/replication and final hardware/load/endurance remain assigned to later stages. Stage 3 is available for selection and has not started.
 - Closed missing physical browser observations with a corrected-source 30-minute two-PC Windows/Chrome run: 348 valid HTTP 200 samples, six expected outage timeouts, zero unexpected failures; both display modes updated within 60 seconds after all three changes and TV rotated during the outage. Retained 146 timed screenshots, matched the client report hash and completed owned runtime/browser/trust cleanup without VPN/network/working-data changes.
 - Bounded retries of atomic endurance-report replacement after reproducing a Windows reader sharing conflict. Persistent failure preserves the previous report and fails after at most one second of retry delay. Three new regressions include actual Windows file sharing; all 166 Python tests, both JS checks, compilation and independent Flask checks passed. Earlier aborted/PermissionError attempts remain recorded as incomplete; no production API/schema/dependency change.
