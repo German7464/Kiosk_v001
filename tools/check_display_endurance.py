@@ -28,7 +28,14 @@ STATE_PATH = "/_display-test/state"
 def write_json(path, data):
     temporary = path.with_suffix(".pending")
     temporary.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    os.replace(temporary, path)
+    for attempt in range(21):
+        try:
+            os.replace(temporary, path)
+            return
+        except PermissionError:
+            if attempt == 20:
+                raise
+            time.sleep(.05)
 
 
 def due_actions(elapsed, completed):

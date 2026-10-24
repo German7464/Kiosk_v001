@@ -10,9 +10,31 @@ The initial baseline passed compilation, eight isolated smoke tests, route check
 
 ## Priorities
 
-The selected 30-minute physical Windows follow-up completed independent API sampling with all four generations, an expected 62.6-second managed-server outage and owned cleanup. Browser acceptance is Partial: kiosk idle-home behavior and missed timing/rotation observations need a bounded repeat. This is not full endurance or stage 2 acceptance. See the latest TZ_PROGRESS.md and CHAT_HANDOFF.md entries.
+Stage 2 baseline stabilization is complete at the 2026-10-24 exit checkpoint in TZ_PROGRESS.md. The current source passed 166 Python tests, both JavaScript checks, compilation and independent Flask checks; the corrected 30-minute physical follow-up also verified the missing browser observations. The next selectable implementation stage is 3: Launcher, installed storage paths, setup wizard and unattended startup. It has not started. The detailed priorities below retain the technical history and later product obligations.
 
-The bounded TV recovery follow-up adds a 10-second deadline per API request including body reading, optional transport cancellation and late-result rejection. Existing polling/stagger and display data are preserved. This does not provide persistent offline display or complete stage 2; see TZ_PROGRESS.md for verification evidence.
+### Stage boundaries confirmed by the owner
+
+Follow TZ section 22 rather than treating every pending product requirement as a stage 2 blocker. Stage 2 stabilizes the existing MVP: installation secrets and credentials, sessions, server-side authorization/CSRF, bounded authentication/uploads, LAN protection, display recovery and repeatable baseline measurements. It does not implement all of section 18 in advance of the features that require those controls.
+
+Stage 2 exit requires bounded physical browser observations, a consolidated regression checkpoint for the current source, and an explicit review of remaining baseline-security limitations. These are recorded in the latest TZ_PROGRESS.md exit checkpoint. An unresolved baseline defect would remain a blocker; a future feature's missing control belongs to that feature's stage. This completion does not establish final-product acceptance.
+
+| Work | Owning stage / acceptance boundary |
+| --- | --- |
+| Existing source HTTPS/CSR validation and temporary Windows trust lifecycle | 2; verified bounded fixtures, not production deployment |
+| Launcher, installed storage paths, service identity/provisioning and unattended startup | 3; source transport tooling is an input, not the product launcher |
+| Persistent complete client snapshot, offline restart and physical Android TV | 4 |
+| Group membership and authorization, pairing and synchronization | 5 |
+| Module process isolation and independent-component fault tests | 6 |
+| Product backup/restore and signed updater verification | 7 |
+| Replica acknowledgments and fenced role handover | 8 |
+| Automatic authority selection and partition safety | 9 |
+| Full load, 72-hour endurance, hardware matrix and clean installation/package acceptance | 10; stage 3 still checks any package it introduces |
+
+Long-content readability and supported hardware remain explicit display acceptance items. Aggregate storage policy and shared-NAT authentication limits require documented decisions; neither is silently declared verified or implemented by this allocation. Each later stage must verify its own applicable security and compatibility controls.
+
+The earlier 30-minute physical Windows run had Partial browser acceptance. The final corrected-source follow-up completed API sampling and timed observations of both modes: all three updates appeared within 60 seconds and TV rotated cards during the managed outage. Its bounded acceptance supersedes the earlier missing observations; it is not full endurance, Android TV or persistent-offline acceptance. See the latest TZ_PROGRESS.md and CHAT_HANDOFF.md entries.
+
+The bounded TV recovery follow-up adds a 10-second deadline per API request including body reading, optional transport cancellation and late-result rejection. Existing polling/stagger and display data are preserved. Persistent offline display belongs to stage 4; see TZ_PROGRESS.md for verification evidence and the subsequent stage 2 exit.
 
 The owner approved uninterrupted local cached display with editing paused when safe write authority is unavailable, and a primary plus background standby on a second PC for the first network stage. Follow the two-PC validation plan in the requirements before introducing automatic multi-device election.
 
@@ -22,7 +44,7 @@ The owner approved uninterrupted local cached display with editing paused when s
 4. Local synthetic-data HTTP/image baseline measurements are recorded in MVP_BASELINE.md. Populated Chrome checks verified navigation, placeholders, automatic updates, and fullscreen, and exposed fixed TV-update and dialog-positioning defects. Portrait coverage is a 768x1024 emulated viewport, not physical hardware. Long content still requires scrolling; unattended TV readability and content-length/layout policy remain unresolved. Continue validation on physical target devices.
 5. Verify sustained kiosk and TV operation and the packaged EXE on a clean Windows computer.
 
-The selected physical HTTPS LAN increment completed on 2026-10-23: server 192.168.1.165:8443 and client 192.168.1.117. Eleven client groups, four actual Chrome observations and owned cleanup passed; matching reports are retained under ignored logs/https/wizard-20261023T174700697975Z. The event list and TV updated without manual refresh for that check. See [TZ Progress](TZ_PROGRESS.md#physical-two-pc-https-verification---2026-10-23) for exact evidence and limitations. Stage 2 remains incomplete; no next implementation stage is authorized automatically.
+The selected physical HTTPS LAN increment completed on 2026-10-23: server 192.168.1.165:8443 and client 192.168.1.117. Eleven client groups, four actual Chrome observations and owned cleanup passed; matching reports are retained under ignored logs/https/wizard-20261023T174700697975Z. The event list and TV updated without manual refresh for that check. See [TZ Progress](TZ_PROGRESS.md#physical-two-pc-https-verification---2026-10-23) for exact evidence and limitations. At that historical checkpoint stage 2 remained incomplete; the final exit checkpoint above supersedes that status. No next implementation stage is authorized automatically.
 
 `LAN_Server.cmd` and the generated ZIP's `LAN_Client.cmd` provided Russian test-only wizards, fixture restart/budget/report coordination and explicit temporary firewall/trust operations. Windows-MCP controlled the existing RustDesk session. Owner-configured Amnezia application exclusions and temporary test host-route adjustments enabled the successful run with VPN connected; task route changes were restored. Separate file-transfer/SMB access failed, so the small ZIP used bounded RustDesk clipboard blocks with exact SHA-256 verification before extraction. The first fullscreen-unlock form expired; normal reload and authenticated retry passed. A subsequent targeted increment reproduced cookie-replacement and login/logout token staleness and added bounded fullscreen recovery with fresh password entry. The exact historical cause remains unproven; a subsequent helper correction uses explicit IPv4 to address the observed .NET default/dual-stack socket 10049 path while retaining strict TLS checks. See TZ_PROGRESS.md for final results and remaining scope. The manual procedure remains available. These helpers are not the stage 3 product Launcher.
 

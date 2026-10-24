@@ -1,11 +1,69 @@
 import json
+import os
 from pathlib import Path
 import tempfile
+import threading
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 from tools import check_display_endurance as endurance
+
+
+class ReportReplacementTests(unittest.TestCase):
+    def test_transient_sharing_failure_replaces_complete_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "status.json"
+            path.write_text('{"generation": 0}')
+            replace = os.replace
+            attempts = []
+
+            def sharing_then_replace(source, destination):
+                attempts.append(destination)
+                if len(attempts) < 3:
+                    self.assertEqual(json.loads(path.read_text()), {"generation": 0})
+                    raise PermissionError("Sharing violation")
+                replace(source, destination)
+
+            with patch.object(endurance.os, "replace", side_effect=sharing_then_replace), patch.object(endurance.time, "sleep"):
+                endurance.write_json(path, {"generation": 1})
+            self.assertEqual(json.loads(path.read_text()), {"generation": 1})
+            self.assertFalse(path.with_suffix(".pending").exists())
+
+    def test_persistent_sharing_failure_is_bounded_and_preserves_previous_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "status.json"
+            path.write_text('{"generation": 0}')
+            with patch.object(endurance.os, "replace", side_effect=PermissionError("Denied")) as replace, patch.object(endurance.time, "sleep") as sleep:
+                with self.assertRaises(PermissionError):
+                    endurance.write_json(path, {"generation": 1})
+            self.assertEqual(replace.call_count, 21)
+            self.assertEqual(sleep.call_count, 20)
+            self.assertEqual(json.loads(path.read_text()), {"generation": 0})
+            self.assertEqual(json.loads(path.with_suffix(".pending").read_text()), {"generation": 1})
+
+    @unittest.skipUnless(os.name == "nt", "Windows file sharing required")
+    def test_actual_windows_reader_temporarily_blocks_report_replacement(self):
+        import ctypes
+        from ctypes import wintypes
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+        kernel.CreateFileW.restype = wintypes.HANDLE
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel.CloseHandle.restype = wintypes.BOOL
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "status.json"
+            path.write_text('{"generation": 0}')
+            handle = kernel.CreateFileW(str(path), 0x80000000, 1, None, 3, 0, None)
+            self.assertNotEqual(handle, wintypes.HANDLE(-1).value)
+            timer = threading.Timer(.15, kernel.CloseHandle, args=(handle,))
+            timer.start()
+            try:
+                endurance.write_json(path, {"generation": 1})
+            finally:
+                timer.join()
+            self.assertEqual(json.loads(path.read_text()), {"generation": 1})
 
 
 class FakeClock:

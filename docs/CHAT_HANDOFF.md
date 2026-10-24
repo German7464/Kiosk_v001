@@ -1,6 +1,18 @@
 # Chat handoff — 2026-10-24
 
-## Latest: 30-minute physical display sampling; browser acceptance Partial
+## Latest: stage 2 baseline stabilization completed
+
+The owner confirmed following TZ section 22 without expanding stage 2 into final-product acceptance. Stage 2 is complete within the baseline-security/resilience/measurement scope recorded in the new TZ_PROGRESS.md allocation and exit checkpoint. Stage 3 is available for owner selection: Launcher, installed storage paths, setup wizard and unattended startup. Do not implement it automatically. Persistent offline/Android TV belong to stage 4; full load, 72-hour endurance and installation matrix remain stage 10 obligations.
+
+Final corrected-source physical run: logs/https/endurance-20261024T212600, started 21:35:26 +03:00, server/client 1800.076/1800.118 seconds. Independent client: 348 valid HTTP 200, six expected outage timeouts, zero unexpected failures, generations 0–3. Its report SHA-256 715d28e6606e6c0e5c99b40caf98d21a5ae39bf5cf522f2e4a356096eef79821 matched the remote console. Actual Chrome guest windows on the second PC were placed side by side through Windows-MCP/RustDesk. 146 timed screenshots prove both modes updated within 60 seconds after all three changes (approximately 25/40/30 seconds upper bounds) without navigation/reload. Frames 049/051 show different TV cards inside outage 600.191–662.873 seconds. This closes the previous missing browser observations, not persistent offline, Android TV, long-content readability or final endurance.
+
+Two failed attempts remain historical evidence: endurance-20261024T200400 was aborted after a missed timing observation and accidental fullscreen operation; endurance-20261024T205000 stopped with PermissionError near 193 seconds. A Windows reader can block atomic report replacement; this was reproduced, and the helper now retries PermissionError for at most one second, preserving the prior report on persistent failure. Three new regressions include an actual Windows sharing handle. Exact failing call in the historical run was not logged; the reproduced sharing conflict is consistent with the concurrent status reader. Capture readers now permit shared deletion. Current source passed all 166 Python tests in 259.522 seconds, both JS checks, compileall, independent Flask 200/302/403/404 and documentation checks.
+
+No live fixture remains: both final managed runtimes closed gracefully with exit 0, backend stopped, temporary data removed; listener and owned server processes absent. Client sampler exited, guest windows and both task-owned consoles closed. Final test-root removal was explicitly confirmed in Windows; removal and independent inspect both returned zero. Transferred session manifest/archive removed; public client tools/authority/reports retained. Earlier attempts' exact roots were also removed. Original RustDesk input source 2 and toolbar pin state restored; RustDesk remains connected. VPN, routes, firewall, working data/credentials and retained CA/USB material unchanged. A stale clipboard report was harmlessly treated as an unknown command before the correct cleanup retry. Task Manager opened during fullscreen cleanup was closed; a system-process termination confirmation caused by list movement was cancelled, not accepted.
+
+Commit subject for this increment: `fix: stabilize endurance reports and close stage 2 baseline`. Evidence is local/ignored; do not publish capability archives or runtime recovery material. The earlier entries below describe historical states only.
+
+## Previous: 30-minute physical display sampling; browser acceptance Partial
 
 Added tools/check_display_endurance.py with server/client/summarize modes and tests/test_display_endurance.py. The tool reuses LanFixture/ManagedHttps and existing image/version logic, creates three synthetic cards, updates at minutes 5/12/25 and stops/restarts its own server at minutes 10/11. Public product APIs/schema are unchanged; only the fixture has a source/HTTPS/capability-restricted read-only elapsed-time endpoint. Current source separates that capability from report session identifiers and bounds client transport/body reading. See docs/LAN_TRANSPORT.md for operator commands and limits.
 
@@ -12,7 +24,7 @@ Ignored logs/https/endurance-20261024T182500 holds server.json, client.json, sum
 
 Next: repeat the bounded browser checklist with a reliable foreground/activity schedule and timed capture; do not repeat certificate signing or advance to stage 3. Production provisioning, Android TV, disconnected/long-term/load/EXE acceptance remain pending.
 
-Final checks: 53 Python tests passed in 38.039 seconds (new helper, LAN helper, managed HTTPS and MVP smoke), both JS checks, compileall, independent Flask 200/302/403/404, UTF-8/local links and diff whitespace passed. No full certificate-suite rerun is claimed. See the latest TZ_PROGRESS.md entry for exact scopes. This source/documentation increment is ready for its separate local commit; the physical browser checklist remains incomplete.
+Final checks: 53 Python tests passed in 38.039 seconds (new helper, LAN helper, managed HTTPS and MVP smoke), both JS checks, compileall, independent Flask 200/302/403/404, UTF-8/local links and diff whitespace passed. No full certificate-suite rerun is claimed. See the latest TZ_PROGRESS.md entry for exact scopes. This increment was committed as 6d901e9, `test: add bounded two-PC display endurance verification`; the physical browser checklist remains incomplete.
 
 ## Previous: bounded TV request deadlines
 
