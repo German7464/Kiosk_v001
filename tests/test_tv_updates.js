@@ -13,6 +13,7 @@ async function display(initialEvents, options = {}) {
     let timerId = 0;
     const timers = new Map();
     const requests = [];
+    const signals = [];
     let respond = options.respond;
     let pollCallback;
     const classes = () => ({ add() {}, remove() {}, toggle() {} });
@@ -33,12 +34,14 @@ async function display(initialEvents, options = {}) {
         Image: class {
             set src(value) { this.onload(); }
         },
-        fetch: async url => {
+        fetch: async (url, settings) => {
             requests.push(url);
-            const response = respond ? await respond(url) : undefined;
+            signals.push(settings && settings.signal);
+            const response = respond ? await respond(url, settings) : undefined;
             return response || { ok: true, json: async () => url === "/api/version" ? { content_version: version } : { events } };
         },
     });
+    if (options.abortController) context.AbortController = AbortController;
     async function settle() {
         for (let index = 0; index < 40; index += 1) await Promise.resolve();
     }
@@ -57,6 +60,7 @@ async function display(initialEvents, options = {}) {
         elements,
         timers,
         requests,
+        signals,
         advance,
         respond(callback) { respond = callback; },
         setVersion(value) { version = value; },
@@ -181,7 +185,110 @@ async function run() {
     await delayed.advance(220);
     await delayed.poll();
     assert.equal(delayed.elements["[data-tv-version]"].textContent, "Version 2");
-    console.log("TV updates, preserved slides, initial/unchanged-version recovery, invalid responses and duplicate-poll protection passed.");
+
+    for (const abortController of [false, true]) {
+        for (const bodyPending of [false, true]) {
+            let release;
+            const startup = await display([event(1, "Recovered timeout")], {
+                abortController,
+                respond: url => {
+                    if (url !== "/api/events") return undefined;
+                    const pending = new Promise(resolve => { release = resolve; });
+                    return bodyPending ? { ok: true, json: () => pending } : pending;
+                },
+            });
+            assert.equal(startup.elements["[data-tv-title]"].textContent, "");
+            const initialRequests = startup.requests.length;
+            await startup.tick();
+            assert.equal(startup.requests.length, initialRequests);
+            await startup.advance(10000);
+            assert.equal(startup.elements["[data-tv-version]"].textContent, "Version unavailable");
+            if (abortController) assert.equal(startup.signals[1].aborted, true);
+            startup.respond(null);
+            await startup.poll();
+            assert.equal(startup.elements["[data-tv-title]"].textContent, "Recovered timeout");
+            const lateEvents = { events: [event(9, "Late startup")] };
+            release(bodyPending ? lateEvents : { ok: true, json: async () => lateEvents });
+            await startup.tick();
+            assert.equal(startup.elements["[data-tv-title]"].textContent, "Recovered timeout");
+            assert.equal(startup.timers.size, 0);
+        }
+
+        const polling = await display([event(1, "Still rotating"), event(2, "Second slide")], { abortController });
+        assert.equal([...polling.timers.values()].filter(timer => timer.delay === 10000).length, 0);
+        if (abortController) assert.ok(polling.signals.every(signal => !signal.aborted));
+        let releasePoll;
+        polling.respond(() => new Promise(resolve => { releasePoll = resolve; }));
+        await polling.tick();
+        const pendingRequests = polling.requests.length;
+        await polling.tick();
+        assert.equal(polling.requests.length, pendingRequests);
+        await polling.advance(10000);
+        assert.equal(polling.elements["[data-tv-version]"].textContent, "Version unavailable");
+        await polling.nextSlide();
+        assert.equal(polling.elements["[data-tv-title]"].textContent, "Second slide");
+        polling.respond(null);
+        await polling.poll();
+        assert.equal(polling.elements["[data-tv-version]"].textContent, "Version 1");
+        const beforeLate = polling.requests.length;
+        releasePoll({ ok: true, json: async () => ({ content_version: 99 }) });
+        await polling.advance(0);
+        assert.equal(polling.requests.length, beforeLate);
+        assert.equal(polling.elements["[data-tv-version]"].textContent, "Version 1");
+
+        const refreshing = await display([event(1, "Keep card")], { abortController });
+        let releaseEvents;
+        refreshing.respond(url => url === "/api/events" ? {
+            ok: true, json: () => new Promise(resolve => { releaseEvents = resolve; }),
+        } : undefined);
+        await refreshing.update([event(1, "New card")]);
+        assert.equal(refreshing.elements["[data-tv-title]"].textContent, "Keep card");
+        await refreshing.advance(10000);
+        assert.equal(refreshing.elements["[data-tv-version]"].textContent, "Version unavailable");
+        refreshing.respond(null);
+        await refreshing.poll();
+        assert.equal(refreshing.elements["[data-tv-title]"].textContent, "New card");
+        releaseEvents({ events: [event(1, "Late card")] });
+        await refreshing.tick();
+        assert.equal(refreshing.elements["[data-tv-title]"].textContent, "New card");
+        assert.equal(refreshing.timers.size, 0);
+    }
+
+    const paired = await display([event(1, "Paired recovery")], {
+        respond: url => url === "/api/version" ? { ok: false } : new Promise(() => {}),
+    });
+    const pairedRequests = paired.requests.length;
+    await paired.tick();
+    assert.equal(paired.requests.length, pairedRequests);
+    await paired.advance(10000);
+    assert.equal(paired.elements["[data-tv-version]"].textContent, "Version unavailable");
+    paired.respond(null);
+    await paired.poll();
+    assert.equal(paired.elements["[data-tv-title]"].textContent, "Paired recovery");
+    assert.equal(paired.timers.size, 0);
+
+    const rejectedPair = await display([event(1, "Pair stayed busy")]);
+    let releasePairedVersion;
+    let pairedVersionRequests = 0;
+    rejectedPair.respond(url => {
+        if (url === "/api/events") return { ok: false };
+        pairedVersionRequests += 1;
+        return pairedVersionRequests === 1 ? undefined : new Promise(resolve => { releasePairedVersion = resolve; });
+    });
+    await rejectedPair.update([event(1, "After paired recovery")]);
+    const whilePaired = rejectedPair.requests.length;
+    await rejectedPair.tick();
+    assert.equal(rejectedPair.requests.length, whilePaired);
+    await rejectedPair.advance(10000);
+    assert.equal(rejectedPair.elements["[data-tv-title]"].textContent, "Pair stayed busy");
+    rejectedPair.respond(null);
+    await rejectedPair.poll();
+    assert.equal(rejectedPair.elements["[data-tv-title]"].textContent, "After paired recovery");
+    releasePairedVersion({ ok: true, json: async () => ({ content_version: 50 }) });
+    await rejectedPair.advance(0);
+    assert.equal(rejectedPair.elements["[data-tv-version]"].textContent, "Version 2");
+    assert.equal(rejectedPair.timers.size, 0);
+    console.log("TV updates, recovery, request/body deadlines, late responses, timer cleanup and duplicate-poll protection passed.");
 }
 
 run().catch(error => { console.error(error); process.exitCode = 1; });

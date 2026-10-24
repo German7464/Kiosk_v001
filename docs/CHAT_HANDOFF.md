@@ -1,6 +1,14 @@
 # Chat handoff — 2026-10-24
 
-## Latest: bounded TV recovery and certificate documentation
+## Latest: bounded TV request deadlines
+
+TV API requests now have a 10-second deadline covering fetch and JSON body reading. AbortController cancels transport when available; the Promise deadline also works without it. Late results cannot mutate displayed data. Parallel version/events loads settle both requests before releasing the busy guard. Existing 10-second polling, random 0–10-second refresh delay, cards and slideshow are preserved. Source changes are confined to TV and its existing JS regressions; no public API/schema changes or new dependencies.
+
+Both JS checks, compilation, eight MVP smoke tests and independent disposable Flask checks passed. Expanded timeout tests fail against the preceding TV source and pass with the change. See the latest TZ_PROGRESS.md entry for browser evidence, cleanup and remaining limits. Stage 2 remains incomplete; stage 3 is unstarted. Working data, credentials, certificates, VPN and network settings are unchanged.
+
+Actual Windows-MCP Chrome at http://127.0.0.1:5004/tv retained fixture 1 during 18-second API delays and recovered to fixture 2/Version 2 without reloading; one HTML request was recorded. The isolated fixture exited 0 with server_stopped=true and temporary_removed=true; its incognito window is closed and port 5004 has no listener. Ignored logs/tv-timeout-20261024 retains sanitized results and Flask status codes. No live fixture remains. Next work still requires a bounded stage 2 selection; browser suspension, image loading, persistent offline, target-device and endurance acceptance are not covered.
+
+## Previous: bounded TV recovery and certificate documentation
 
 The TV API-recovery increment is complete; stage 2 remains incomplete. Initial failed loads retry, successful same-version polling restores status, and later failures preserve cards. Both JS checks, compilation, eight MVP smoke tests and independent Flask checks passed. Actual Chrome through Windows-MCP at http://127.0.0.1:5004/tv recovered from API/server interruption and displayed a new version without reload; only one HTML request was recorded. The final disposable fixture exited 0 with temporary_removed=true, no listener remains on 5004, and the owned incognito window is closed. Its earlier helper lifecycle failure and corrected rerun are documented in TZ_PROGRESS.md; evidence is ignored logs/tv-recovery-20261024T161711/result.json. No fixture from this increment is live.
 

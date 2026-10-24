@@ -13,6 +13,7 @@ const minSlideDuration = 8000;
 const maxSlideDuration = 24000;
 const versionPollInterval = Number(tvScreen.dataset.versionPollInterval);
 const updateDelayMax = Number(tvScreen.dataset.updateDelayMax);
+const tvRequestTimeout = 10000;
 const labels = tvScreen.dataset;
 
 let tvEvents = [];
@@ -210,11 +211,28 @@ function applyTvData(versionData, eventsData, showCurrentEvent) {
 }
 
 async function requestTvJson(path) {
-    const response = await fetch(path);
-    if (!response.ok) {
-        throw new Error("TV request failed");
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
+    let timeout;
+    const deadline = new Promise((resolve, reject) => {
+        timeout = window.setTimeout(() => {
+            reject(new Error("TV request timed out"));
+            if (controller) {
+                controller.abort();
+            }
+        }, tvRequestTimeout);
+    });
+    try {
+        const request = (async () => {
+            const response = await fetch(path, controller ? { signal: controller.signal } : undefined);
+            if (!response.ok) {
+                throw new Error("TV request failed");
+            }
+            return response.json();
+        })();
+        return await Promise.race([request, deadline]);
+    } finally {
+        window.clearTimeout(timeout);
     }
-    return response.json();
 }
 
 async function loadTvVersion() {
@@ -238,7 +256,12 @@ async function loadTvEvents() {
 }
 
 async function loadTvData(showCurrentEvent) {
-    const [versionData, eventsData] = await Promise.all([loadTvVersion(), loadTvEvents()]);
+    const results = await Promise.allSettled([loadTvVersion(), loadTvEvents()]);
+    const failure = results.find(result => result.status === "rejected");
+    if (failure) {
+        throw failure.reason;
+    }
+    const [versionData, eventsData] = results.map(result => result.value);
 
     applyTvData(versionData, eventsData, showCurrentEvent);
 }

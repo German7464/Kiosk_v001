@@ -2,6 +2,8 @@
 
 ## 2026-10-24
 
+- Bounded TV API requests to 10 seconds including JSON-body reading, with optional transport cancellation and ignored late results. Parallel version/events loads retain their busy guard until both settle. Both JS checks, compilation, eight smoke tests and independent Flask checks passed; actual Windows-MCP Chrome retained cards during 18-second API delays and recovered to changed content without reloading. The isolated fixture/window were stopped and temporary data removed. Source API/database formats are unchanged; stage 2 remains incomplete. See TZ_PROGRESS.md for exact evidence and limits.
+
 - Fixed TV recovery after temporary API/network failures: retry initial load, restore same-version status, preserve existing cards and reject invalid responses before replacement. Added JS regressions; both JS checks, compilation, eight MVP smoke tests and independent Flask checks passed. Actual Chrome through Windows-MCP recovered without a page reload; the isolated server/window were stopped and final temporary data removed. Stage 2 remains incomplete; physical Android TV, persistent offline behavior and never-settling requests are not verified.
 - Added concise certificate/CA/CSR setup and renewal guidance to the root README with links to complete commands; removed advice to disconnect VPN. Confirmed the owner removed the previously blocked retired CSR server folder. Preserved historical evidence and intentionally retained test CA/USB material. See TZ_PROGRESS.md for exact scope, fixture lifecycle correction and remaining acceptance gates.
 
