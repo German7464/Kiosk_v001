@@ -104,7 +104,7 @@ python serve.py --host 0.0.0.0 --port 5000 --open-kiosk
 
 If a local server is already running on `http://127.0.0.1:<port>/api/version`, the launcher reuses it instead of starting a duplicate server.
 
-The HTTP commands below serve plaintext, including administrative credentials and sessions when used over LAN. Use loopback for local development. An opt-in [managed HTTPS profile](docs/LAN_TRANSPORT.md#managed-https-startup) now starts Caddy and loopback Waitress with prepared certificates; browser trust and physical LAN/Android TV acceptance remain pending.
+The HTTP commands below serve plaintext, including administrative credentials and sessions when used over LAN. Use loopback for local development. An opt-in [managed HTTPS profile](docs/LAN_TRANSPORT.md#managed-https-startup) starts Caddy and loopback Waitress with prepared certificates. Selected two-PC Windows/Chrome HTTPS, signing, renewal and USB CA recovery checks passed; production provisioning, other platforms and Android TV acceptance remain pending.
 
 ```powershell
 .\.venv\Scripts\python.exe serve.py --https-config instance/https.json --no-client
@@ -112,6 +112,20 @@ The HTTP commands below serve plaintext, including administrative credentials an
 ```
 
 The profile specifies the external origin, IPv4 listener, pinned Caddy executable, server certificate/key, and public CA file. Paths resolve relative to the profile. It cannot be combined with `--host`, `--port`, or credential commands. No certificate/root installation, service, firewall change, automatic download, or HTTP fallback occurs. HTTPS readiness precedes browser opening; this profile uses the browser rather than unverified legacy ClientKiosk.exe. See the linked configuration and certificate prerequisites before running.
+
+### Certificates in Plain English
+
+HTTPS encrypts traffic and lets screens verify that they reached your server. A server certificate identifies the server; your certificate authority (CA) signs it. A CSR is a public signing request that leaves the server's private key on the server.
+
+An administrator prepares certificates during setup and renews them before expiry; everyday users only open the configured HTTPS address.
+
+1. On a separate administrative PC, explicitly create the installation CA during the first signing operation. Its password must contain at least 16 characters and is separate from the application login password. Keep the encrypted CA key there and a protected recovery copy on a separate device; keep its password separately.
+2. On the server, use `request` to create a key and CSR for its actual address. Transfer only the CSR to the administrative PC.
+3. Use `sign` there, review the installation/address/request digest, and return only the signed server certificate and public CA certificate. Renewal uses the existing CA without initializing a new one.
+4. Independently compare the full CA fingerprint, then resume `request` on the server to verify the return. Prepare the HTTPS profile and pinned Caddy as documented below. For renewal, stop the old server normally and use the documented `--activate-profile` option.
+5. Enroll only the public CA certificate on supported clients after fingerprint verification, then open the HTTPS address. Same-CA renewal does not require enrolling that root again. Never transfer private keys or bypass a certificate warning.
+
+The two routine commands are `python -m tools.certificates request` and `python -m tools.certificates sign`; use `--help` for their required options. [Certificate workflow examples](docs/LAN_TRANSPORT.md#operator-flow) and [HTTPS profile configuration](docs/LAN_TRANSPORT.md#managed-https-startup) provide the complete commands. Daily server startup uses `python serve.py --https-config instance/https.json --no-client` after that profile is prepared. The CA/USB files retained from development are labelled test material, not a production installation.
 
 LAN startup for phones, tablets, kiosks, and Smart TV browsers:
 
@@ -147,7 +161,7 @@ When you start with `--host 0.0.0.0`, use the computer LAN IP address from anoth
 http://192.168.1.117:5000/tv
 ```
 
-If another device cannot connect, disable VPN, check that both devices are on the same Wi-Fi, and allow TCP port 5000 in Windows Firewall.
+If another device cannot connect, verify the server address/port, LAN reachability and the relevant Windows Firewall rule. Check VPN routing and application exclusions without disconnecting VPN during remote maintenance; the remote connection may depend on it. Firewall access must match the selected HTTP or HTTPS listener.
 
 To reset the local admin password from the command line:
 

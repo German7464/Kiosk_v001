@@ -1,6 +1,14 @@
 # Chat handoff — 2026-10-24
 
-## Latest: physical CSR, renewal and USB recovery verification
+## Latest: bounded TV recovery and certificate documentation
+
+The TV API-recovery increment is complete; stage 2 remains incomplete. Initial failed loads retry, successful same-version polling restores status, and later failures preserve cards. Both JS checks, compilation, eight MVP smoke tests and independent Flask checks passed. Actual Chrome through Windows-MCP at http://127.0.0.1:5004/tv recovered from API/server interruption and displayed a new version without reload; only one HTML request was recorded. The final disposable fixture exited 0 with temporary_removed=true, no listener remains on 5004, and the owned incognito window is closed. Its earlier helper lifecycle failure and corrected rerun are documented in TZ_PROGRESS.md; evidence is ignored logs/tv-recovery-20261024T161711/result.json. No fixture from this increment is live.
+
+The root README now contains short certificate/CA/CSR instructions and links to full request/sign/renewal commands. The owner removed C:/Users/admin/AppData/Local/Temp/Kiosk-CSR-20261024T101043; Test-Path returned false. This supersedes the blocked retired-server-artifact state below; historical reports are unchanged. Test signer CA/USB backup and unrelated earlier Chrome profile remain intentionally untouched. No working credentials/data, VPN, routes, firewall or trust changes occurred.
+
+Next: continue only a bounded stage 2 increment. Production identity/provisioning, target-device/disconnected/endurance/load acceptance remain pending. Requests that never settle and persistent offline storage were not implemented here. Stage 3 remains unstarted. The following entries are historical checkpoints, not live fixture instructions.
+
+## Previous: physical CSR, renewal and USB recovery verification
 
 The owner-approved isolated two-PC certificate workflow passed its functional checks on 2026-10-24. Stage 2 remains incomplete. Server 192.168.1.165 and signer/client DIALOG-MEDIA2 at 192.168.1.117 used HTTPS port 8443. Windows-MCP operated the existing RustDesk session. Python 3.14.5, PowerShell 7.6.8 and .NET 10.0.13 were present on the signer. VPN stayed connected; no route, Amnezia or firewall change was made in this run. Working data, credentials and deployment certificates were untouched. No IAB, computer-use API, SSH installation or stage 3 work occurred.
 

@@ -19,6 +19,7 @@ let tvEvents = [];
 let tvEventIndex = 0;
 let currentContentVersion = null;
 let updatePending = false;
+let versionPollActive = false;
 let transitionActive = false;
 let slideTimer = null;
 
@@ -208,14 +209,36 @@ function applyTvData(versionData, eventsData, showCurrentEvent) {
     }
 }
 
-async function loadTvData(showCurrentEvent) {
-    const [versionResponse, eventsResponse] = await Promise.all([
-        fetch("/api/version"),
-        fetch("/api/events"),
-    ]);
+async function requestTvJson(path) {
+    const response = await fetch(path);
+    if (!response.ok) {
+        throw new Error("TV request failed");
+    }
+    return response.json();
+}
 
-    const versionData = await versionResponse.json();
-    const eventsData = await eventsResponse.json();
+async function loadTvVersion() {
+    const data = await requestTvJson("/api/version");
+    if (!data || !Number.isInteger(data.content_version) || data.content_version < 0) {
+        throw new Error("Invalid TV version");
+    }
+    return data;
+}
+
+async function loadTvEvents() {
+    const data = await requestTvJson("/api/events");
+    const textFields = ["event_date", "place", "short_description", "image_tv", "image_kiosk"];
+    if (!data || !Array.isArray(data.events) || !data.events.every((event) => (
+        event && Number.isInteger(event.id) && event.id > 0 && typeof event.title === "string"
+        && textFields.every((name) => event[name] == null || typeof event[name] === "string")
+    ))) {
+        throw new Error("Invalid TV events");
+    }
+    return data;
+}
+
+async function loadTvData(showCurrentEvent) {
+    const [versionData, eventsData] = await Promise.all([loadTvVersion(), loadTvEvents()]);
 
     applyTvData(versionData, eventsData, showCurrentEvent);
 }
@@ -236,21 +259,31 @@ function refreshTvWhenSafe() {
 }
 
 async function pollTvVersion() {
-    if (updatePending) {
+    if (updatePending || versionPollActive) {
         return;
     }
 
-    const versionResponse = await fetch("/api/version");
-    const versionData = await versionResponse.json();
-
-    if (currentContentVersion !== null && versionData.content_version !== currentContentVersion) {
-        updatePending = true;
-        window.setTimeout(refreshTvWhenSafe, randomUpdateDelay());
+    versionPollActive = true;
+    try {
+        const versionData = await loadTvVersion();
+        if (currentContentVersion === null || versionData.content_version !== currentContentVersion) {
+            updatePending = true;
+            window.setTimeout(refreshTvWhenSafe, randomUpdateDelay());
+        } else {
+            tvVersion.textContent = `${labels.versionLabel} ${currentContentVersion}`;
+        }
+    } finally {
+        versionPollActive = false;
     }
 }
 
 async function loadTvDisplay() {
-    await loadTvData(true);
+    updatePending = true;
+    try {
+        await loadTvData(true);
+    } finally {
+        updatePending = false;
+    }
 }
 
 setupTvFullscreenButton();

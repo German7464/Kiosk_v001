@@ -10,6 +10,8 @@ Provides read-only public JSON endpoints for MVP display clients.
 - `kiosk/features/api/__init__.py`
 - `kiosk/app.py`
 - `kiosk/database.py`
+- `kiosk/static/js/tv.js`
+- `tests/test_tv_updates.js`
 
 ## Related Database Tables
 
@@ -40,6 +42,8 @@ Kiosk mode uses `/api/version` every 5 seconds to detect content changes. The ki
 ## How the Feature Is Shown in TV Mode
 
 TV mode uses `/api/version` every 10 seconds to detect content changes. When a new version is found, the client waits a random 0 to 10 second delay, waits until the slide transition is safe, then refreshes active events through `/api/events` without a full page reload.
+
+After a completed network/API failure, later successful polling restores the version label even when content has not changed. A failed initial data load is retried through the same staggered refresh path. Existing cards/slideshow continue during a later failure; unsuccessful HTTP responses, invalid JSON/version/event shapes are rejected before applying new data. Active initial loads, version polls and queued refreshes suppress duplicate requests. Recovery does not reload the page, change content version, manage certificates or provide persistent offline storage. Requests that never settle and physical Android TV behavior remain outside this bounded verification.
 
 ## How the Feature Is Shown in Preview Mode
 
