@@ -24,7 +24,7 @@ The MVP remains the compatibility baseline. Version 2 follows [the specification
 
 ## Development Status
 
-Stage 3 Windows Launcher/storage/service/setup implementation is in progress. Its source UI can be inspected with `python launcher.py`; source/uninstalled configuration saving is deliberately rejected. The existing MVP commands below remain available. See [Launcher documentation](kiosk/launcher/README.md) for the selected scope, migration, installed certificate workflow and pending package/physical acceptance. No accepted new EXE installer is available at this checkpoint.
+Stage 3 Windows Launcher/storage/service/setup implementation is in progress. A development bundle is built in `dist/KioskLauncher`, with transfer archive `dist/KioskLauncher-stage3-5b07164.zip`. Same-machine EXE, manifest, CSR and UI checks passed; actual service/boot/sign-in and second-PC acceptance remain pending. Extract the whole archive before opening `KioskLauncher.exe`; do not transfer only the executable. Its source UI can be inspected with `python launcher.py`; source/uninstalled configuration saving is deliberately rejected. Existing MVP commands remain available. See [Launcher documentation](kiosk/launcher/README.md) for setup and remaining gates. This is not an accepted installed release.
 
 The MVP baseline is preserved by the annotated Git tag `v1.0.0-mvp`. Version 2 development continues on branch `v2`; version 2 is not a completed release. See [Version 2 Plan](docs/V2_PLAN.md) for priorities, validation limits, and rollback instructions.
 

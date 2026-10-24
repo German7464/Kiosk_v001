@@ -95,6 +95,14 @@ For invalid device configuration, stop the service and run elevated `KioskMainte
 
 ## Offline Build
 
+### Development Bundle Checkpoint — 2026-10-24
+
+After owner-authorized restoration/exclusion of the exact verified bootloader, PyInstaller built four executables without dependency-version changes. `dist/KioskLauncher`: 1724 manifest-listed files plus manifest, 376098578 total bytes. Transfer ZIP: `dist/KioskLauncher-stage3-5b07164.zip` (172029060 bytes), SHA-256 `b8cb42510aef6e46a80302c6880e1ac25da0a7dd2b21dd0a9f4f9017c54525b3`. Extract the entire archive; retain `_internal`, `runtime`, licenses and `package.json`. Do not run just an EXE or launch inside the ZIP.
+
+Actual packaged server checks passed on this PC from a foreign working directory, with isolated seeded storage and child PATH excluding source Python/PowerShell: public pages/assets/APIs 200, missing CSRF 403, authenticated admin 200, session/version retained after forced termination/restart and listener/temp cleanup. This is abrupt fixture shutdown, not graceful SCM shutdown. Packaged CSR request/return used the bundled PowerShell; counter-signing used a disposable source fixture, so packaged interactive signing remains pending. Windows-MCP inspected actual EXE main/setup windows and closed normally without submitting setup or installing service/autorun. Manifest verification passed before/after execution.
+
+Evidence: ignored `logs/launcher-build-after-exclusion.txt`, `logs/launcher-package-check.json`, `logs/launcher-packaged-ui.json`, `logs/launcher-package-flask.json` and `logs/launcher-package-archive.txt`. No installed service/machine data was created. This is not clean-machine or real service-token acceptance. The next gate is the owner's deferred second-PC installation, SCM identity/permissions/shutdown, boot/sign-in/display, HTTPS provisioning and reinstall/uninstall checks. Stage 3 remains incomplete.
+
 ```powershell
 .\.venv\Scripts\python.exe -m tools.build_launcher --pwsh-directory <trusted-portable-powershell-directory> --caddy-directory logs/https-tools/caddy
 ```
