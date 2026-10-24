@@ -14,8 +14,8 @@ from unittest.mock import patch
 from kiosk.transport.profile import load_profile
 from kiosk.transport.profile_operations import ProfileLease, ProfileTransaction, atomic_profile_write, bounded_bytes, journal_path, recover_profile
 from kiosk.transport.runtime import ManagedHttps, probe_https, run_https
-from tools.certificate_activation import CertificateActivation, verify_generation
-from tools.certificates import crypto, inspect_request, pem_bytes, private_directory
+from tools.certificate_activation import CertificateActivation, served_certificate, verify_generation
+from tools.certificates import CertificateError, crypto, inspect_request, pem_bytes, private_directory
 from tools.check_managed_https import fixture_factory
 from tools.check_https_prototype import Client
 
@@ -166,6 +166,31 @@ class CertificateActivationTests(unittest.TestCase):
             finally:
                 session.close()
         self.assertFalse(journal_path(self.filename).exists())
+
+    def test_readiness_and_leaf_validation_survive_denied_default_source_connections(self):
+        profile = load_profile(self.filename)
+        original_connect = socket.create_connection
+        denied = []
+
+        def require_local_source(address, *args, **kwargs):
+            if address == (profile.listen_host, profile.port) and kwargs.get("source_address") != (profile.listen_host, 0):
+                denied.append(address)
+                raise PermissionError("Default connection path denied")
+            return original_connect(address, *args, **kwargs)
+
+        fingerprint = hashlib.sha256(pem_bytes(profile.certificate_file.read_text())).hexdigest()
+        with patch("socket.create_connection", side_effect=require_local_source):
+            with self.assertRaises(PermissionError):
+                socket.create_connection((profile.listen_host, profile.port), timeout=1)
+            runtime = self.runtime(profile)
+            try:
+                runtime.start()
+                served_certificate(profile, fingerprint)
+                with self.assertRaisesRegex(CertificateError, "served certificate differs"):
+                    served_certificate(profile, "0" * 64)
+            finally:
+                runtime.close()
+        self.assertEqual(len(denied), 1)
 
     def test_failed_readiness_stops_candidate_and_restarts_original(self):
         with ProfileLease(self.filename):

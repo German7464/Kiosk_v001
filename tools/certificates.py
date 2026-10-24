@@ -103,11 +103,12 @@ def password(confirm=False):
         raise CertificateError("Signing requires an interactive terminal with hidden password input.")
     with warnings.catch_warnings():
         warnings.simplefilter("error", getpass.GetPassWarning)
-        value = getpass.getpass("CA password: ")
-        if confirm and value != getpass.getpass("Confirm CA password: "):
+        options = {"echo_char": "*"} if sys.version_info >= (3, 14) else {}
+        value = getpass.getpass("CA password (16-1024 characters): ", **options)
+        if not 16 <= len(value) <= 1024:
+            raise CertificateError("CA password must contain 16 to 1024 characters.")
+        if confirm and value != getpass.getpass("Repeat CA password: ", **options):
             raise CertificateError("Passwords differ.")
-    if not 16 <= len(value) <= 1024:
-        raise CertificateError("CA password must contain 16 to 1024 characters.")
     return value
 
 

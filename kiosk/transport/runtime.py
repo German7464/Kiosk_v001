@@ -50,11 +50,14 @@ def admin_request(port, path, method="GET", timeout=1):
         connection.close()
 
 
+def connect_local_proxy(profile, timeout):
+    target = "127.0.0.1" if profile.listen_host == "0.0.0.0" else profile.listen_host
+    return socket.create_connection((target, profile.port), timeout=timeout, source_address=(target, 0))
+
+
 def probe_https(profile, context, identity, timeout=1):
     connection = http.client.HTTPSConnection(profile.hostname, profile.port, context=context, timeout=timeout)
-    connection._create_connection = lambda address, timeout, source_address=None: socket.create_connection(
-        ("127.0.0.1" if profile.listen_host == "0.0.0.0" else profile.listen_host, profile.port), timeout
-    )
+    connection._create_connection = lambda address, timeout, source_address=None: connect_local_proxy(profile, timeout)
     try:
         connection.request("GET", "/api/version", headers={"Host": profile.authority})
         with connection.getresponse() as response:

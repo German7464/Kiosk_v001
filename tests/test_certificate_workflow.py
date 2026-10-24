@@ -225,6 +225,33 @@ try {
 
 
 class CertificateInputTests(unittest.TestCase):
+    def test_invalid_password_length_is_rejected_before_confirmation(self):
+        for value in ("x" * 12, "x" * 1025):
+            with self.subTest(length=len(value)), patch("tools.certificates.sys.stdin.isatty", return_value=True), patch("tools.certificates.getpass.getpass", return_value=value) as read:
+                with self.assertRaisesRegex(certificates.CertificateError, "16 to 1024"):
+                    certificates.password(confirm=True)
+                read.assert_called_once()
+
+    def test_password_confirmation_uses_masked_input_without_secret_in_prompt(self):
+        value = "disposable-test-password"
+        with patch("tools.certificates.sys.stdin.isatty", return_value=True), patch("tools.certificates.sys.version_info", (3, 14)), patch("tools.certificates.getpass.getpass", return_value=value) as read:
+            self.assertEqual(certificates.password(confirm=True), value)
+            self.assertEqual(read.call_count, 2)
+            for call in read.call_args_list:
+                self.assertEqual(call.kwargs, {"echo_char": "*"})
+                self.assertNotIn(value, call.args[0])
+            self.assertIn("16-1024", read.call_args_list[0].args[0])
+
+    def test_mismatched_password_confirmation_is_rejected(self):
+        with patch("tools.certificates.sys.stdin.isatty", return_value=True), patch("tools.certificates.getpass.getpass", side_effect=["disposable-test-password", "different-test-password"]):
+            with self.assertRaisesRegex(certificates.CertificateError, "Passwords differ"):
+                certificates.password(confirm=True)
+
+    def test_older_python_retains_hidden_input_without_echo_char_argument(self):
+        with patch("tools.certificates.sys.stdin.isatty", return_value=True), patch("tools.certificates.sys.version_info", (3, 13)), patch("tools.certificates.getpass.getpass", return_value="disposable-test-password") as read:
+            certificates.password()
+            self.assertEqual(read.call_args.kwargs, {})
+
     def test_activation_is_only_available_after_returned_certificate_validation(self):
         with tempfile.TemporaryDirectory() as directory, redirect_stderr(io.StringIO()), patch("tools.certificates.create_request") as create:
             result = certificates.main(["request", "--installation", INSTALLATION, "--state", directory, "--export", directory + "-export", "--name", "localhost", "--activate-profile", "https.json"])

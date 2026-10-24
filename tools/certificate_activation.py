@@ -8,7 +8,7 @@ import time
 
 from kiosk.transport.profile import load_profile, unique_object
 from kiosk.transport.profile_operations import ProfileLease, ProfileTransaction, bounded_bytes, recover_profile
-from kiosk.transport.runtime import ManagedHttps
+from kiosk.transport.runtime import ManagedHttps, connect_local_proxy
 from tools.certificates import CertificateError, checked_path, crypto, inspect_request, read_text
 
 
@@ -29,8 +29,7 @@ def require_stopped(profile):
 
 
 def served_certificate(profile, fingerprint):
-    target = "127.0.0.1" if profile.listen_host == "0.0.0.0" else profile.listen_host
-    with socket.create_connection((target, profile.port), timeout=3) as connection:
+    with connect_local_proxy(profile, timeout=3) as connection:
         with profile.trust_context().wrap_socket(connection, server_hostname=profile.hostname) as secured:
             if hashlib.sha256(secured.getpeercert(binary_form=True)).hexdigest() != fingerprint:
                 raise CertificateError("The served certificate differs from the verified generation.")

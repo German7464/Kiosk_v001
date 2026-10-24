@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-24
+
+- Improved certificate signing prompts after physical operator checks: show the 16–1024-character limit, reject invalid length before confirmation, and mask input on Python 3.14+ while retaining hidden input on earlier Python. Rejected short or mismatched bootstrap passwords created no authority. No password characters are printed; masking reveals entered length.
+- Bound managed local readiness and served-certificate sockets to the selected local interface, retaining public-hostname TLS, instance and fingerprint checks. Reproduced default-source Windows 10013 and explicit-source success against the same Ethernet listener; the isolated two-PC HTTPS fixture then started without VPN, route or firewall changes. Added a real TLS regression with a denied default-source connection and incorrect-fingerprint rejection.
+- Verified the initial physical server CSR -> separate-PC signing -> public certificate return, encrypted CA backup to a distinct NTFS USB device and byte-identical local restoration. Actual Chrome rejected the unknown CA, then loaded kiosk/TV after temporary enrollment. Same-CA renewal, signing with restored CA, final trust removal and fixture cleanup remain pending at this checkpoint; stage 2 is incomplete. See CHAT_HANDOFF.md for the live fixture and next password prompt.
+- All 151 Python tests passed in 245.054 seconds, no skips; compilation, both JS checks and independent disposable Flask checks passed. The preceding 150-test checkpoint passed before the local-source socket correction. No working application data, credentials or certificates were replaced. Changes are source fixes and bounded test evidence, not production deployment acceptance.
+
 ## 2026-10-23
 
 - Added opt-in same-CA certificate activation through the existing request workflow: shared source-profile lock, served-certificate readiness, DACL-preserving atomic profile commit, exact rollback and interrupted-transaction recovery. Failed candidate cleanup/rollback fails closed; running/unrelated listeners are untouched. Added real HTTPS, authenticated-session/version continuity, process-crash, lock, permission and failure regressions. Working profiles/trust/network settings are unchanged; physical signing/enrollment/recovery acceptance and stage 2 completion remain pending. All 146 Python tests passed in 233.800 seconds, no skips; compilation, both JS checks, independent Flask checks and documentation/whitespace checks passed. See TZ_PROGRESS.md for precise scope.
