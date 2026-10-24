@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provide opt-in Windows source startup with a supervised Caddy TLS proxy, loopback-only Waitress, explicit certificate trust, and bounded cleanup. Existing HTTP startup remains separate. Local integration, a bounded Windows Chrome trust lifecycle and the selected physical two-PC Windows/Chrome HTTPS run are verified. Android, other platform/browser trust, physical production certificate custody/enrollment/recovery acceptance and a packaged service remain pending; stage 2 is incomplete.
+Provide opt-in Windows source startup with a supervised Caddy TLS proxy, loopback-only Waitress, explicit certificate trust, and bounded cleanup. Existing HTTP startup remains separate. Stage 2 baseline acceptance is complete within the ledger's bounded scope. Stage 3 [Launcher](../launcher/README.md) adds an explicit managed temporary-directory option and installed-data provisioning integration; packaged service, real service-account, Android and broader deployment acceptance remain pending. Historical dated limitations below do not supersede the latest TZ_PROGRESS.md checkpoint.
 
 ## Related Files
 

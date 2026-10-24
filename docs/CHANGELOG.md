@@ -2,6 +2,10 @@
 
 ## 2026-10-24
 
+- Added the stage 3 Windows Launcher/storage/setup/service source foundation, explicit MVP import, separate installed secrets, local maintenance, bounded runtime recovery, allowlisted diagnostics, installed-data HTTPS provisioning and separate offline package tooling. Existing MVP startup, public API shapes and dependency versions remain unchanged. Updated Launcher/root/transport documentation and the stage ledger.
+- All 188 Python tests passed with no skips, including 22 new stage 3 tests, real loopback/TLS, exact Windows ACL and reader-sharing checks. Both JS checks, compilation, pip check and independent Flask 200/302/403/session-restart checks passed. Main source UI and wizard were inspected through Windows-MCP using isolated paths. No real service/autorun/working-data/network change was performed.
+- Stage 3 remains incomplete: 360 Total Security quarantines the pinned PyInstaller windowed bootloader. Its wheel matches official PyPI SHA-256; exact-file restoration/exclusion awaits the owner's explicit decision, and no accepted EXE was built. Actual service-token, boot/sign-in and physical second-PC package acceptance remain pending; the owner deferred second-PC preparation. No later stage started.
+
 - Selected stage 3 under the owner's approved plan: local Windows Launcher/storage/setup, background service before sign-in and display after sign-in. Preserved stage 2 at annotated tag v2-stage2-baseline (9bbbc4e). Group operations and later-stage features remain deferred; the owner postponed physical second-PC preparation. Stage 3 implementation and acceptance remain in progress.
 
 - Completed stage 2 baseline stabilization following the owner's confirmed TZ section 22 boundaries. Recorded requirement/stage ownership and a baseline-security limitations review; Launcher/provisioning, persistent offline/Android TV, groups, updater/replication and final hardware/load/endurance remain assigned to later stages. Stage 3 is available for selection and has not started.

@@ -11,7 +11,7 @@ def configure_session_security(app):
             raise RuntimeError("Explicit SECRET_KEY must not be empty.")
         return
 
-    app.config["SECRET_KEY"] = load_session_key(app.config["INSTANCE_DIR"])
+    app.config["SECRET_KEY"] = load_session_key(app.config.get("SECRETS_DIR", app.config["INSTANCE_DIR"]))
 
 
 def load_session_key(instance_directory):

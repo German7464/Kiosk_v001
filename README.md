@@ -24,6 +24,8 @@ The MVP remains the compatibility baseline. Version 2 follows [the specification
 
 ## Development Status
 
+Stage 3 Windows Launcher/storage/service/setup implementation is in progress. Its source UI can be inspected with `python launcher.py`; source/uninstalled configuration saving is deliberately rejected. The existing MVP commands below remain available. See [Launcher documentation](kiosk/launcher/README.md) for the selected scope, migration, installed certificate workflow and pending package/physical acceptance. No accepted new EXE installer is available at this checkpoint.
+
 The MVP baseline is preserved by the annotated Git tag `v1.0.0-mvp`. Version 2 development continues on branch `v2`; version 2 is not a completed release. See [Version 2 Plan](docs/V2_PLAN.md) for priorities, validation limits, and rollback instructions.
 
 The MVP Flask application is implemented with SQLite storage, admin management flows, public display routes, public API endpoints, image processing, translations, responsive layouts, and reusable developer smoke tests.

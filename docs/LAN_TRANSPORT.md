@@ -1,5 +1,7 @@
 # Standalone LAN Transport Protection
 
+Current stage note (2026-10-24): stage 2 baseline acceptance is complete within TZ_PROGRESS.md's bounded scope. The owner selected stage 3 Launcher/installed provisioning; its source integration uses installed application paths and a dedicated managed temporary directory. See [Launcher](../kiosk/launcher/README.md) for commands and pending package/service-account acceptance. Earlier dated statements below remain historical and do not override the latest stage ledger.
+
 Status: approved design with a verified isolated prototype, opt-in managed HTTPS source startup, bounded Windows Chrome trust lifecycle and a completed physical two-PC Windows/Chrome HTTPS run on 2026-10-23. Other browser/platform trust, production certificate operations and packaged deployment remain pending. Requirement: TZ 18.11, with related session and write protection under 18.4 and 18.8. This document defines bounded stage 2 work; it does not complete security or authorize later network stages.
 
 ## Current Application

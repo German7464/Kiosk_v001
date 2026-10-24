@@ -15,6 +15,7 @@ dist/
 build/
 *.spec
 !Kiosk_v001.spec
+!KioskLauncher.spec
 
 .env
 *.db

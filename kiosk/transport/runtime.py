@@ -68,8 +68,9 @@ def probe_https(profile, context, identity, timeout=1):
 
 
 class ManagedHttps:
-    def __init__(self, profile, app_factory=create_app, startup_timeout=30):
+    def __init__(self, profile, app_factory=create_app, startup_timeout=30, temporary_directory=None):
         self.profile = profile
+        self.temporary_directory = temporary_directory
         self.app_factory = app_factory
         self.deadline = time.monotonic() + startup_timeout
         self.identity = secrets.token_hex(24)
@@ -92,7 +93,7 @@ class ManagedHttps:
         if os.name != "nt":
             raise RuntimeError("Managed HTTPS currently supports Windows only.")
         try:
-            self.temporary = tempfile.TemporaryDirectory(prefix="kiosk-managed-https-")
+            self.temporary = tempfile.TemporaryDirectory(prefix="kiosk-managed-https-", dir=self.temporary_directory)
             root = Path(self.temporary.name)
             self.admin_reservation = reserve_loopback()
             self.backend_reservation = reserve_loopback()
