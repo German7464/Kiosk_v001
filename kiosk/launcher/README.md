@@ -55,6 +55,24 @@ Initial startup failure stops immediately. After a successful start, recovery re
 
 ## Development Checks
 
+### Installed Service Logging
+
+The installed service writes `%ProgramData%\Kiosk\logs\startup.log` with four rotated siblings (`startup.log.1` through `.4`), each limited to 5 MiB. Logs are restricted by the machine storage ACL; use an authorized administrator account to inspect them. Logging does not require DEBUG mode or a working admin page. Existing development/MVP startup is unchanged.
+
+Each record includes local timestamp, severity, process and thread. Service records identify startup attempts, HTTPS phase on failure, restart delay, state/uptime and startup/shutdown duration. Failures include exception type and the last 20 stack locations (source basename, line and function), excluding exception text, source lines and local variables. HTTP records include a generated request correlation ID, method, route template, response status and server processing duration. Successful responses are INFO; 4xx and responses taking at least one second are WARNING; 5xx are ERROR. The one-second threshold is diagnostic, not the TZ performance acceptance target. Timing ends at Flask response construction, excluding proxy/network transfer, streamed body delivery and browser rendering.
+
+Free disk and system available memory are sampled at startup and every 60 seconds. Less than 1 GiB disk or 256 MiB available memory produces WARNING. A supervisor heartbeat interval of at least five seconds also produces WARNING; it cannot report while the entire process is suspended or dead. These samples are not process CPU/RAM profiling or client frame-rate measurements.
+
+Request bodies, query strings, actual dynamic route values, unknown request paths, headers, cookies, credentials and exception messages are excluded. Correlate `application_failed` with its `http_request` using `request_id`. Rejected requests that finish before the diagnostic before-request hook can have `request_id=none`. Diagnostics ZIP export remains the existing public status allowlist; protected detailed logs are not automatically exported. Browser JavaScript, proxy stderr, installer and GUI failures are not covered by this service journal. Future module/synchronization/update/recovery logging belongs to those implementations; TZ 19 is not fully implemented.
+
+```powershell
+Get-Content "$env:ProgramData\Kiosk\logs\startup.log" -Tail 100 -Wait
+Select-String -Path "$env:ProgramData\Kiosk\logs\startup.log*" -Pattern 'WARNING|ERROR'
+.\.venv\Scripts\python.exe -m unittest tests.test_launcher_diagnostics tests.test_launcher_runtime
+```
+
+The previously built `KioskLauncher-stage3-5b07164.zip` predates this logging extension. The rebuilt development package is `dist/KioskLauncher-stage3-diagnostics-20261025.zip` (171990712 bytes, SHA-256 `b8d4ca527ff510bae761dade00c79b34d9d8a7ba3c25a30140abe84304107496`). Extract the whole archive. Its manifest, ZIP CRC and actual isolated packaged-service HTTP/resource/secret-omission checks passed; the owned listener closed afterward. The fixture used forced termination, not an SCM graceful-stop check. The previous unpacked build is preserved at `dist/KioskLauncher-stage3-5b07164-preserved`. Actual installed-service/second-PC acceptance remains required; no working installation was updated.
+
 ```powershell
 .\.venv\Scripts\python.exe launcher.py
 .\.venv\Scripts\python.exe -m unittest tests.test_launcher_storage tests.test_launcher_runtime

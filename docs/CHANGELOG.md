@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25
+
+- Extended stage 3 installed-service logging with sanitized stack locations, correlated HTTP status/route-template/duration and slow-response warnings, startup/shutdown/retry diagnostics, minute-scale disk/memory samples and delayed supervisor warnings. Retained bounded rotation and protected local logs without logging request/exception secrets; documented inspection commands and coverage limits. Existing status-only diagnostic export and MVP startup are unchanged.
+- All 26 Launcher/diagnostics tests pass (42.738 seconds), including real HTTP/TLS, Windows ACL/file-sharing, secret omission, slow responses, bounded rotation and resource failure probes; compilation and independent Flask 200/302/403 checks pass. The prior EXE archive predates these source changes. Actual second-PC installed/SCM/boot/sign-in acceptance remains pending; stage 3 is incomplete.
+- Rebuilt four EXEs and verified the manifest, isolated actual packaged-service HTTP/resource/warning records and secret omission, owned listener cleanup and ZIP CRC. New development archive: `KioskLauncher-stage3-diagnostics-20261025.zip` (171990712 bytes, SHA-256 `b8d4ca527ff510bae761dade00c79b34d9d8a7ba3c25a30140abe84304107496`). Prior build preserved; no working installation was changed. Forced fixture termination is not graceful SCM acceptance.
+
 ## 2026-10-24
 
 - Resolved the stage 3 packaging blocker after owner-authorized exact bootloader restoration and the owner's antivirus exclusion. Built four EXEs with pinned bundled runtimes/licenses and a 1724-file integrity manifest; prepared a SHA-256-recorded transfer ZIP. Product code and dependency versions are unchanged.

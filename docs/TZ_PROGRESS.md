@@ -35,7 +35,7 @@ After every stage update requirement references, evidence, limitations, remainin
 | 16 | Compatibility | Partial | Temporary database preservation test; supported upgrade matrix pending. |
 | 17 | Display interface | Partial | Populated local/emulated checks and one physical Windows client at 1920x1080; target kiosk/TV hardware, long-content/readability acceptance pending. |
 | 18 | Security | Partial | Local security and bounded two-PC HTTPS/CSR renewal/USB recovery verified; production identity/provisioning, other platforms and other controls pending. |
-| 19 | Diagnostics | Not started | No specified normal/safe/recovery modes. |
+| 19 | Diagnostics | Partial | Bounded installed-service lifecycle, sanitized HTTP/failure/resource logging; specified normal/safe/recovery modes and future-feature diagnostics remain pending. |
 | 20 | Performance | Partial | Fixed local synthetic HTTP baseline in MVP_BASELINE.md; no UI/LAN/hardware/100-device acceptance. |
 | 21 | Testing | Partial | Isolated Python/JS/TLS checks and the selected physical two-PC Windows/Chrome HTTPS run passed; see dated scopes/counts below. Other hardware, disconnected, load, endurance and failure-matrix checks pending. |
 | 22 | Development stages | Partial | Stage 2 baseline stabilization completed under the owner-confirmed allocation below; stage 3 selected and in progress, acceptance pending. |
@@ -44,6 +44,18 @@ After every stage update requirement references, evidence, limitations, remainin
 | 25 | Excluded features | Implemented | No optional content modules added by this work. |
 | 26 | Development rules | Partial | Stage ledger and workflow established; maintain after every stage. |
 | 27 | Final product | Not started | Version 2 is not a completed release. |
+
+## Stage 3 service diagnostics extension — 2026-10-25
+
+References: selected 5/22.3 and applicable bounded logging in 19, resource/performance observations in 20, checks in 21. Status: **Partial; stage 3 remains incomplete**.
+
+At the owner's request, extended the installed service journal beyond state/type-only startup records. Added sanitized stack locations, startup/shutdown timing, retry attempts/delays and transport failure phase, correlated HTTP status/route-template/server duration, slow-response and 4xx/5xx severity, minute-scale disk/available-memory sampling and delayed supervisor heartbeat warnings. Retained five 5-MiB rolling files and existing protected storage. No dependency, database, public response, working credential, network or OS startup change.
+
+Isolated diagnostics regressions cover secret omission from request/query/header/body/dynamic/unknown paths and exception messages, actionable stack/correlation, simulated slow response, low resources, probe failure and bounded rotation. Existing Launcher runtime tests exercise actual owned HTTP lifecycle and recovery. Independent Flask pages/APIs return 200, unauthenticated admin 302 and missing CSRF 403. Detailed test counts are recorded in CHANGELOG.md. No browser behavior changed; no visual check required.
+
+Built all four updated EXEs (1724 manifest-listed files, 376105654 total bytes) and verified actual packaged-service lifecycle/HTTP/resource records and secret omission with isolated data, restricted child PATH and an unrelated working directory. Owned fixture was forcibly terminated and its listener closed; this does not establish graceful SCM stop. New archive: `dist/KioskLauncher-stage3-diagnostics-20261025.zip`, 171990712 bytes, SHA-256 `b8d4ca527ff510bae761dade00c79b34d9d8a7ba3c25a30140abe84304107496`; 1725 entries passed ZIP CRC and package manifest verification. Prior archive and unpacked build were preserved. Evidence: ignored `logs/launcher-diagnostics-build.txt`, `logs/launcher-diagnostics-package.json`, `logs/launcher-diagnostics-packaged-startup.log` and `logs/launcher-diagnostics-flask.json`.
+
+Limits: server timings exclude network/proxy transfer and browser rendering. No client JavaScript, CPU profiler, proxy stderr, GUI/installer journal or future-module diagnostics is claimed. Diagnostic ZIP remains the public status allowlist, excluding protected logs. No working installation was updated. Second-PC SCM/boot/sign-in/package acceptance remains pending. TZ 19 service modes/full diagnostics and stage 3 are not completed by this increment.
 
 ## Stage 3 selection — 2026-10-24
 
