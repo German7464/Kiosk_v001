@@ -10,6 +10,8 @@ The initial baseline passed compilation, eight isolated smoke tests, route check
 
 ## Priorities
 
+The selected 30-minute physical Windows follow-up completed independent API sampling with all four generations, an expected 62.6-second managed-server outage and owned cleanup. Browser acceptance is Partial: kiosk idle-home behavior and missed timing/rotation observations need a bounded repeat. This is not full endurance or stage 2 acceptance. See the latest TZ_PROGRESS.md and CHAT_HANDOFF.md entries.
+
 The bounded TV recovery follow-up adds a 10-second deadline per API request including body reading, optional transport cancellation and late-result rejection. Existing polling/stagger and display data are preserved. This does not provide persistent offline display or complete stage 2; see TZ_PROGRESS.md for verification evidence.
 
 The owner approved uninterrupted local cached display with editing paused when safe write authority is unavailable, and a primary plus background standby on a second PC for the first network stage. Follow the two-PC validation plan in the requirements before introducing automatic multi-device election.

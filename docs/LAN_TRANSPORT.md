@@ -245,6 +245,37 @@ The sanitized report under ignored `logs/https/` contains fixed check names, cou
 
 Checkpoint: `logs/https/prototype-20261019T183356687195Z.json`, 14.999 seconds, all scenario checks passed. Responses: 62 x 200, 6 x 302, 2 x 400, 36 x 401, 1 x 403, 2 x 429, 1 x 413, and the expected backend-failure 502. All 107 observed application requests had correct metadata. TLS verification rejected unknown authority (20), wrong identity (64), and expiry (10). Waitress exited 0; four owned proxy processes were terminated and waited for; temporary data was removed. Raw reports and binaries are not committed.
 
+## Bounded Two-PC Display Endurance
+
+This opt-in check uses a fresh disposable Windows installation, synthetic events/images and a temporary public CA. It does not use working credentials or the retained separate-PC CA. It does not change network, VPN, firewall or OS trust settings automatically. Record the actual source revision, OS/browser, addresses, observations and cleanup before claiming a physical result.
+
+Prepare the pinned Caddy and PowerShell as above. On the server, choose an unused output directory:
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.check_display_endurance server --server-ip <server-ipv4> --client-ip <client-ipv4> --caddy logs/https-tools/caddy/caddy.exe --pwsh (Get-Command pwsh).Source --output logs/https/<new-run>
+```
+
+The server prints the HTTPS origin, CA SHA-256 and client ZIP SHA-256 and waits up to 20 minutes. Transfer `client.zip` through the existing shared folder or RustDesk into a new client directory; compare its exact hash before extraction. Compare the CA digest separately with the trusted server console. The four files are the portable Python helper, `browser_trust.ps1`, `session.json` and public `authority.pem`. The manifest carries a temporary read-only fixture capability; do not publish the ZIP. No private key or application database is transferred.
+
+On the second PC, Python needs no application packages. Run this from the extracted directory; use a separate console/background process so Chrome remains usable:
+
+```powershell
+python check_display_endurance.py client --manifest session.json --ca-sha256 <independently-compared-sha256> --output client.json
+```
+
+The client verifies TLS using only that root and waits for the server start. For actual Chrome observations, inspect that the exact root is initially absent, then explicitly enroll the test root using `browser_trust.ps1` and confirm the Windows dialog. Pass an absolute certificate path because .NET file resolution can differ from PowerShell's current location. Open an isolated guest/incognito Chrome window through Windows-MCP at `/tv` and `/kiosk/events`; confirm three cards/images and TV rotation. Do not bypass certificate warnings. Write `start` to the server output directory's `control.txt` only when both screens and the independent client are ready.
+
+The 30-minute monotonic schedule changes titles/images at 300, 720 and 1500 seconds and gracefully stops its own HTTPS runtime at 600 seconds, restarting the same data/certificate at 660 seconds. Minute-level samples record only server Python/Caddy CPU time and memory. Watch the changed foreground tab within 60 seconds after each update; record both modes and the time bound, plus visible TV rotation during the outage and recovery without navigation/reload. Bring tabs forward without reloading them. Suspended/background browser scheduling is outside this timing claim. Preserve the VPN connection; if existing firewall/routing blocks the run, record the obstacle instead of altering it automatically.
+
+After 30 minutes, copy `client.json` back and complete observations within the server's additional 10-minute completion budget. Write `finish` to `control.txt` to stop the fixture, or `abort` at any earlier point. Preparation/runtime failures and interruption retain partial reports. The fixture cleans its temporary installation and managed processes in finally paths. Independently verify listener/process absence, close only test browser windows, explicitly remove the exact test root and inspect a zero matching count. Remove transferred archive/capability files by an owned exact allowlist. Do not retry a deletion rejected by automatic review through another mechanism.
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.check_display_endurance summarize --server-report logs/https/<new-run>/server.json --client-report logs/https/<new-run>/client.json
+.\.venv\Scripts\python.exe -m unittest tests.test_display_endurance
+```
+
+Summary validation matches sessions, complete 30-minute coverage, all four content generations and actual server stop/readiness interval. Only overlapping connection failures/timeouts are expected outage samples; TLS, JSON, HTTP-status and outside-interval failures are unexpected. Reports contain codes, timing, fixed synthetic generation/version values and process counters, not credentials, cookies or response bodies. Automated success still leaves browser/trust cleanup Pending until separately observed. This is a bounded two-Windows-PC result, not 72-hour, memory-leak, Android TV, persistent offline, replication/failover, 100-device or stage 2 acceptance.
+
 ## Managed HTTPS Startup
 
 This opt-in Windows source profile uses prepared certificates; it is not an installer, certificate issuer, service, or EXE acceptance result. Existing HTTP startup remains separate. Related implementation and verification are listed in [the transport README](../kiosk/transport/README.md).

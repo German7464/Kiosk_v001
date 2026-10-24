@@ -1,6 +1,20 @@
 # Chat handoff — 2026-10-24
 
-## Latest: bounded TV request deadlines
+## Latest: 30-minute physical display sampling; browser acceptance Partial
+
+Added tools/check_display_endurance.py with server/client/summarize modes and tests/test_display_endurance.py. The tool reuses LanFixture/ManagedHttps and existing image/version logic, creates three synthetic cards, updates at minutes 5/12/25 and stops/restarts its own server at minutes 10/11. Public product APIs/schema are unchanged; only the fixture has a source/HTTPS/capability-restricted read-only elapsed-time endpoint. Current source separates that capability from report session identifiers and bounds client transport/body reading. See docs/LAN_TRANSPORT.md for operator commands and limits.
+
+The physical run between 192.168.1.165 and 192.168.1.117 started 2026-10-24 18:39:55 +03:00. Server/client elapsed 1800.073/1800.103 seconds; independent client recorded 354 samples: 348 valid HTTP 200 and six expected timeout samples overlapping the actual outage 600.061–662.647 seconds, zero unexpected failures, generations 0–3. Summary automated scope passed, not complete browser acceptance. Actual Chrome guest window was operated through Windows-MCP/RustDesk; TV retained a card during the outage and showed generations 1/2/3 without navigation/reload. Kiosk returned home on inactivity, so automatic kiosk updates are not accepted; first TV update's 60-second bound and slide rotation during outage also need repeat observations. Do not mark the bounded physical browser checklist, stage 2 or long-term endurance fully verified.
+
+No live fixture remains: both managed cleanup records are graceful, temporary server installation removed, owned Python/Caddy and listener 8443 absent, client sampler exited, guest window/owned console closed, exact test root removal was confirmed in Windows and two helper inspections returned zero. Client archive/session manifest removed; original RustDesk input source restored. VPN, routes, firewall, working data/credentials and retained CA/USB material were unchanged. RustDesk remains connected. Client Desktop/Kiosk-Endurance-20261024T182500 retains public utilities/authority and synthetic reports only.
+
+Ignored logs/https/endurance-20261024T182500 holds server.json, client.json, summary.json, browser-checkpoint.json, final-source-probes.json and technical evidence. Client report SHA-256 2ce339b03dce84c1d7caca415f477c81e7dac5ee499f0c35f25cf01800422a0f matched the remote console. The run used the transferred ZIP snapshot; capability separation, complete-status writing and stricter request cleanup/deadline changes were made after that snapshot, covered by local tests and targeted final-source real TLS probes, not another 30-minute physical run. The first relative-Caddy-path startup failed with no live runtime and temporary data removed; current source resolves tool paths before startup. Clipboard exports needed retry after stale content/parse errors; only the final matched completed report is acceptance evidence.
+
+Next: repeat the bounded browser checklist with a reliable foreground/activity schedule and timed capture; do not repeat certificate signing or advance to stage 3. Production provisioning, Android TV, disconnected/long-term/load/EXE acceptance remain pending.
+
+Final checks: 53 Python tests passed in 38.039 seconds (new helper, LAN helper, managed HTTPS and MVP smoke), both JS checks, compileall, independent Flask 200/302/403/404, UTF-8/local links and diff whitespace passed. No full certificate-suite rerun is claimed. See the latest TZ_PROGRESS.md entry for exact scopes. This source/documentation increment is ready for its separate local commit; the physical browser checklist remains incomplete.
+
+## Previous: bounded TV request deadlines
 
 TV API requests now have a 10-second deadline covering fetch and JSON body reading. AbortController cancels transport when available; the Promise deadline also works without it. Late results cannot mutate displayed data. Parallel version/events loads settle both requests before releasing the busy guard. Existing 10-second polling, random 0–10-second refresh delay, cards and slideshow are preserved. Source changes are confined to TV and its existing JS regressions; no public API/schema changes or new dependencies.
 
