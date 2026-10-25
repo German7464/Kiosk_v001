@@ -9,6 +9,7 @@ import winreg
 from pathlib import Path
 
 from kiosk.launcher.storage import DIRECTORIES, Storage, common_root, read_profile, safe_local_path
+from kiosk.launcher.errors import AdministratorRequired
 from kiosk.launcher.windows import SERVICE_NAME, administrator, grant_service_storage, hidden_run, protect_storage
 
 
@@ -21,7 +22,7 @@ def binary_directory():
 
 def require_administrator():
     if not administrator():
-        raise PermissionError("Windows administrator approval is required.")
+        raise AdministratorRequired("Run this utility from a terminal opened as administrator. Windows administrator approval is required.")
 
 
 def verify_package(directory):

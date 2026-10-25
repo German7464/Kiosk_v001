@@ -22,7 +22,9 @@ def main():
         try:
             control_service("start" if args.start else "stop")
         except Exception as error:
-            messagebox.showerror("Kiosk", str(error))
+            from kiosk.launcher.errors import access_message
+
+            messagebox.showerror("Kiosk", access_message(error, "system"))
             return 1
         return 0
     if args.install:
@@ -39,6 +41,7 @@ if __name__ == "__main__":
         sys.exit(main())
     except Exception as error:
         from tkinter import messagebox
+        from kiosk.launcher.errors import access_message
 
-        messagebox.showerror("Kiosk", f"Операция не выполнена ({type(error).__name__}).\n{error}")
+        messagebox.showerror("Kiosk", access_message(error, "system"))
         sys.exit(1)

@@ -13,6 +13,7 @@ from kiosk.app import create_app
 from kiosk.core.credentials import save_admin_password, validate_password
 from kiosk.launcher.client import check_ready, export_diagnostics, maintenance_enabled, read_status, set_maintenance
 from kiosk.launcher.display import open_display
+from kiosk.launcher.errors import ElevationUnavailable, access_message
 from kiosk.launcher.installation import binary_directory, configure_user_startup, control_service, initialize_directories, install, register_service, service_state, user_startup_enabled
 from kiosk.launcher.runtime import VERSION
 from kiosk.launcher.storage import Storage, common_root, needs_administrator, new_profile, read_profile, save_profile
@@ -34,7 +35,7 @@ def elevate(action):
     api.ShellExecuteW.restype = ctypes.c_void_p
     result = api.ShellExecuteW(None, "runas", command[0], subprocess.list2cmdline(command[1:]), None, 1)
     if not result or result <= 32:
-        raise RuntimeError("Windows administrator approval was cancelled or unavailable.")
+        raise ElevationUnavailable("Windows administrator approval was cancelled or unavailable.")
 
 
 class Launcher:
@@ -63,6 +64,7 @@ class Launcher:
             ttk.Button(buttons, text=label, command=command).grid(row=index // 3, column=index % 3, sticky="ew", padx=3, pady=4)
         for column in range(3):
             buttons.columnconfigure(column, weight=1)
+        ttk.Label(frame, text="Для установки, управления службой и изменения системных настроек требуются права администратора. Windows запросит подтверждение. Экран и веб-админка открываются без повышения прав.", wraplength=690).pack(anchor="w", pady=(0, 8))
         self.startup = tk.BooleanVar(value=user_startup_enabled())
         ttk.Checkbutton(frame, text="Открывать экран после моего входа в Windows", variable=self.startup, command=self.change_startup).pack(anchor="w", pady=5)
         self.maintenance = tk.BooleanVar(value=maintenance_enabled())
@@ -76,10 +78,10 @@ class Launcher:
         if configure:
             self.root.after(100, self.configure)
 
-    def error(self, error):
-        messagebox.showerror("Kiosk", f"Операция не выполнена ({type(error).__name__}).\n{error}", parent=self.root)
+    def error(self, error, context=None):
+        messagebox.showerror("Kiosk", access_message(error, context), parent=self.root)
 
-    def background(self, action, success=None):
+    def background(self, action, success=None, error_context=None):
         if self.busy:
             return
         self.busy = True
@@ -90,7 +92,7 @@ class Launcher:
                 if success:
                     self.root.after(0, lambda: success(value))
             except Exception as error:
-                self.root.after(0, lambda error=error: self.error(error))
+                self.root.after(0, lambda error=error: self.error(error, error_context))
             finally:
                 self.busy = False
 
@@ -99,17 +101,27 @@ class Launcher:
     def poll(self):
         if not self.busy:
             def inspect():
+                access_error = None
                 try:
                     status = read_status(self.storage)
                     ready = check_ready(self.storage, status)
+                except PermissionError as error:
+                    status, ready = None, False
+                    access_error = access_message(error, "status")
                 except (OSError, ValueError):
                     status, ready = None, False
-                free = shutil.disk_usage(self.storage.root if self.storage.root.exists() else self.storage.root.parent).free
-                return status, ready, free, available_memory()
+                try:
+                    free = shutil.disk_usage(self.storage.root if self.storage.root.exists() else self.storage.root.parent).free
+                except PermissionError as error:
+                    free = None
+                    access_error = access_message(error, "status")
+                return status, ready, free, available_memory(), access_error
 
             def shown(result):
-                self.status, ready, free, memory = result
-                if self.status:
+                self.status, ready, free, memory, access_error = result
+                if access_error:
+                    lines = [access_error]
+                elif self.status:
                     data = self.status
                     state = data["state"] if ready or data["state"] != "running" else "недоступен"
                     lines = [f"Устройство: {data['device_name']}\nUUID: {data['device_id']}",
@@ -119,7 +131,7 @@ class Launcher:
                         lines.append("Последняя ошибка: " + str(data["error"]))
                 else:
                     lines = ["Сервер остановлен или установка ещё не настроена."]
-                lines.append(f"Свободно на диске: {free // (1024 * 1024)} МиБ" + (" — мало места" if free < 1024 ** 3 else ""))
+                lines.append("Свободное место недоступно для проверки." if free is None else f"Свободно на диске: {free // (1024 * 1024)} МиБ" + (" — мало места" if free < 1024 ** 3 else ""))
                 lines.append(f"Доступно ОЗУ: {memory // (1024 * 1024)} МиБ" + (" — мало памяти" if memory < 256 * 1024 ** 2 else ""))
                 lines.append("Группа / синхронизация / репликация: ещё не реализованы")
                 self.details.set("\n\n".join(lines))
@@ -139,14 +151,14 @@ class Launcher:
             try:
                 elevate(action)
             except Exception as error:
-                self.error(error)
+                self.error(error, "system")
             return
         if action == "configure":
             self.configure()
         elif action == "install":
-            self.background(install, lambda result: messagebox.showinfo("Kiosk", "Установка завершена. Запустите KioskLauncher.exe из Program Files\\Kiosk и откройте настройки."))
+            self.background(install, lambda result: messagebox.showinfo("Kiosk", "Программа установлена для всех пользователей этого компьютера. Запустите KioskLauncher.exe из Program Files\\Kiosk и откройте настройки. Автозапуск экрана каждый пользователь включает в своём сеансе."), error_context="system")
         else:
-            self.background(lambda: control_service(action))
+            self.background(lambda: control_service(action), error_context="system")
 
     def stop(self):
         if messagebox.askyesno("Остановка сервера", "Редактирование и обновления экранов станут недоступны. Автономный перезапуск экрана ещё не реализован.\n\nОстановить сервер?", parent=self.root):
@@ -158,36 +170,39 @@ class Launcher:
             if not check_ready(self.storage, data):
                 raise RuntimeError("Свой сервер ещё не готов. Проверьте состояние и сертификат.")
             open_display(data["origin"], mode or data["mode"], fullscreen=mode != "admin")
-        self.background(launch)
+        self.background(launch, error_context="status")
 
     def change_startup(self):
         try:
             configure_user_startup(self.startup.get())
         except Exception as error:
             self.startup.set(not self.startup.get())
-            self.error(error)
+            self.error(error, "user_settings")
 
     def change_maintenance(self):
         try:
             set_maintenance(self.maintenance.get())
         except Exception as error:
-            self.error(error)
+            self.error(error, "user_settings")
 
     def export(self):
         target = filedialog.asksaveasfilename(parent=self.root, defaultextension=".zip", initialfile="Kiosk-diagnostics.zip")
         if target:
-            self.background(lambda: export_diagnostics(self.storage, target), lambda result: messagebox.showinfo("Kiosk", "Диагностика сохранена."))
+            self.background(lambda: export_diagnostics(self.storage, target), lambda result: messagebox.showinfo("Kiosk", "Диагностика сохранена."), error_context="export")
 
     def configure(self):
         if not administrator():
-            elevate("configure")
+            try:
+                elevate("configure")
+            except Exception as error:
+                self.error(error, "system")
             return
         try:
             current = read_profile(self.storage.profile) if self.storage.profile.exists() else None
             if service_state() not in {"absent", "stopped"}:
                 raise RuntimeError("Перед настройкой корректно остановите сервер.")
         except Exception as error:
-            self.error(error)
+            self.error(error, "system")
             return
         window = tk.Toplevel(self.root)
         window.title("Настройка локального устройства")
@@ -252,7 +267,7 @@ class Launcher:
                 window.destroy()
                 messagebox.showinfo("Kiosk", "Настройки сохранены. Запустите сервер. Автозапуск экрана включается отдельно в главном окне.", parent=self.root)
             except Exception as error:
-                self.error(error)
+                self.error(error, "system")
 
         ttk.Button(panel, text="Сохранить локальную установку", command=save).pack(fill="x", pady=18)
 

@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from kiosk.launcher.installation import require_administrator
+from kiosk.launcher.errors import AdministratorRequired
 from kiosk.launcher.storage import Storage, atomic_json, common_root, import_mvp, read_profile
 
 
@@ -68,5 +69,13 @@ def main():
     return 0
 
 
+def run():
+    try:
+        return main()
+    except AdministratorRequired as error:
+        print(str(error), file=sys.stderr)
+        return 1
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(run())

@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from kiosk.launcher.storage import atomic_json, safe_local_path
+from kiosk.launcher.errors import StatusAccessDenied
 from kiosk.transport.profile import unique_object
 
 
@@ -15,9 +16,12 @@ STATUS_FIELDS = {"schema_version", "state", "version", "pid", "device_name", "de
 
 
 def read_status(storage):
-    path = safe_local_path(storage.directory("status") / "runtime.json")
-    with path.open("rb") as stream:
-        content = stream.read(16385)
+    try:
+        path = safe_local_path(storage.directory("status") / "runtime.json")
+        with path.open("rb") as stream:
+            content = stream.read(16385)
+    except PermissionError:
+        raise StatusAccessDenied("Cannot read the installed service status. Ask an administrator to review installation permissions.") from None
     if len(content) > 16384:
         raise ValueError("Status is too large.")
     data = json.loads(content, object_pairs_hook=unique_object)

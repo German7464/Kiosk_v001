@@ -10,6 +10,7 @@ Stage 3 work in progress. Provide separate installed storage, explicit MVP impor
 - `windows.py`, `installation.py`, `service.py`: Windows identity, permissions, installation and service control.
 - `runtime.py`: loopback/HTTPS ownership, bounded restart attempts, shutdown and rolling startup logs.
 - `client.py`, `display.py`, `gui.py`: instance readiness, diagnostic allowlist, dedicated browser profile and desktop interface.
+- `errors.py`: typed administrative/elevation/status access failures and contextual operator instructions.
 - `launcher.py`, `launcher_service.py`: desktop and service entry points at the repository root.
 - `provisioning.py`, root `certificates_cli.py` and `launcher_maintenance.py`: installed certificate provisioning and local maintenance.
 - Root `KioskLauncher.spec` and `tools/build_launcher.py`: separate opt-in offline package build, preserving the MVP build.
@@ -85,6 +86,10 @@ Opening the development UI does not install a service. Configuration saving is r
 
 ## Operator Flow (Package Acceptance Pending)
 
+Installation and the service are machine-wide: an administrator installs once for the computer. Opening display/admin is an ordinary user action; web authentication remains separate from Windows elevation. Each intended user configures display-after-sign-in and maintenance in their own session. A future installer can expose this machine-wide installation choice and reuse the same storage/service rules; no separate installer format or per-user binary installation is introduced here. Distinct ordinary-user end-to-end access is still an acceptance gate.
+
+Launcher explains which actions require Windows administrator approval. Cancelled/unavailable UAC reports that the operation did not run and offers retry/administrator assistance. Administrative denial suggests running Launcher as administrator; user-settings denial refers to that user's LocalAppData permissions. Export destination denial offers another writable directory. Inaccessible source status is reported as a status-permission problem even during export, not a destination problem. Polling displays that message in the main window without claiming the server stopped or repeatedly opening error dialogs. Unexpected errors retain their existing type/detail presentation. `KioskMaintenance.exe` without administrative rights exits 1 with an English elevated-terminal instruction and no traceback for that expected refusal.
+
 1. Preserve the offline package outside ProgramFiles. Start its `KioskLauncher.exe` and select installation, approving Windows elevation. Open the installed Launcher from `%ProgramFiles%\Kiosk`, select settings, configure the local device and create its administrator.
 2. Start the server. The default address is loopback only. Open display/admin from Launcher. An unrelated server occupying the port is rejected.
 3. Enable display-after-sign-in in the normal, non-elevated Launcher of the intended Windows user. This writes only that user's Run entry and stores no Windows password. Service-before-sign-in is configured separately by an administrator. Alternate UAC credentials must not be used to configure another user's display startup.
@@ -115,6 +120,14 @@ For invalid device configuration, stop the service and run elevated `KioskMainte
 
 ## Offline Build
 
+### Access Messages Development Checkpoint — 2026-10-25
+
+Current development package: `dist/KioskLauncher-stage3-access-messages-20261025.zip`, 171993953 bytes, SHA-256 `5657b9bdbc27f3da707c3cdc18e23270b1f1f4969b60927f21278b2b1677d1dd`. All four EXEs rebuilt; 1724-file manifest, 376110016 unpacked bytes, ZIP CRC and packaged maintenance help passed. The installed second-PC package remains `632139d`; it was not replaced. Browser-fix binaries are preserved at `dist/KioskLauncher-browser-fix-preserved`; the initial access-message candidate is separately retained and superseded by this final package.
+
+Seven new regressions cover administrative refusal before storage access, elevation failure without service action, export/user-settings guidance, source-status versus export-target denial, nonmodal polling and GUI-thread error context; all 42 selected Launcher/MVP tests passed in 45.554 seconds. Compileall and independent disposable Flask 200/302/403 passed. Windows-MCP observed real source error dialogs and the final EXE showing an actual denied disposable status-file read; its exact ACL was restored and all local test windows closed. The first packaged UI fixture lacked an existing LocalAppData parent; fixing the fixture allowed normal startup, without a product change. No new package was installed or real machine storage/service/autorun modified by these local checks.
+
+Real second-PC service-token access probes remain pending: helper compilation/parsing passed locally, but repeated remote UAC attempts were cancelled/unavailable. Requested physical owner confirmation rather than changing UAC/account/security settings. No actual token matrix result is claimed. The owner chose no new Windows accounts, so distinct-user denial also remains pending. Source regression verifies the nonadministrator CLI branch; an actual nonadministrator run of the new EXE was not performed from the elevated local execution shell. Evidence is ignored `logs/launcher-access-physical-20261025`. This is a development package, not completed stage 3 acceptance.
+
 ### Packaged MVP Import Checkpoint — 2026-10-25
 
 The installed `632139d` package on the second PC passed `KioskMaintenance.exe import-mvp` against a synthetic current-baseline MVP-layout fixture. Missing `--source-stopped` exited 2 without mutation; confirmed import exited 0; repeat into the existing destination exited 1 without overwriting it. The operator acknowledgment is required; it is not automatic detection of every possible source process. Original source file hashes stayed unchanged. Only child-process `PROGRAMDATA` pointed to a new restricted fixture directory; this check did not replace the working machine installation or register another service.
@@ -141,7 +154,7 @@ Owner-enabled RustDesk file transfer delivered the whole archive to `DIALOG-MEDI
 
 Opening display exposed an Edge account/synchronization prompt. Chrome preference and separate browser profiles avoid that prompt on the selected Chrome-equipped PC. After reboot, application startup at 02:52:00.645 preceded the interactive Security 4624 login at 02:53:05.5395192 (+03:00, 2026-10-25). The owner confirmed automatic Chrome fullscreen launch after sign-in and physical F11 exit; Windows-MCP observed the normal Chrome window afterward. Post-boot checks confirmed eight-route HTTP 200, the installed manifest and the single owned Launcher/Chrome main process. A separate temporary startup probe produced no report (task result 1) and was removed; no directly sampled pre-login HTTP result is claimed. Evidence was retrieved and independently checked under ignored `logs/launcher-physical-20261025`.
 
-Latest development archive: `dist/KioskLauncher-stage3-browser-fix-20261025.zip`, 171990670 bytes, SHA-256 `c694b914c2047bb9026f1bbb1f96c4b79b513562d8c4338879178dfb24911690`. Its 1724-file manifest and ZIP CRC passed; all four EXEs were rebuilt. Earlier diagnostics/service-fix archives and unpacked builds are preserved as historical evidence. The package is for continued stage 3 acceptance, not an accepted unattended release. Later dated checkpoints record additional HTTPS/signing, maintenance and failure results; use the current progress checklist for remaining gates.
+Historical browser-fix archive, still installed on the second PC: `dist/KioskLauncher-stage3-browser-fix-20261025.zip`, 171990670 bytes, SHA-256 `c694b914c2047bb9026f1bbb1f96c4b79b513562d8c4338879178dfb24911690`. Its 1724-file manifest and ZIP CRC passed; all four EXEs were rebuilt. Earlier diagnostics/service-fix archives and unpacked builds are preserved as historical evidence. Later dated checkpoints record additional HTTPS/signing, maintenance and failure results; use the current progress checklist for remaining gates and the newer access-message checkpoint for the current local development package.
 
 ### Development Bundle Checkpoint — 2026-10-24
 
