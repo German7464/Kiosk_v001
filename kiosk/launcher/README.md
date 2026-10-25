@@ -54,9 +54,15 @@ Device configuration has schema version 1 and a stable UUID. Saving preserves a 
 
 Initial startup failure stops immediately. After a successful start, recovery retries use delays of 5, 15 and 60 seconds, then stop; failed cleanup stops retries. Startup journals rotate across five files of 5 MiB each. Diagnostic ZIPs contain allowlisted startup state only; database, assets, host identity, passwords, cookies and keys are excluded. They are not backups. Disk/memory warning thresholds (1 GiB and 256 MiB) are informational, not confirmed capacity or content quotas.
 
+The owner confirmed the stage 3 aggregate storage policy on 2026-10-25: retain the below-1-GiB free-space warning and 25-MiB journal bound, with no aggregate quota and no automatic content deletion. Configurable aggregate quotas require later scoped work. This decision does not establish disk-exhaustion recovery or capacity acceptance.
+
 These retries run inside the live service process and share one budget until it is restarted; a successful retry does not reset that budget. Windows SCM automatic process recovery is not configured. After a whole-process crash, start the service explicitly from Launcher or an elevated `Start-Service KioskService`. A killed process can leave `status/runtime.json` reporting its last `running` state; Launcher also checks freshness and the live identity endpoint before accepting readiness.
 
 ## Development Checks
+
+### Isolated Packaged Removal Checks
+
+Run `python -m tools.check_launcher_package --package dist/KioskLauncher --evidence logs/launcher-removal-acceptance` from an elevated development terminal with no local KioskService registration. The helper refuses an existing report or service, verifies the complete package and copies it into a temporary fixture. Only child-process ProgramFiles/ProgramData point to the fixture. Actual Maintenance EXE cases check missing confirmation, wrong UUID, unexpected binary file, a data symlink to an outside witness and successful exact-UUID deletion. File preservation, package integrity and absent SCM registration are checked independently. No service is installed or stopped. This verifies packaged filesystem guards, not deletion of a registered running service or second-PC acceptance. Keep this separate from the existing physical data-preserving uninstall evidence.
 
 ### Installed Service Logging
 

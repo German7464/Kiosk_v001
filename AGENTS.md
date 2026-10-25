@@ -80,6 +80,22 @@ For each task:
 6. Update docs/TZ_PROGRESS.md and docs/CHANGELOG.md after every completed stage. Record requirement references, evidence, limitations, unresolved decisions, and the next step. Do not mark an entire requirement verified from partial checks.
 7. Provide commands to run and test the change.
 
+## Continuous execution and test batching
+
+Maintain a remaining-check queue for the selected stage in docs/TZ_PROGRESS.md. Each check records its requirement, source/package version, environment, expected outcome, evidence and blocker. Reuse applicable existing evidence; rerun only when related code, package, environment or an unresolved failure justifies it. Source tests, mocked checks and ACL inspection do not establish physical service-token acceptance.
+
+Continue through the queue without ending the session after a few passing checks or a commit. A blocked scenario does not block independent work. Record the failure and move on; retry only with a new diagnostic hypothesis or changed conditions. Do not weaken Windows security or add a permanent privileged product interface solely to make a test pass.
+
+Batch independent automated checks and inspect every result. Serialize tests that share a service, database, port or mutable fixture. After an implementation step run relevant targeted tests, compileall, independent Flask checks and git status. Run consolidated regression before stage closure; repeat it after fixes that invalidate its result. Do not rerun unchanged passing suites merely for documentation updates.
+
+Collect unavoidable manual checks into batches by environment and required owner action. Prefer repeatable isolated automated scenarios with bounded timeouts, exact path/identity guards, evidence and cleanup. Use Windows-MCP for practical Windows/browser behavior; do not use computer-use or IAB. Never modify working credentials or delete working installation data for a test.
+
+Keep full logs in evidence files; show concise summaries, failures and paths. Do not print archives, base64 payloads or large successful logs. Read only relevant documentation sections and changes, not entire historical ledgers repeatedly. Record results after each coherent block; checkpoints and commits are not session-ending events.
+
+When a context-remaining indicator is available, prepare a handoff at 15 percent and stop starting new work at 10 percent. Finish safe cleanup of any active operation. If no exact indicator is available, do not claim an exact percentage: save compact state early in docs/CHAT_HANDOFF.md and use available context compaction. Handoff includes completed/remaining checks, evidence paths, versions, blockers, active processes and exact next action.
+
+End the session only when the selected stage is complete, all available independent work is exhausted and external input is required, the owner stops work, or the context threshold requires a handoff. Preserve stage boundaries: unresolved mandatory checks keep the stage incomplete, and the next stage still requires owner selection. Give progress updates during execution and a consolidated final report when actually stopping.
+
 ## Stage completion and transition
 
 At the start of each task, read docs/TZ.md and docs/TZ_PROGRESS.md to identify the selected stage, its acceptance criteria, and outstanding checks.

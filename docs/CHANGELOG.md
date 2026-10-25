@@ -2,6 +2,10 @@
 
 ## 2026-10-25
 
+- Adopted continuous selected-stage execution in AGENTS.md: evidence-aware test queues, batched automated checks, grouped manual acceptance, independent work around blockers and context-budget handoffs. Commits and small passing batches no longer end a working session; mandatory acceptance and stage boundaries remain unchanged.
+- Added repeatable isolated actual-EXE removal acceptance: missing confirmation, wrong UUID, unexpected binary file, data reparse path and exact-UUID deletion passed with preservation checks. Corrected the test environment's architecture-specific ProgramFiles overrides before successful execution; no product or working installation changed. All 42 selected tests, compileall and independent Flask 200/302/403 passed.
+- Recorded the owner's stage 3 storage decision: below-1-GiB free-space warning, 25-MiB journal bound, no aggregate quota or automatic content deletion. Locally validated a replacement diagnostic method with 43 actual virtual-service handle probes and verified temporary-service cleanup; actual second-PC service acceptance remains pending.
+
 - Confirmed the owner-opened elevated second-PC console and hash-checked the native permission helper transfer. Windows refused service-token opening with error 5 before any of the 43 access probes; recorded this as an unresolved test setup boundary, not a passing permission matrix. Final service/runtime PID 8040, original UUID and HTTP 200 remain intact. Nine targeted tests, compileall and independent isolated Flask 200/302/403 passed. No product/package/security-policy change; stage 3 remains incomplete.
 
 - Added contextual Launcher guidance for administrative approval, unavailable/cancelled UAC, user-settings/export access and inaccessible service status. Ordinary display/admin opening remains unelevated; maintenance refuses nonadministrative execution before storage access with exit 1/actionable instruction and no expected-error traceback. Recorded the owner's machine-wide future-installer intent without adding an installer or Windows accounts.
