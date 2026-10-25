@@ -2,6 +2,8 @@
 
 ## 2026-10-25
 
+- Verified bounded stage 3 installed recovery on the second PC with the unchanged package: duplicate-owner refusal, four owned Caddy crashes with 5/15/60-second retries and terminal fail-closed stop, explicit restart, whole-service process crash cleanup and manual recovery. No SCM automatic recovery is configured; documented stale status-file limitations and live readiness checks. Original HTTP profile, retained HTTPS configuration, database and session-key hashes were restored/preserved. Fourteen targeted tests, compileall and independent Flask 200/302/403 passed. Stage 3 remains incomplete; no stage 4 work began.
+
 - Continued physical stage 3 acceptance without changing product code or rebuilding the package: installed CSR/return, packaged interactive signing on the separate administrative PC, real service-token loopback HTTPS with strict TLS/served-leaf verification, maintenance suppression, missing-key fail-closed startup and guarded previous-configuration restoration passed. Existing CA/USB, VPN, firewall and working credentials were unchanged.
 - Restored the disposable installation to its original working loopback HTTP profile, retaining exact HTTPS configuration, database and session key; maintenance is disabled and intended startup remains enabled. Recorded actual ACL evidence and explicit remaining permission/browser/network/failure/deletion limits. Independently validated retrieved reports/logs; 22 targeted tests (31.969 seconds), compileall and disposable Flask 200/302/403 passed. Stage 3 remains incomplete; stage 4 is unstarted.
 
