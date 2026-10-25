@@ -2,6 +2,8 @@
 
 ## 2026-10-25
 
+- Confirmed the owner-opened elevated second-PC console and hash-checked the native permission helper transfer. Windows refused service-token opening with error 5 before any of the 43 access probes; recorded this as an unresolved test setup boundary, not a passing permission matrix. Final service/runtime PID 8040, original UUID and HTTP 200 remain intact. Nine targeted tests, compileall and independent isolated Flask 200/302/403 passed. No product/package/security-policy change; stage 3 remains incomplete.
+
 - Added contextual Launcher guidance for administrative approval, unavailable/cancelled UAC, user-settings/export access and inaccessible service status. Ordinary display/admin opening remains unelevated; maintenance refuses nonadministrative execution before storage access with exit 1/actionable instruction and no expected-error traceback. Recorded the owner's machine-wide future-installer intent without adding an installer or Windows accounts.
 - Seven new regressions and all 42 selected Launcher/MVP tests passed, as did compileall, independent Flask 200/302/403 and actual local GUI/EXE denied-status observations with exact fixture ACL restoration. Rebuilt/verified four EXEs and final ZIP (`KioskLauncher-stage3-access-messages-20261025.zip`, SHA-256 `5657b9bdbc27f3da707c3cdc18e23270b1f1f4969b60927f21278b2b1677d1dd`); retained previous builds. New package is local only. Real second-PC token probes await physical UAC confirmation; distinct-user checks remain pending under the no-new-accounts choice. Stage 3 remains incomplete.
 
