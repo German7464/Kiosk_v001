@@ -33,7 +33,7 @@ Device name, orientation, startup settings, runtime transitions and migration do
 
 ## How the Feature Is Shown in Kiosk Mode
 
-Launcher opens the existing kiosk route in a separate user browser profile after verified readiness. Display startup runs in the signed-in user's session, separately from the background service. Browser fullscreen does not lock Windows; Esc/F11 or Alt+F4 provides local maintenance access. OS-level kiosk lockdown is not implemented.
+Launcher opens the existing kiosk route in a separate user browser profile after verified readiness. Prefer installed Chrome, with Edge as fallback; profiles are separate under `%LOCALAPPDATA%/Kiosk/browser/chrome` and `browser/edge`. Existing browser profiles are retained. MVP browser selection is unchanged. Edge-only first-run/account prompts remain a separate acceptance check. Display startup runs in the signed-in user's session, separately from the background service. Browser fullscreen does not lock Windows; Esc/F11 or Alt+F4 provides local maintenance access. OS-level kiosk lockdown is not implemented.
 
 ## How the Feature Is Shown in TV Mode
 
@@ -47,7 +47,7 @@ Content and passwords remain managed through the existing authenticated admin pa
 
 Installed paths are derived from Windows known environment locations, never from the current working directory. `%ProgramFiles%/Kiosk` is reserved for binaries; `%ProgramData%/Kiosk` separates `data`, `config`, `secrets`, `logs`, `temp`, `updates` and `status`. `%LOCALAPPDATA%/Kiosk` holds per-user browser/maintenance settings. Development/MVP startup retains its existing paths unless explicit installed overrides are supplied.
 
-The service is designed for the virtual account `NT SERVICE\KioskService`. Configuration and secrets are restricted to administrators, SYSTEM and the service identity. Ordinary users may read sanitized status, not private keys or the database. The service reads configuration/secrets, modifies data/log/temp/status directories and receives write access to its HTTPS ownership lock. Current source permissions and service registration still require practical installed-account verification before acceptance.
+The service uses the virtual account `NT SERVICE\KioskService`. Registration omits the password argument: virtual accounts require a null password, and passing an empty password produced Windows error 1057 in physical testing. Configuration and secrets are restricted to the operator, administrators, SYSTEM and the service identity. Ordinary users may read sanitized status, not private keys or the database. The service reads configuration/secrets, modifies data/log/temp/status directories and receives write access to its HTTPS ownership lock. Actual HTTP service execution under this identity/session 0 and graceful SCM stop passed on the second PC; HTTPS private-key access and the complete installed-account failure matrix remain pending.
 
 Device configuration has schema version 1 and a stable UUID. Saving preserves a validated previous configuration. Invalid existing configuration is an error, not permission to create a new identity. Imports require `source_stopped=True`, a new disjoint destination, an existing valid session key and an intact SQLite database. Stop the old server first. A write reservation protects the snapshot/copy; originals and public assets are checked before destination activation. The source is retained.
 
@@ -112,6 +112,14 @@ Before uninstalling, disable display startup in the normal Launcher for each con
 For invalid device configuration, stop the service and run elevated `KioskMaintenance.exe restore-config --device-id <previous-uuid>`. It restores only the validated previous configuration and retains the damaged bounded file. This is configuration maintenance, not product backup/restore.
 
 ## Offline Build
+
+### Physical Windows Installation Checkpoint — 2026-10-25
+
+Owner-enabled RustDesk file transfer delivered the whole archive to `DIALOG-MEDIA2` (Windows 10 build 19045). Archive and all 1724 file hashes were checked before execution. A real wizard exposed error 1057 from the empty virtual-account password; omission fixed actual packaged create/configure/start. An elevated test confirmed process owner `NT SERVICE\KioskService`, session 0, automatic SCM startup, readiness after closing Launcher, eight public HTTP 200 responses, admin 302 before login, missing CSRF 403, login 302 and authenticated admin 200. Packaged graceful stop returned stopped/exit 0, identical reinstall succeeded, and restart preserved the authenticated session and content version. Uninstall from a running service removed only named service/binaries and retained exact database/configuration hashes. These checks use a fresh disposable installation, not production credentials or data.
+
+Opening display exposed an Edge account/synchronization prompt. Chrome preference and separate browser profiles avoid that prompt on the selected Chrome-equipped PC. After reboot, application startup at 02:52:00.645 preceded the interactive Security 4624 login at 02:53:05.5395192 (+03:00, 2026-10-25). The owner confirmed automatic Chrome fullscreen launch after sign-in and physical F11 exit; Windows-MCP observed the normal Chrome window afterward. Post-boot checks confirmed eight-route HTTP 200, the installed manifest and the single owned Launcher/Chrome main process. A separate temporary startup probe produced no report (task result 1) and was removed; no directly sampled pre-login HTTP result is claimed. Evidence was retrieved and independently checked under ignored `logs/launcher-physical-20261025`.
+
+Latest development archive: `dist/KioskLauncher-stage3-browser-fix-20261025.zip`, 171990670 bytes, SHA-256 `c694b914c2047bb9026f1bbb1f96c4b79b513562d8c4338879178dfb24911690`. Its 1724-file manifest and ZIP CRC passed; all four EXEs were rebuilt. Earlier diagnostics/service-fix archives and unpacked builds are preserved as historical evidence. The package is for continued stage 3 acceptance, not an accepted unattended release. Installed HTTPS/operator signing, failure/permission checks, maintenance suppression and explicit data-deletion gates still apply.
 
 ### Development Bundle Checkpoint — 2026-10-24
 

@@ -95,7 +95,7 @@ def register_service(storage):
         raise RuntimeError("Stop the service before changing its configuration.")
     operation = "create" if state == "absent" else "config"
     hidden_run(["sc.exe", operation, SERVICE_NAME, "binPath=", command, "start=", "auto" if profile["server_autostart"] else "demand",
-                "obj=", "NT SERVICE\\" + SERVICE_NAME, "password=", "", "DisplayName=", "Kiosk Local Server"])
+                "obj=", "NT SERVICE\\" + SERVICE_NAME, "DisplayName=", "Kiosk Local Server"])
     hidden_run(["sc.exe", "sidtype", SERVICE_NAME, "unrestricted"])
     from kiosk.launcher.windows import service_sid
 

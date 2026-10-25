@@ -1,6 +1,6 @@
 # Technical Specification Progress
 
-Source: [TZ.md](TZ.md). Updated: 2026-10-24. This ledger records evidence, not promises.
+Source: [TZ.md](TZ.md). Updated: 2026-10-25. This ledger records evidence, not promises.
 
 Conversation continuation: [CHAT_HANDOFF.md](CHAT_HANDOFF.md) records stage 3 selection and ongoing implementation after the completed stage 2 baseline exit. Earlier dated entries retain their historical Pending statuses.
 
@@ -21,7 +21,7 @@ After every stage update requirement references, evidence, limitations, remainin
 | 2 | Baseline and constraints | Partial | MVP tag retained; v2 branch; no stack replacement. |
 | 3 | Platforms and capacity | Partial | Physical Windows/Chrome LAN and CSR lifecycle fixtures on the selected client; no general platform matrix, physical Android TV or 100-device acceptance. |
 | 4 | Architecture | Partial | Existing modular Flask layout; no isolated module lifecycle. |
-| 5 | Installation and launcher | Partial | Stage 3 source and 188-test checkpoint passed; EXE development bundle built and same-machine package/UI/CSR checks passed. Actual SCM identity, boot/sign-in and second-PC installed acceptance pending. |
+| 5 | Installation and launcher | Partial | Real second-PC HTTP service identity/session 0, graceful stop/restart, session/version preservation, identical reinstall, data-preserving uninstall and boot/sign-in/Chrome fullscreen/F11 exit passed. Installed HTTPS and remaining failure/permission/deletion acceptance pending. |
 | 6 | Groups and discovery | Not started | No pairing or group protocol. |
 | 7 | Device roles | Not started | No standby or authority protocol. |
 | 8 | Accounts and permissions | Partial | Single admin authentication and own-password change; two roles pending. |
@@ -44,6 +44,19 @@ After every stage update requirement references, evidence, limitations, remainin
 | 25 | Excluded features | Implemented | No optional content modules added by this work. |
 | 26 | Development rules | Partial | Stage ledger and workflow established; maintain after every stage. |
 | 27 | Final product | Not started | Version 2 is not a completed release. |
+
+## Stage 3 physical Windows installation — 2026-10-25
+
+References: selected 5.1–5.4/22.3, applicable 16/18/19/21. Status: **Partial; stage 3 remains incomplete**. The owner prepared the second PC and enabled RustDesk file transfer. Windows-MCP controlled the existing remote connection to `DIALOG-MEDIA2`, Windows 10 build 19045, using a fresh disposable installation. No working data/credentials, retained CA/USB, VPN or firewall settings were changed.
+
+- Initial archive SHA-256 and all 1724 files matched. Real setup exposed Windows error 1057: the installer passed an empty password for its virtual account. Microsoft CreateService documentation requires a null password. Omitting the password option succeeded first in a controlled native diagnostic and then through the corrected packaged wizard. The final setup reuses the existing fixture account/UUID and does not reset credentials.
+- Real SCM process owner `NT SERVICE\KioskService`, session 0 and automatic start mode were confirmed. Closing Launcher left the service running. Eight public pages/APIs returned 200, unauthenticated admin 302, missing CSRF 403, valid fixture login 302 and authenticated admin 200. Packaged stop produced SCM stopped/exit 0 and runtime stopped; identical reinstall succeeded; restart preserved the authenticated session and content version.
+- Uninstall of the running corrected service removed the named service and binary tree while retaining exact database/device-config SHA-256 values. The next build was installed with those values unchanged. Explicit deletion of test machine data is not yet verified physically.
+- Edge opened an account/synchronization prompt over display. Launcher now prefers available Chrome and separates Chrome/Edge profiles, leaving MVP selection and existing profiles unchanged. The new EXE opened kiosk fullscreen from normal-user `--autostart`. After reboot the owner confirmed automatic Chrome fullscreen launch after sign-in and physical F11 exit; Windows-MCP then observed Chrome's address bar and the kiosk URL. Post-boot process checks found exactly one autostart Launcher and one owned Chrome main process. Edge-only unattended acceptance remains pending.
+- Latest archive `dist/KioskLauncher-stage3-browser-fix-20261025.zip`: 171990670 bytes, SHA-256 `c694b914c2047bb9026f1bbb1f96c4b79b513562d8c4338879178dfb24911690`; 1724 manifest-listed files, 376105876 total unpacked bytes. Four EXEs, manifest and ZIP CRC passed. Targeted source tests: 20 passed in 6.273 seconds including browser preference/profile isolation; compileall and independent Flask 200/302/403 passed. Earlier service-fix build/19-test checkpoint and old archives are retained.
+- The second PC was rebooted through RustDesk; the owner signed back in. A temporary protected SYSTEM startup probe produced no report (task result 1), so it provides no pre-login HTTP evidence. Its task and exact scratch directory were removed. Independent Windows Security event 4624 and the matching current service PID's startup journal show boot at `02:51:46.500 +03:00`, service process creation `02:51:57.258895`, application running `02:52:00.645`, and interactive login `02:53:05.5395192` on 2026-10-25. This confirms service/application startup before sign-in, not a directly sampled pre-login HTTP response. No automatic OS sign-in was configured. Post-boot eight-route HTTP 200 and all 1724 installed hashes passed. Physical installed HTTPS/signer, complete permission/failure matrix, maintenance suppression and explicit data-deletion checks remain pending. Stage 4 is not started.
+
+Remote evidence directory: `C:\Users\admin\Desktop\Kiosk-Stage3-Evidence-20261025`. Its eight-file archive was retrieved through RustDesk, passed ZIP CRC and matching SHA-256 `205a973cd3ae4834e8bcceecd94ff097e1664631d0b86ef2e91cd9a506aa8b9e` (43821 bytes), and extracted under ignored `logs/launcher-physical-20261025`; an independent parser asserted service identity/lifecycle/authentication, preserved data, boot timeline, post-boot routes/manifest and probe cleanup. Files include `service-lifecycle.json`, `running-uninstall.json`, `boot-probe-failure.json`, `boot-timeline.json`, `post-boot-check.json` and sanitized startup journals. Local build/source evidence: ignored `logs/launcher-virtual-account-build.txt`, `logs/launcher-virtual-account-package.json`, `logs/launcher-virtual-account-flask.json`, `logs/launcher-browser-build.txt` and `logs/launcher-browser-package.json`. Test installation and intended service/display startup remain available for the remaining stage 3 checks.
 
 ## Stage 3 service diagnostics extension — 2026-10-25
 
