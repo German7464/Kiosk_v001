@@ -115,6 +115,14 @@ For invalid device configuration, stop the service and run elevated `KioskMainte
 
 ## Offline Build
 
+### Packaged MVP Import Checkpoint — 2026-10-25
+
+The installed `632139d` package on the second PC passed `KioskMaintenance.exe import-mvp` against a synthetic current-baseline MVP-layout fixture. Missing `--source-stopped` exited 2 without mutation; confirmed import exited 0; repeat into the existing destination exited 1 without overwriting it. The operator acknowledgment is required; it is not automatic detection of every possible source process. Original source file hashes stayed unchanged. Only child-process `PROGRAMDATA` pointed to a new restricted fixture directory; this check did not replace the working machine installation or register another service.
+
+The imported fixture ran through packaged `KioskService.exe --console-root` at loopback port 5006. Exact PID/live identity readiness, eight public HTTP 200 responses, old-session admin 200 and fresh login 302/admin 200 passed. Version 2, event contents, original bytes and three public image URL/hash pairs were preserved. Separate offline SQLite comparison verified exact users/password hashes, tags, event_tags, settings and content_versions; only the expected `events.image_original` storage prefix changed. Source/imported session-key hashes matched. The owned console process was forcibly terminated and its listener closed; the existing SCM service PID/identity/data/configuration remained unchanged. This does not establish historical-release migration compatibility or service-token ACL acceptance for a newly imported real installation.
+
+Fixture ZIP: 5323 bytes/eight files, SHA-256 `ec39db075e72bbae6ee665806c2aac883ae3cd89351480148b2e647d55c9e73c`; remote retained directory: `Desktop/Kiosk-MVP-Import-20261025`. It contains only disposable test data/credentials, not working secrets. Evidence: ignored `logs/launcher-import-physical-20261025`; report SHA-256 `336e010fabe5a476baacaaa7812ac350b1c246d10cb0c4099a7bd60f16782276` matched the remote file including its newline. Twenty-three targeted tests, compileall and independent Flask 200/302/403 passed. No product code/build or network/trust/working-credential change; stage 3 remains incomplete.
+
 ### Installed Configuration Failure Checkpoint — 2026-10-25
 
 The unchanged `632139d` package on the second PC rejected malformed device JSON, schema version 99 and a synthetic certificate-transaction journal with JSONDecodeError, ValueError and RuntimeError respectively. Each real SCM start ended stopped/1066 with runtime failed, no HTTP/HTTPS listener and no installed Caddy. The service preserved the injected configuration/journal and all unrelated tested hashes; it did not replace the device identity. Invalid device configurations yield an empty status identity because no valid configuration was loaded, not a new UUID.

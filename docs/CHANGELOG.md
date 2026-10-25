@@ -2,6 +2,9 @@
 
 ## 2026-10-25
 
+- Verified installed EXE MVP import on the second PC using a restricted synthetic fixture and child-scoped ProgramData: missing stopped-source acknowledgment and existing-destination overwrite were rejected; valid import preserved source files, administrator/password hash, session, content version, event data and images with only the expected internal original-image prefix conversion. Exact six-table SQLite comparison and actual packaged HTTP/authentication/image probes passed.
+- Closed the isolated importer runtime/listener while preserving the existing SCM service PID/identity and tracked working data/configuration hashes. No product code/build, credentials, trust or network configuration changed. Twenty-three targeted tests (15.202 seconds), compileall and independent Flask 200/302/403 passed. Updated the current acceptance checklist; stage 3 remains incomplete and stage 4 is unstarted.
+
 - Audited stage 3 against TZ/stage allocation, corrected stale current package/acceptance wording and added a single current acceptance checklist while preserving dated history. Recorded remaining packaged MVP import and aggregate-storage decisions alongside browser HTTPS, permissions, deletion and startup/error gates; no future-stage work was started.
 - Verified actual installed service refusal for malformed device JSON, schema version 99 and a synthetic interrupted-certificate marker. SCM stopped/1066 with specific sanitized errors and no listeners/proxy/fallback; original configuration, UUID, database/session and previous/retained HTTPS material were preserved/restored after each case. Twenty-one targeted tests (31.459 seconds), compileall and independent Flask 200/302/403 passed. Product package/code and network/trust/credentials are unchanged; stage 3 remains incomplete.
 
