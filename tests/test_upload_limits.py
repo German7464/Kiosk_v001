@@ -142,7 +142,17 @@ class UploadLimitTests(unittest.TestCase):
 
     def test_waitress_http_body_rejection(self):
         server = create_server(self.app, host='127.0.0.1', port=0, max_request_body_size=256, asyncore_loop_timeout=0.1)
-        thread = threading.Thread(target=server.run, daemon=True)
+        stopped = threading.Event()
+        loop_errors = []
+
+        def serve_requests():
+            try:
+                while not stopped.is_set():
+                    server.asyncore.loop(timeout=0.1, count=1, map=server._map)
+            except Exception as error:
+                loop_errors.append(error)
+
+        thread = threading.Thread(target=serve_requests, daemon=True)
         thread.start()
         try:
             base = f'http://127.0.0.1:{server.effective_port}'
@@ -163,7 +173,9 @@ class UploadLimitTests(unittest.TestCase):
         finally:
             server.task_dispatcher.shutdown()
             self.assertFalse(server.task_dispatcher.threads)
-            server.close()
-            server.asyncore.close_all(map=server._map)
+            stopped.set()
             thread.join(timeout=3)
             self.assertFalse(thread.is_alive())
+            server.close()
+            server.asyncore.close_all(map=server._map)
+            self.assertEqual(loop_errors, [])
