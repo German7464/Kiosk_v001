@@ -2,6 +2,9 @@
 
 ## 2026-10-25
 
+- Audited stage 3 against TZ/stage allocation, corrected stale current package/acceptance wording and added a single current acceptance checklist while preserving dated history. Recorded remaining packaged MVP import and aggregate-storage decisions alongside browser HTTPS, permissions, deletion and startup/error gates; no future-stage work was started.
+- Verified actual installed service refusal for malformed device JSON, schema version 99 and a synthetic interrupted-certificate marker. SCM stopped/1066 with specific sanitized errors and no listeners/proxy/fallback; original configuration, UUID, database/session and previous/retained HTTPS material were preserved/restored after each case. Twenty-one targeted tests (31.459 seconds), compileall and independent Flask 200/302/403 passed. Product package/code and network/trust/credentials are unchanged; stage 3 remains incomplete.
+
 - Verified bounded stage 3 installed recovery on the second PC with the unchanged package: duplicate-owner refusal, four owned Caddy crashes with 5/15/60-second retries and terminal fail-closed stop, explicit restart, whole-service process crash cleanup and manual recovery. No SCM automatic recovery is configured; documented stale status-file limitations and live readiness checks. Original HTTP profile, retained HTTPS configuration, database and session-key hashes were restored/preserved. Fourteen targeted tests, compileall and independent Flask 200/302/403 passed. Stage 3 remains incomplete; no stage 4 work began.
 
 - Continued physical stage 3 acceptance without changing product code or rebuilding the package: installed CSR/return, packaged interactive signing on the separate administrative PC, real service-token loopback HTTPS with strict TLS/served-leaf verification, maintenance suppression, missing-key fail-closed startup and guarded previous-configuration restoration passed. Existing CA/USB, VPN, firewall and working credentials were unchanged.

@@ -21,7 +21,7 @@ After every stage update requirement references, evidence, limitations, remainin
 | 2 | Baseline and constraints | Partial | MVP tag retained; v2 branch; no stack replacement. |
 | 3 | Platforms and capacity | Partial | Physical Windows/Chrome LAN and CSR lifecycle fixtures on the selected client; no general platform matrix, physical Android TV or 100-device acceptance. |
 | 4 | Architecture | Partial | Existing modular Flask layout; no isolated module lifecycle. |
-| 5 | Installation and launcher | Partial | Real second-PC HTTP service identity/session 0, graceful stop/restart, session/version preservation, identical reinstall, data-preserving uninstall and boot/sign-in/Chrome fullscreen/F11 exit passed. Packaged signing, installed loopback HTTPS, missing-key fail-closed behavior, maintenance suppression and guarded configuration restoration passed; broader permission/failure/deletion acceptance pending. |
+| 5 | Installation and launcher | Partial | Selected second-PC installation, HTTP/HTTPS virtual service, boot/sign-in/Chrome, signing, maintenance entry point, bounded crash recovery and configuration-failure checks passed. See the current stage 3 checklist for remaining gates; partial scenarios do not establish complete acceptance. |
 | 6 | Groups and discovery | Not started | No pairing or group protocol. |
 | 7 | Device roles | Not started | No standby or authority protocol. |
 | 8 | Accounts and permissions | Partial | Single admin authentication and own-password change; two roles pending. |
@@ -44,6 +44,35 @@ After every stage update requirement references, evidence, limitations, remainin
 | 25 | Excluded features | Implemented | No optional content modules added by this work. |
 | 26 | Development rules | Partial | Stage ledger and workflow established; maintain after every stage. |
 | 27 | Final product | Not started | Version 2 is not a completed release. |
+
+## Current stage 3 acceptance checklist
+
+This is the current consolidated checklist, superseding pending wording in older dated entries. Stage 3 remains incomplete. References: 5.1–5.4/22.3 and applicable 16/18/19/21. Read the dated checkpoints for precise evidence and limits; do not infer untested behavior from a row's summary.
+
+| Area | Current evidence | Remaining check or decision |
+| --- | --- | --- |
+| Installation and ordinary lifecycle | Manifest-checked package, local wizard, real virtual account/session 0, HTTP/HTTPS, graceful stop, identical reinstall, data-preserving uninstall passed | Explicit machine-data deletion and exact-UUID refusal using disposable data |
+| Startup and display | Service startup before sign-in established by boot/process/journal/login timeline; owner-confirmed Chrome fullscreen after sign-in and F11 exit; maintenance suppressed the same autostart entry point | Maintenance at an actual sign-in; Edge fallback first-run behavior remains unaccepted. No new positive Chrome reboot test is needed |
+| Permissions | Real service reads HTTPS key/configuration and modifies required runtime paths; actual ACLs captured | Distinct non-operator token denial and complete service write-denial matrix; do not infer these from ACL inspection |
+| HTTPS deployment | Separate-PC packaged CSR/signing/return and installed loopback strict TLS passed | Browser trust/display and broader network origin; packaged same-CA renewal under the actual service identity. No automatic trust/firewall changes |
+| Error handling | Duplicate owner, missing leaf key, four Caddy crashes/retry exhaustion, manual whole-process recovery, malformed/unsupported device configuration and transaction-presence guard passed | Unsafe-cleanup rejection currently has source/mock evidence only. Synthetic transaction presence does not establish real interrupted activation or power-loss durability |
+| MVP import and compatibility | Isolated source import tests preserve accounts/session/version/image references | Packaged stopped-source import and source preservation on a disposable fixture |
+| Storage and diagnostics | Separate roots, bounded journals, sanitized request/failure records, resource warning implementation | Document/resolve installed aggregate storage policy; warning thresholds are not total quotas or disk-exhaustion acceptance |
+
+Stage 4 owns persistent offline restart/Android TV; stages 5–9 own groups/modules/updates/replication; stage 10 owns full load, 72-hour endurance and broader hardware matrix. These are not new stage 3 implementation tasks. Next choose a bounded remaining gate; OS account/trust changes and destructive tests must have an explicit concrete scope. Existing owner edit in `run.py` is outside this work.
+
+## Stage 3 configuration failure and documentation audit — 2026-10-25
+
+References: selected 5.2–5.4/22.3 and applicable 18.11/19/21. **This bounded increment passed; stage 3 remains incomplete.** Audited TZ, progress, stage allocation and Launcher documentation: implementation stays within stage 3, stage 2 baseline remains preserved and stage 4 is unstarted. Corrected stale current-summary wording in V2_PLAN/Launcher README, marked historical package evidence explicitly and consolidated the remaining checks above. No product code, dependency or package changed. Commit subject: `docs: reconcile stage 3 status and record configuration failures`.
+
+- Windows-MCP/RustDesk operated the unchanged `632139d` package on `DIALOG-MEDIA2`. Verified host, elevation, service identity/path, device UUID and ordinary fixture paths. Refused any existing certificate transaction before mutation; none existed. Preserved exact active profile bytes and hashes of active/previous/retained device configuration, HTTPS configuration, database and session key.
+- With service stopped, injected malformed device JSON and then unsupported schema version 99. Actual SCM startup refused each: stopped/1066, runtime failed with JSONDecodeError and ValueError respectively, no HTTP/HTTPS listener or installed Caddy. Injected file bytes and unrelated tested hashes stayed unchanged. Failed status had an empty device identity because profile validation failed; no replacement UUID or configuration was created. Exact original profile restoration after each case returned HTTP 200 with the existing UUID and matching live runtime identity.
+- Temporarily reactivated retained HTTPS device configuration and created only a synthetic transaction marker at `config/https.json.certificate-transaction.json` using exclusive creation. Actual service refused startup with stopped/1066/failed RuntimeError; journals locate `runtime.py:138:supervise`. No HTTP fallback/listener/proxy, configuration rewrite or journal consumption occurred. The helper verified marker content, removed only its exact owned marker, restored the original HTTP bytes and confirmed readiness and all tested hashes. This tests the presence guard, not a real certificate transaction, activation rollback or power loss. Existing `device.retained.json` was never overwritten or removed.
+- Final service/runtime running at `http://127.0.0.1:5000`, HTTP 200, original UUID, no transaction marker or 8443 listener, all six tracked file hashes preserved. Normal Launcher visually showed running HTTP, maintenance off and display-after-sign-in on. Test consoles closed; RustDesk remains connected. No reboot, trust, VPN/routes/firewall, OS account, working password or retained CA/USB change.
+
+Evidence: remote `Desktop/Kiosk-Stage3-Evidence-20261025/{configuration-failures.json,startup-configuration-failures.log}`; retrieved report, selected timestamp-bounded sanitized journal and independent assertions in ignored `logs/launcher-config-physical-20261025`. Report SHA-256 `473398fa2879bf2d2b1d8c205b4233de1d68fefd2e8791e28a53e30834451aa2` matched the remote file including its newline. Retrieved bundle SHA-256 `261a219b000b981ef32384cebe2d4055245772216d0671a305f90743b289ebdd`. Three compressed clipboard blocks were source-hash checked before execution; assertions checked exact scenarios, error types, refusal, hash preservation, restored identity, journal failure frames and secret omission.
+
+Technical checks: 21 tests across Launcher storage/runtime/provisioning/diagnostics/installation passed in 31.459 seconds; compileall passed. Independent disposable Flask: `/kiosk`, `/kiosk/events`, `/tv`, `/preview`, `/admin/login`, `/api/version`, `/api/events`, `/api/tags` 200; unauthenticated `/admin` 302; missing-CSRF login 403. No full-suite rerun or rebuild is claimed. Documentation UTF-8/local links/anchors and diff whitespace checked before commit. The pre-existing `run.py` edit is retained outside the commit. Remaining work is only as allocated in the current checklist; do not repeat completed endurance or advance stages automatically.
 
 ## Stage 3 installed crash recovery checkpoint — 2026-10-25
 

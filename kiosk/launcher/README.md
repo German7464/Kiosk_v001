@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Stage 3 work in progress. Provide separate installed storage, explicit MVP import, local device setup, a Windows service host and a desktop controller. This source increment is not an accepted installer or a verified unattended deployment. Stage 2 is retained at `v2-stage2-baseline` (`9bbbc4e`).
+Stage 3 work in progress. Provide separate installed storage, explicit MVP import, local device setup, a Windows service host and a desktop controller. Source, package and selected second-PC checks have passed; this is not an accepted unattended release. Stage 2 is retained at `v2-stage2-baseline` (`9bbbc4e`). Current remaining gates are listed in [TZ Progress](../../docs/TZ_PROGRESS.md#current-stage-3-acceptance-checklist). Dated checkpoints below describe their own evidence, not the current aggregate status.
 
 ## Related Files
 
@@ -73,7 +73,7 @@ Select-String -Path "$env:ProgramData\Kiosk\logs\startup.log*" -Pattern 'WARNING
 .\.venv\Scripts\python.exe -m unittest tests.test_launcher_diagnostics tests.test_launcher_runtime
 ```
 
-The previously built `KioskLauncher-stage3-5b07164.zip` predates this logging extension. The rebuilt development package is `dist/KioskLauncher-stage3-diagnostics-20261025.zip` (171990712 bytes, SHA-256 `b8d4ca527ff510bae761dade00c79b34d9d8a7ba3c25a30140abe84304107496`). Extract the whole archive. Its manifest, ZIP CRC and actual isolated packaged-service HTTP/resource/secret-omission checks passed; the owned listener closed afterward. The fixture used forced termination, not an SCM graceful-stop check. The previous unpacked build is preserved at `dist/KioskLauncher-stage3-5b07164-preserved`. Actual installed-service/second-PC acceptance remains required; no working installation was updated.
+Historical logging-package checkpoint: `KioskLauncher-stage3-5b07164.zip` predates this logging extension. Its rebuilt successor was `dist/KioskLauncher-stage3-diagnostics-20261025.zip` (171990712 bytes, SHA-256 `b8d4ca527ff510bae761dade00c79b34d9d8a7ba3c25a30140abe84304107496`). Its manifest, ZIP CRC and isolated packaged-service HTTP/resource/secret-omission checks passed; the owned listener closed afterward. That fixture used forced termination, not SCM graceful stop. The old unpacked build remains at `dist/KioskLauncher-stage3-5b07164-preserved`. Later physical checkpoints below use the newer browser-fix package and supersede this checkpoint's pending second-PC checks.
 
 ```powershell
 .\.venv\Scripts\python.exe launcher.py
@@ -81,7 +81,7 @@ The previously built `KioskLauncher-stage3-5b07164.zip` predates this logging ex
 .\.venv\Scripts\python.exe -m compileall run.py kiosk launcher.py launcher_service.py
 ```
 
-Opening the development UI does not install a service. Configuration saving is rejected from an uninstalled/source Launcher. Real SCM account permissions, boot-before-sign-in, per-user display startup, completed offline packaging, packaged certificate provisioning and physical reinstall/uninstall remain acceptance gates. The main source UI/setup was inspected through Windows-MCP. Installed-data HTTPS provisioning was checked using isolated real TLS with mocked service/DACL operations. Neither proves packaged/virtual-account acceptance. Do not mark stage 3 complete from source tests.
+Opening the development UI does not install a service. Configuration saving is rejected from an uninstalled/source Launcher. Source UI/setup was inspected through Windows-MCP; isolated provisioning tests mock SCM/DACL operations and do not themselves establish real service acceptance. Subsequent physical checkpoints separately establish the stated package, virtual-account, boot/sign-in and reinstall/uninstall results. Remaining gates are in the current progress checklist. Do not mark stage 3 complete from source tests.
 
 ## Operator Flow (Package Acceptance Pending)
 
@@ -103,7 +103,7 @@ KioskMaintenance.exe provision-https --generation <server-local-generation> --fi
 
 This checks the generation against the device UUID, pinned Caddy, certificate/key/name/chain, actual served leaf and an owned installed-data runtime before enabling HTTPS. Only the public root is published to status storage. Enroll that public root separately on browsers after fingerprint verification. No trust installation or firewall/VPN change is automatic.
 
-For same-CA renewal, supply a new verified generation and the same fingerprint without origin/listener. Existing controlled activation/rollback is reused with the installed app factory, retaining old keys, data and sessions. Power-loss guarantees and real virtual-account access remain unverified. An interrupted certificate journal requires administrative review; the service does not rewrite protected configuration or use HTTP. The packaged certificate wrapper rejects source `--activate-profile` in both argument forms, preventing accidental startup against MVP paths.
+For same-CA renewal, supply a new verified generation and the same fingerprint without origin/listener. Existing controlled activation/rollback is reused with the installed app factory, retaining old keys, data and sessions. Initial installed HTTPS private-key access under the real virtual account passed; this does not establish packaged renewal under that identity or power-loss durability. An interrupted certificate journal requires administrative review; the service does not rewrite protected configuration or use HTTP. The packaged certificate wrapper rejects source `--activate-profile` in both argument forms, preventing accidental startup against MVP paths.
 
 ### Reinstall, Removal and Configuration Recovery
 
@@ -114,6 +114,12 @@ Before uninstalling, disable display startup in the normal Launcher for each con
 For invalid device configuration, stop the service and run elevated `KioskMaintenance.exe restore-config --device-id <previous-uuid>`. It restores only the validated previous configuration and retains the damaged bounded file. This is configuration maintenance, not product backup/restore.
 
 ## Offline Build
+
+### Installed Configuration Failure Checkpoint — 2026-10-25
+
+The unchanged `632139d` package on the second PC rejected malformed device JSON, schema version 99 and a synthetic certificate-transaction journal with JSONDecodeError, ValueError and RuntimeError respectively. Each real SCM start ended stopped/1066 with runtime failed, no HTTP/HTTPS listener and no installed Caddy. The service preserved the injected configuration/journal and all unrelated tested hashes; it did not replace the device identity. Invalid device configurations yield an empty status identity because no valid configuration was loaded, not a new UUID.
+
+The helper first refused any pre-existing transaction, retained original configuration bytes and restored them after every case. It removed only its exact synthetic journal after verifying its content. Each restored HTTP runtime returned 200 with the original device UUID and matching live identity. Original/previous/retained device configurations, HTTPS configuration, database and session-key hashes were preserved; the retained HTTPS recovery file was never overwritten. This verifies the startup guard, not real power-loss transaction recovery. Evidence: ignored `logs/launcher-config-physical-20261025`; report SHA-256 `473398fa2879bf2d2b1d8c205b4233de1d68fefd2e8791e28a53e30834451aa2` matched the remote file including its newline. Twenty-one targeted tests, compileall and independent Flask 200/302/403 passed. No product code/build, trust, credentials or network settings changed.
 
 ### Installed Recovery Checkpoint — 2026-10-25
 
@@ -127,9 +133,11 @@ Owner-enabled RustDesk file transfer delivered the whole archive to `DIALOG-MEDI
 
 Opening display exposed an Edge account/synchronization prompt. Chrome preference and separate browser profiles avoid that prompt on the selected Chrome-equipped PC. After reboot, application startup at 02:52:00.645 preceded the interactive Security 4624 login at 02:53:05.5395192 (+03:00, 2026-10-25). The owner confirmed automatic Chrome fullscreen launch after sign-in and physical F11 exit; Windows-MCP observed the normal Chrome window afterward. Post-boot checks confirmed eight-route HTTP 200, the installed manifest and the single owned Launcher/Chrome main process. A separate temporary startup probe produced no report (task result 1) and was removed; no directly sampled pre-login HTTP result is claimed. Evidence was retrieved and independently checked under ignored `logs/launcher-physical-20261025`.
 
-Latest development archive: `dist/KioskLauncher-stage3-browser-fix-20261025.zip`, 171990670 bytes, SHA-256 `c694b914c2047bb9026f1bbb1f96c4b79b513562d8c4338879178dfb24911690`. Its 1724-file manifest and ZIP CRC passed; all four EXEs were rebuilt. Earlier diagnostics/service-fix archives and unpacked builds are preserved as historical evidence. The package is for continued stage 3 acceptance, not an accepted unattended release. Installed HTTPS/operator signing, failure/permission checks, maintenance suppression and explicit data-deletion gates still apply.
+Latest development archive: `dist/KioskLauncher-stage3-browser-fix-20261025.zip`, 171990670 bytes, SHA-256 `c694b914c2047bb9026f1bbb1f96c4b79b513562d8c4338879178dfb24911690`. Its 1724-file manifest and ZIP CRC passed; all four EXEs were rebuilt. Earlier diagnostics/service-fix archives and unpacked builds are preserved as historical evidence. The package is for continued stage 3 acceptance, not an accepted unattended release. Later dated checkpoints record additional HTTPS/signing, maintenance and failure results; use the current progress checklist for remaining gates.
 
 ### Development Bundle Checkpoint — 2026-10-24
+
+Historical checkpoint only: its pending package/signing/second-PC checks are superseded where later physical evidence is recorded above and in TZ Progress. Do not repeat them solely because they were pending on this date.
 
 After owner-authorized restoration/exclusion of the exact verified bootloader, PyInstaller built four executables without dependency-version changes. `dist/KioskLauncher`: 1724 manifest-listed files plus manifest, 376098578 total bytes. Transfer ZIP: `dist/KioskLauncher-stage3-5b07164.zip` (172029060 bytes), SHA-256 `b8cb42510aef6e46a80302c6880e1ac25da0a7dd2b21dd0a9f4f9017c54525b3`. Extract the entire archive; retain `_internal`, `runtime`, licenses and `package.json`. Do not run just an EXE or launch inside the ZIP.
 
