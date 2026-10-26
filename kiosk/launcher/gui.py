@@ -111,10 +111,9 @@ class Launcher:
                 except (OSError, ValueError):
                     status, ready = None, False
                 try:
-                    free = shutil.disk_usage(self.storage.root if self.storage.root.exists() else self.storage.root.parent).free
-                except PermissionError as error:
+                    free = shutil.disk_usage(self.storage.root.anchor).free
+                except OSError:
                     free = None
-                    access_error = access_message(error, "status")
                 return status, ready, free, available_memory(), access_error
 
             def shown(result):

@@ -95,6 +95,21 @@ class LauncherAccessMessageTests(unittest.TestCase):
             ready.assert_not_called()
             dialog.assert_not_called()
 
+    def test_disk_probe_denial_preserves_readable_running_status(self):
+        with tempfile.TemporaryDirectory() as directory:
+            controller = self.controller()
+            controller.storage = Storage(Path(directory))
+            controller.background = lambda action, success: success(action())
+            status = {'state': 'running', 'device_name': 'Fixture', 'device_id': 'fixture-id', 'origin': 'http://127.0.0.1:5000', 'mode': 'kiosk', 'orientation': 'landscape', 'error': None}
+            with patch('kiosk.launcher.gui.read_status', return_value=status), patch('kiosk.launcher.gui.check_ready', return_value=True), patch('kiosk.launcher.gui.shutil.disk_usage', side_effect=PermissionError('private path')) as disk, patch('kiosk.launcher.gui.available_memory', return_value=4 * 1024 ** 3):
+                controller.poll()
+            text = controller.details.set.call_args.args[0]
+            self.assertIn('Сервер: running', text)
+            self.assertIn('Свободное место недоступно', text)
+            self.assertNotIn('Нет доступа к состоянию службы', text)
+            self.assertNotIn('private path', text)
+            disk.assert_called_once_with(controller.storage.root.anchor)
+
     def test_user_settings_and_display_do_not_elevate(self):
         controller = self.controller()
         controller.storage = Mock()

@@ -1,8 +1,9 @@
 # Changelog
 
-- Verified dedicated-VM maintenance at real sign-in, packaged separate-CA CSR/sign/return and installed network HTTPS/same-CA renewal with strict TLS and trusted Chrome. Temporary Work root and scoped firewall rule were removed; original HTTP restored, database/session/UUID preserved. Recorded the remaining Launcher disk/status warning and ordinary-user/Edge gates; stage 3 stays incomplete.
-
 ## 2026-10-26
+
+- Fixed protected-directory disk probes to use the installation volume root; disk-only failures preserve readable service status. 201 source tests, compileall and Flask 200/302/403 passed. Rebuilt and hash-verified the candidate package; actual separate-user VM GUI/CLI, Chrome opening, allowlisted export and own settings passed without changing the installed package. Prepared Edge remains pending; stage 3 is incomplete.
+- Verified dedicated-VM maintenance at real sign-in, packaged separate-CA CSR/sign/return and installed network HTTPS/same-CA renewal with strict TLS and trusted Chrome. Temporary Work root and scoped firewall rule were removed; original HTTP restored, database/session/UUID preserved. Recorded the remaining Launcher disk/status warning and ordinary-user/Edge gates; stage 3 stays incomplete.
 
 - Prepared the owner-cloned dedicated Windows VM: separate test accounts, pinned-key SSH/SFTP restricted to the development PC, protected credentials, standard UAC and remote access after reboot. Physical installation/accounts/VPN and retained CA/USB were preserved; only newly attached USB volume metadata was read.
 - Verified package transfer/1724-file manifest, real installation/UAC setup and virtual-account HTTP service. Installed public200/admin302/CSRF403, fixture login302/admin200 and fullscreen Chrome content passed. Eight installed-file handles under a distinct ordinary-account token gave two grants/six error-5 denials; full ordinary-user GUI/CLI remains separate.

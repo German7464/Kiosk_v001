@@ -1,5 +1,18 @@
 # Chat handoff — 2026-10-26
 
+## Current checkpoint: disk probe corrected; ordinary-user acceptance passed
+
+Supersedes live/next-task wording below. Stage3 incomplete; prepared Edge reserve is the remaining named checklist gate. Automatic review rejected command-based Edge launch with blocked by policy: do not bypass/retry through another tool. Owner-selected primary Chrome passed. No stage4 work authorized. Owner authorizes independent VM operations without repeated confirmation.
+
+Current VM console KioskTestUser/session4, actual ordinary SID1004. SSH/RustDesk healthy. KioskService remains original installed access-messages package on HTTP127.0.0.1:5000; new disk-probe candidate is separately expanded, not installed. Service Running, no Chrome/Launcher, no temporary KioskLab tasks, ordinary and Work startup/maintenance OFF. Root085e... removed/finalcount0; temporary8443rule absent. DB/session hashes unchanged. No active tests/build/signing. Physical second PC/USB/VPN unchanged.
+
+New source fix queries volume root for GUI/export/service disk metrics and preserves service status on disk-only failures. Candidate archive dist/KioskLauncher-stage3-disk-probe-20261026.zip SHA256 b9c87639525d83088a51441d14114fdb6563a226541531b63ba7b09f5558d0a1;1724 verified files. Old dist directory preserved stage3-access-messages-preserved. Guest candidate KioskTestLab/packages/disk-probe. Work/ordinary GUI status no warning, actual ordinary CLI exit1/actionable/no traceback, GUI administrative refusal, Chrome kiosk/admin, allowlisted export, startup/maintenance toggles and restoration passed. User elevation policy0 denies immediately, unchanged. Ordinary batch logon denied0xc000015b, so actual interactive sign-in used; do not grant batch privileges just for tests.
+
+201 source tests passed296.687s, 13targeted1.176s, compileall/freshFlask200/302/403. Evidence ignored logs/vm-lab-20261026/{source-disk-probe-suite.txt,flask-disk-probe.json,disk-native.json,candidate-cli.json,candidate-browser-status.json,ordinary-cli.json,ordinary-gui-observations.json,ordinary-gui-processes.json,ordinary-cleanup.json,ordinary-diagnostics.zip}. Latest TZ_PROGRESS/checklist records precise scopes. Remaining package service upgrade is not implemented/claimed; installer/updater remains separate scope. Owner run.py blank first line untouched/uncommitted.
+
+Automation fix: work_task.py uniquely registers a task, checks LastRunTime after2000 (new task has no historical run), result0/Ready, then unregisters finally. Earlier tight2-second timestamp check falsely timed out. Actual interactive ordinary login works via RustDesk choose KioskTestUser, protected local credential SetClipboard/send clipboard keystrokes then login arrow, clear clipboard. Current profile initialized. For Work sign-in choose Work and quick click login; no owner action needed. Do not print passwords or CA key.
+
+
 ## Latest live state: VM HTTPS block cleaned; investigate Launcher disk probe
 
 2026-10-26: maintenance at real sign-in and actual packaged network HTTPS/same-CA renewal passed; see newest TZ_PROGRESS entry and ignored logs/vm-lab-20261026/https. All temporary trust/rules removed, original HTTP 127.0.0.1:5000 Running, UUID unchanged, database/session hashes unchanged, Chrome/Launcher closed. Startup/maintenance OFF. Physical second PC remains released. Owner authorizes independent VM work without repeated approval.

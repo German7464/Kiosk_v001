@@ -60,6 +60,7 @@ class LauncherDiagnosticsTests(unittest.TestCase):
         with patch("kiosk.launcher.diagnostics.shutil.disk_usage") as usage, patch("kiosk.launcher.windows.available_memory", return_value=1):
             usage.return_value.free = 1
             record_resources(self.logger, self.storage)
+            usage.assert_called_once_with(self.storage.root.anchor)
             usage.side_effect = OSError("secret-filesystem-message")
             record_resources(self.logger, self.storage)
         output = self.output.getvalue()

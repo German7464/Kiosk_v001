@@ -18,7 +18,7 @@ def record_resources(logger, storage):
     from kiosk.launcher.windows import available_memory
 
     try:
-        disk = shutil.disk_usage(storage.root).free
+        disk = shutil.disk_usage(storage.root.anchor).free
         memory = available_memory()
         level = logging.WARNING if disk < 1024 ** 3 or memory < 256 * 1024 ** 2 else logging.INFO
         logger.log(level, "event=resources free_disk_bytes=%d available_memory_bytes=%d low_disk=%s low_memory=%s",

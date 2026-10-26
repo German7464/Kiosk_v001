@@ -94,7 +94,7 @@ def export_diagnostics(storage, destination):
         raise ValueError("Export diagnostics outside installation storage.")
     status = read_status(storage)
     allowed = {key: status[key] for key in ("schema_version", "state", "version", "mode", "orientation", "updated_at", "error")}
-    allowed["free_bytes"] = __import__("shutil").disk_usage(storage.root).free
+    allowed["free_bytes"] = __import__("shutil").disk_usage(storage.root.anchor).free
     with zipfile.ZipFile(destination, "x", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("status.json", json.dumps(allowed, indent=2))
         archive.writestr("README.txt", "Allowlisted local startup status only. No database, content, host identity, cookies, passwords or private keys.\n")
