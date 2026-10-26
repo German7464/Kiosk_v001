@@ -2,6 +2,8 @@
 
 ## 2026-10-26
 
+- Added a source/documentation/package/evidence audit for specification review, separating implemented behavior, historical acceptance, current artifacts and future stages. Reproduced kiosk initial-load non-retry and retained media after replacement/deletion; documented 15 findings and 14 proposed TZ clarifications without changing the specification or product code. The 201-test sandbox run recorded three failing subtests and two errors in three methods; all three affected methods passed outside the sandbox with unchanged source after CIM/SSPI restrictions were diagnosed. Both JS checks, compilation, independent Flask 200/302/403/404, 1724 package hashes and archive digest passed. Full results and limits are in PROJECT_AUDIT.md; stage 3 remains incomplete.
+
 - Fixed protected-directory disk probes to use the installation volume root; disk-only failures preserve readable service status. 201 source tests, compileall and Flask 200/302/403 passed. Rebuilt and hash-verified the candidate package; actual separate-user VM GUI/CLI, Chrome opening, allowlisted export and own settings passed without changing the installed package. Prepared Edge remains pending; stage 3 is incomplete.
 - Verified dedicated-VM maintenance at real sign-in, packaged separate-CA CSR/sign/return and installed network HTTPS/same-CA renewal with strict TLS and trusted Chrome. Temporary Work root and scoped firewall rule were removed; original HTTP restored, database/session/UUID preserved. Recorded the remaining Launcher disk/status warning and ordinary-user/Edge gates; stage 3 stays incomplete.
 
