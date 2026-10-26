@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-26
+
+- Prepared the owner-cloned dedicated Windows VM: separate test accounts, pinned-key SSH/SFTP restricted to the development PC, protected credentials, standard UAC and remote access after reboot. Physical installation/accounts/VPN and retained CA/USB were preserved; only newly attached USB volume metadata was read.
+- Verified package transfer/1724-file manifest, real installation/UAC setup and virtual-account HTTP service. Installed public200/admin302/CSRF403, fixture login302/admin200 and fullscreen Chrome content passed. Eight installed-file handles under a distinct ordinary-account token gave two grants/six error-5 denials; full ordinary-user GUI/CLI remains separate.
+- No product source/schema/dependency/rebuild changed. Updated stage3 evidence/limits and authorized next maintenance/HTTPS/Edge queue; stage3 remains incomplete.
+
 ## 2026-10-25
 
 - Verified 43 actual installed-path access probes under the second-PC service identity (23 grants/20 error-5 denials), independently matched the report hash, and restored the original service/HTTP readiness with input hashes and ACLs preserved. Added reusable isolated virtual-service diagnostics with explicit framework references and cleanup.
