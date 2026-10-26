@@ -1,5 +1,15 @@
 # Chat handoff — 2026-10-26
 
+## Latest live state: VM HTTPS block cleaned; investigate Launcher disk probe
+
+2026-10-26: maintenance at real sign-in and actual packaged network HTTPS/same-CA renewal passed; see newest TZ_PROGRESS entry and ignored logs/vm-lab-20261026/https. All temporary trust/rules removed, original HTTP 127.0.0.1:5000 Running, UUID unchanged, database/session hashes unchanged, Chrome/Launcher closed. Startup/maintenance OFF. Physical second PC remains released. Owner authorizes independent VM work without repeated approval.
+
+New local CA fingerprint 085e0fee966c1a7ec27a9b007d39a464253f3b4bdac920d99928ef2eb35d84cd; encrypted authority under ignored lab/authority, protected password KioskVmCA.credential.xml in existing restricted .ssh folder. No private CA/USB copy. Two VM generations under installed secrets vm-https-20261026-initial/renewal retained. Initial/new leaves 5da26913.../a0011070... independently verified. Original profile backup/ledger stays guest KioskTestLab/private/https-original. Do not reactivate without bounded cleanup.
+
+Next independent task: diagnose actual Launcher warning after provisioning as KioskTestAdmin instead of Work. Limited Work can read status and DriveInfo C: free space, yet Python shutil.disk_usage(protected installation root) likely denies. GUI currently turns a disk-only denial into status-access guidance; isolate/reproduce and correct minimally if confirmed, including source tests/compileall/Flask and packaged verification. Full ordinary-user GUI/CLI and prepared Edge remain stage 3 gates. No next stage. Use work_task.py for limited Work interactive scripts; suppress progress, allow 120-second dialogs, remove temporary task finally. Windows root add/remove both require native confirmation, handled through Windows-MCP. Fixed trust-vm-root-v3.ps1 uses public CreateFromPem and owned ledger. No active task/test process remains.
+
+Historical setup checkpoint follows; later state above supersedes its live/open-window/next-task wording.
+
 ## Latest: dedicated VM ready; continue stage 3
 
 Owner created a rollback clone, authorized dedicated VM accounts/reboot/install/remove/rollback, and requested planning/executing the next remaining task. Physical DIALOG-MEDIA2 remains released/unchanged; its old stop below still applies. Stage3 selected/incomplete; stage4 not authorized.

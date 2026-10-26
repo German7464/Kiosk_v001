@@ -1,5 +1,7 @@
 # Changelog
 
+- Verified dedicated-VM maintenance at real sign-in, packaged separate-CA CSR/sign/return and installed network HTTPS/same-CA renewal with strict TLS and trusted Chrome. Temporary Work root and scoped firewall rule were removed; original HTTP restored, database/session/UUID preserved. Recorded the remaining Launcher disk/status warning and ordinary-user/Edge gates; stage 3 stays incomplete.
+
 ## 2026-10-26
 
 - Prepared the owner-cloned dedicated Windows VM: separate test accounts, pinned-key SSH/SFTP restricted to the development PC, protected credentials, standard UAC and remote access after reboot. Physical installation/accounts/VPN and retained CA/USB were preserved; only newly attached USB volume metadata was read.
