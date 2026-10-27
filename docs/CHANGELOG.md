@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-27
+
+- Removed the completed initial MVP plan and redundant project-context/workflow documents. Preserved their Git rules in AGENTS.md before removal; retained the specification, earlier owner decisions, audit, acceptance history and feature documentation.
+- Updated the root README and architecture to describe existing startup/deployment paths, and clarified current versus historical HTTPS and baseline acceptance. Current stage 3 gates remain in TZ_PROGRESS.md; no stage completion, product code, dependencies or working data changed.
+
 ## 2026-10-26
 
 - Added a source/documentation/package/evidence audit for specification review, separating implemented behavior, historical acceptance, current artifacts and future stages. Reproduced kiosk initial-load non-retry and retained media after replacement/deletion; documented 15 findings and 14 proposed TZ clarifications without changing the specification or product code. The 201-test sandbox run recorded three failing subtests and two errors in three methods; all three affected methods passed outside the sandbox with unchanged source after CIM/SSPI restrictions were diagnosed. Both JS checks, compilation, independent Flask 200/302/403/404, 1724 package hashes and archive digest passed. Full results and limits are in PROJECT_AUDIT.md; stage 3 remains incomplete.

@@ -106,6 +106,12 @@ If mandatory checks, physical-device verification, or unresolved decisions remai
 
 Readiness to begin the next stage does not authorize implementing it automatically. Continue only within the owner's selected scope.
 
+## Git rules
+
+Local commits are allowed when requested or when they are part of the task.
+
+`git push` is not allowed unless the user explicitly requests it.
+
 ## MVP boundaries
 
 The first version must include:

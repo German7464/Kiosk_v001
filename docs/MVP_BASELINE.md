@@ -2,6 +2,8 @@
 
 ## Verified checkpoint
 
+This is a historical measurement checkpoint. Its results and acceptance limits describe the measured source/environment only. Stage 2 subsequently completed on 2026-10-24 within its agreed scope; use [TZ Progress](TZ_PROGRESS.md#current-stage-3-acceptance-checklist) for the current stage and outstanding checks. Historical pending statements below do not override that ledger.
+
 Measured at 2026-10-18T22:58:27.722593+00:00 (UTC) with `python -m tools.measure_mvp_baseline`. Source artifact: ignored `logs/measurements/mvp-20261018T225827722593Z.json`. This is a local Windows developer checkpoint for TZ sections 20, 21, and stage 2 of section 22, not system acceptance.
 
 Environment: Windows-10-10.0.19045-SP0, AMD64, CPython 3.14.5, pip 26.1.1; processor: Intel64 Family 6 Model 158 Stepping 9, GenuineIntel; physical RAM visible to Windows: 8457334784 bytes (7.88 GiB). Dependency versions match requirements.txt. The machine also hosts other processes; background load, CPU frequency, disk cache, and scheduler timing were not controlled.

@@ -1,8 +1,10 @@
 # Managed HTTPS Transport
 
+Current acceptance: selected physical Windows/Chrome LAN/CSR scenarios and VM installed network HTTPS, explicit browser trust and same-CA renewal passed within their recorded scopes. Stage 2 is complete; stage 3 remains incomplete, with prepared Edge reserve-browser acceptance pending. The source/prototype checkpoints below retain their historical scope and do not override the [current checklist](../../docs/TZ_PROGRESS.md#current-stage-3-acceptance-checklist). Installed package provisioning is documented in the [Launcher README](../launcher/README.md).
+
 ## Purpose
 
-Provide opt-in Windows source startup with a supervised Caddy TLS proxy, loopback-only Waitress, explicit certificate trust, and bounded cleanup. Existing HTTP startup remains separate. Stage 2 baseline acceptance is complete within the ledger's bounded scope. Stage 3 [Launcher](../launcher/README.md) adds an explicit managed temporary-directory option and installed-data provisioning integration; packaged service, real service-account, Android and broader deployment acceptance remain pending. Historical dated limitations below do not supersede the latest TZ_PROGRESS.md checkpoint.
+Provide opt-in Windows source startup with a supervised Caddy TLS proxy, loopback-only Waitress, explicit certificate trust, and bounded cleanup. Existing HTTP startup remains separate. Stage 3 [Launcher](../launcher/README.md) adds an explicit managed temporary-directory option and installed-data provisioning integration. Selected packaged service and real service-identity checks passed as recorded in the current checklist above; Android and broader deployment acceptance remain pending.
 
 ## Related Files
 
