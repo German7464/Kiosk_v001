@@ -17,6 +17,18 @@ Current owner selection (2026-10-28), **verify factual results against the ledge
 
 ## Minimal-context workflow
 
+### Two-PC responsibilities and document links
+
+PC1 owns server/Windows work, integration coordination and the single
+`docs/TZ_PROGRESS.md` ledger after reviewing both PCs' evidence. PC2 owns bounded
+Android/Android TV tasks under `android/`, updates its README and returns a report
+through the owner; it does not maintain a second ledger. See
+[two-PC workflow](docs/TWO_PC_WORKFLOW.md), [shared contracts](contracts/README.md)
+and [Android scope](android/README.md). Shared contract/requirement changes require
+coordination before dependent implementation. Nested Android AGENTS may supplement,
+never contradict, these root rules. These responsibilities do not expand stages
+or replace the specification's authority.
+
 Codex normally receives applicable `AGENTS.md` automatically; avoid rereading it. At task start:
 1. Inspect bounded Git branch/status; **preserve all pre-existing edits and untracked files**.
 2. Start with the current control section and selected stage/check in `docs/TZ_PROGRESS.md`. Read related decisions, dependencies and dated evidence when needed; do not reread the entire history by default.

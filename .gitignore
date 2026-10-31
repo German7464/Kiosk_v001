@@ -29,3 +29,23 @@ prototype/
 www/
 www.zip
 sessions/
+
+# Android: keep project/build scripts and Gradle Wrapper tracked.
+android/**/.gradle/
+android/**/.kotlin/
+android/**/build/
+android/**/.cxx/
+android/**/.externalNativeBuild/
+android/**/local.properties
+android/**/sdk/
+android/**/.android/
+android/**/captures/
+android/**/keystore.properties
+android/**/signing.properties
+android/**/*.jks
+android/**/*.keystore
+android/**/*.p12
+android/**/*.pfx
+android/**/*.key
+android/**/.env
+android/**/.env.*
