@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-31
+
+- Prepared two-PC ownership/PR workflow, documentation of the existing Events-v1 contract, reproducible synthetic conformance examples and an explicitly gated Android design-task draft. Existing Windows/server sources and stage acceptance are unchanged; see TZ_PROGRESS.md.
+
 ## 2026-10-30
 
 - Added a separate bounded native engine policy fixture referencing the unchanged identified display assembly. Verified25 real WebView2 assertions on the Windows VM, including cancelled external navigation/new window/download, effective CSP, local403 and geolocation denial; display retained and owned processes/shortcut cleaned up. Product code unchanged; see TZ_PROGRESS.md.

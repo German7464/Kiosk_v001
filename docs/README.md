@@ -4,6 +4,10 @@ Primary requirements: **owner-approved TZ_RECONCILED.md revision 1.2.2 (owner de
 
 ## Current working documents
 
+Two-PC entry points: [coordination workflow](TWO_PC_WORKFLOW.md),
+[shared Events contract and examples](../contracts/README.md),
+[Android workspace](../android/README.md), [blocked Android task draft](ANDROID_TASK_DRAFT.md).
+
 Client implementation modules: [publication export/store/renderer](../kiosk/publication/README.md) and [native display candidate](../kiosk/display/README.md). These describe implemented interfaces and limits; current acceptance/evidence remains in the progress ledger.
 
 | Document | Role / when to read |
