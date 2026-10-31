@@ -6,7 +6,11 @@ Kiosk_v001 provides a modular Flask web application backed by SQLite. Public dis
 
 Source/MVP startup uses `run.py` for Flask development or `serve.py` for Waitress. The stage 3 Windows package adds a separate SCM service and a Tk/ttk Launcher. Managed HTTPS supervises Caddy in front of loopback Waitress. See the [Launcher](../kiosk/launcher/README.md) and [transport](../kiosk/transport/README.md) documentation for deployment details.
 
-The distributed architecture in [TZ](TZ.md) remains the target. Persistent client snapshots, groups, replication, isolated modules and signed updates are future stage work; current acceptance is recorded in [TZ Progress](TZ_PROGRESS.md).
+The distributed architecture in [approved specification](TZ_RECONCILED.md) remains the target. Persistent client snapshots, groups, replication, versioned module contracts with selective process isolation, and signed updates are future stage work; current acceptance is recorded in [TZ Progress](TZ_PROGRESS.md).
+
+## Evidence boundary
+
+This describes the supplied implemented baseline, not an independent current source audit. Target contracts and stage allocation belong to the approved specification; actual checks and blockers belong to the progress ledger. Existing package organization does not prove process fault isolation. Use the [documentation index](README.md) for related operational documents.
 
 ## Current Folder Structure
 

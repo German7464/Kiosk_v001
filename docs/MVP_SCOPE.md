@@ -1,4 +1,6 @@
-# MVP Scope
+# MVP Scope — historical compatibility baseline
+
+This records the original MVP boundary, not the current v2 feature exclusions. Preserve its implemented behavior on supported migrations. The [approved v2 specification](TZ_RECONCILED.md) and [current ledger](TZ_PROGRESS.md) govern present scope and acceptance: Android clients, product roles and backups are v2 targets even though excluded from the original MVP. Optional additions still require owner selection. [Measured baseline](MVP_BASELINE.md); [development recovery](DEVELOPMENT_RECOVERY.md); [documentation index](README.md).
 
 ## Included
 

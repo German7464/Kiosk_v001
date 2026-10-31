@@ -1,0 +1,10 @@
+# Kiosk_v001 project-only overrides for Codex CLI 0.165.0.
+# Install at: Kiosk_v001/.codex/config.toml
+# Global MCP, plugins, sandbox and approval settings remain inherited.
+
+model = "gpt-6.1-sol"
+model_reasoning_effort = "low"
+
+[agents]
+# Cap parallel spawned agents; this does not automatically launch agents.
+max_concurrent_threads_per_session = 2

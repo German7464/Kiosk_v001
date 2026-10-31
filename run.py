@@ -1,3 +1,4 @@
+
 from kiosk.app import create_app
 
 

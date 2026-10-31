@@ -240,39 +240,91 @@ function applyEventsData(versionData, eventsData, tagsData) {
     applySelectedFilter(false);
 }
 
+let loadInProgress = false;
+let pollInProgress = false;
+
+async function requestKioskJson(url) {
+    const controller = new AbortController();
+    let timer;
+    try {
+        // Keep the deadline active through body decoding, not only response headers.
+        return await Promise.race([
+            (async () => {
+                const response = await fetch(url, { signal: controller.signal });
+                if (!response.ok) throw new Error("Kiosk request failed");
+                return await response.json();
+            })(),
+            new Promise((resolve, reject) => {
+                timer = window.setTimeout(() => {
+                    controller.abort();
+                    reject(new Error("Kiosk request timed out"));
+                }, 10000);
+            }),
+        ]);
+    } finally {
+        window.clearTimeout(timer);
+        controller.abort();
+    }
+}
+
+function validateKioskVersion(data) {
+    if (!data || !Number.isSafeInteger(data.content_version) || data.content_version < 1) {
+        throw new Error("Invalid kiosk version");
+    }
+}
+
+function validateKioskData(eventsData, tagsData) {
+    const validTag = tag => tag && Number.isSafeInteger(tag.id) && tag.id > 0 && typeof tag.name === "string";
+    if (!eventsData || !Array.isArray(eventsData.events) || !tagsData || !Array.isArray(tagsData.tags)
+        || !tagsData.tags.every(validTag) || !eventsData.events.every(event => event
+            && Number.isSafeInteger(event.id) && event.id > 0 && typeof event.title === "string"
+            && ["event_date", "short_description", "full_description", "place", "image_kiosk"]
+                .every(field => event[field] == null || typeof event[field] === "string")
+            && Array.isArray(event.tags) && event.tags.every(validTag))) {
+        throw new Error("Invalid kiosk content");
+    }
+}
+
 async function loadKioskEventsPage() {
-    const [versionResponse, eventsResponse, tagsResponse] = await Promise.all([
-        fetch("/api/version"),
-        fetch("/api/events"),
-        fetch("/api/tags"),
-    ]);
-
-    const versionData = await versionResponse.json();
-    const eventsData = await eventsResponse.json();
-    const tagsData = await tagsResponse.json();
-
-    applyEventsData(versionData, eventsData, tagsData);
+    if (loadInProgress) return;
+    loadInProgress = true;
+    try {
+        const [versionData, eventsData, tagsData] = await Promise.all([
+            requestKioskJson("/api/version"), requestKioskJson("/api/events"), requestKioskJson("/api/tags"),
+        ]);
+        validateKioskVersion(versionData);
+        validateKioskData(eventsData, tagsData);
+        // Concurrent API requests are not a transactional snapshot: discard a changing generation.
+        const after = await requestKioskJson("/api/version");
+        validateKioskVersion(after);
+        if (after.content_version !== versionData.content_version
+            || (currentContentVersion !== null && versionData.content_version < currentContentVersion)) {
+            throw new Error("Kiosk content changed during loading");
+        }
+        applyEventsData(versionData, eventsData, tagsData);
+    } finally {
+        loadInProgress = false;
+    }
 }
 
 async function pollKioskVersion() {
-    if (updatePending) {
-        return;
-    }
-
-    const versionResponse = await fetch("/api/version");
-    const versionData = await versionResponse.json();
-
-    if (currentContentVersion !== null && versionData.content_version !== currentContentVersion) {
-        updatePending = true;
-        window.setTimeout(() => {
-            loadKioskEventsPage()
-                .catch(() => {
-                    contentVersion.textContent = labels.versionUnavailable;
-                })
-                .finally(() => {
-                    updatePending = false;
-                });
-        }, randomUpdateDelay());
+    if (updatePending || loadInProgress || pollInProgress) return;
+    pollInProgress = true;
+    try {
+        const versionData = await requestKioskJson("/api/version");
+        validateKioskVersion(versionData);
+        if (currentContentVersion === null || versionData.content_version > currentContentVersion) {
+            updatePending = true;
+            window.setTimeout(() => {
+                loadKioskEventsPage()
+                    .catch(() => { contentVersion.textContent = labels.versionUnavailable; })
+                    .finally(() => { updatePending = false; });
+            }, randomUpdateDelay());
+        } else if (versionData.content_version === currentContentVersion) {
+            contentVersion.textContent = `${labels.versionLabel} ${currentContentVersion}`;
+        }
+    } finally {
+        pollInProgress = false;
     }
 }
 

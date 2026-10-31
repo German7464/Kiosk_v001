@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Stage 3 work in progress. Provide separate installed storage, explicit MVP import, local device setup, a Windows service host and a desktop controller. Source, package and selected second-PC checks have passed; this is not an accepted unattended release. Stage 2 is retained at `v2-stage2-baseline` (`9bbbc4e`). Current remaining gates are listed in [TZ Progress](../../docs/TZ_PROGRESS.md#current-stage-3-acceptance-checklist). Dated checkpoints below describe their own evidence, not the current aggregate status.
+Stage 3 work in progress. Provide separate installed storage, explicit MVP import, local device setup, a Windows service host and a desktop controller. Source, package and selected second-PC checks have passed; this is not an accepted unattended release. Stage 2 is retained at `v2-stage2-baseline` (`9bbbc4e`). Current remaining gates are listed in [TZ Progress](../../docs/TZ_PROGRESS.md#current-stage-3-closure-gates). Dated checkpoints below describe their own evidence, not the current aggregate status.
 
 Disk availability probes in Launcher, diagnostic export and service logging query the installation volume root. A limited user may read public status while Windows denies `GetDiskFreeSpaceExW` on the protected installation directory. A failed disk probe leaves the readable service status visible and reports disk availability separately; private directory permissions are not relaxed. This was reproduced with the limited Work token in the dedicated VM and covered by status-preservation and resource-probe regression checks.
 

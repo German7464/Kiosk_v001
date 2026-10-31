@@ -1,8 +1,10 @@
 # MVP Baseline Measurement
 
+Related documents: [historical MVP scope](MVP_SCOPE.md), [current ledger](TZ_PROGRESS.md), [approved performance targets](TZ_RECONCILED.md#20-производительность), [documentation index](README.md). Numeric measurements below are unchanged; no benchmark was rerun.
+
 ## Verified checkpoint
 
-This is a historical measurement checkpoint. Its results and acceptance limits describe the measured source/environment only. Stage 2 subsequently completed on 2026-10-24 within its agreed scope; use [TZ Progress](TZ_PROGRESS.md#current-stage-3-acceptance-checklist) for the current stage and outstanding checks. Historical pending statements below do not override that ledger.
+This is a historical measurement checkpoint. Its results and acceptance limits describe the measured source/environment only. Stage 2 subsequently completed on 2026-10-24 within its agreed scope; use [TZ Progress](TZ_PROGRESS.md#current-stage-3-closure-gates) for the current stage and outstanding checks. Historical pending statements below do not override that ledger.
 
 Measured at 2026-10-18T22:58:27.722593+00:00 (UTC) with `python -m tools.measure_mvp_baseline`. Source artifact: ignored `logs/measurements/mvp-20261018T225827722593Z.json`. This is a local Windows developer checkpoint for TZ sections 20, 21, and stage 2 of section 22, not system acceptance.
 
@@ -72,4 +74,4 @@ Scenario duration including preparation and shutdown: 91.71 seconds. Server shut
 
 Run the command from the repository using the pinned Windows environment. Reports go to ignored logs/measurements; no external URL, existing database, or custom workload is accepted. Requests time out after at most ten seconds; a 180-second watchdog stops an overrun server. Shutdown/cleanup can add time. Failed HTTP checks, invalid data, sampling failures, and incomplete/forced shutdown return nonzero and retain diagnostic report fields. Passwords, cookies, session keys, hostnames, and server addresses are excluded.
 
-No latency acceptance threshold is asserted. In particular, these HTTP timings do not verify the proposed 200 ms UI reaction target, five-second publication activation, Android TV, LAN transfer rates, 100 registered devices, offline display, failover, sustained memory stability, 72-hour operation, or EXE deployment. Automatic refresh, fullscreen, and populated screen layout still need browser/hardware checks. Stage 2 and overall system acceptance remain incomplete.
+No latency acceptance threshold is asserted. In particular, these HTTP timings do not verify the proposed 200 ms UI reaction target, five-second publication activation, Android TV, LAN transfer rates, 100 registered devices, offline display, failover, sustained memory stability, 72-hour operation, or EXE deployment. Automatic refresh, fullscreen, and populated screen layout still need browser/hardware checks. At this measurement checkpoint, stage 2 and overall system acceptance were incomplete. Stage 2 subsequently closed within its recorded boundary; overall system acceptance is still not established. See the current ledger rather than using this historical sentence as current stage status.

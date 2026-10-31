@@ -20,15 +20,17 @@ React is not used in the first version.
 
 The MVP provides a local Flask application with event management, kiosk and TV display modes, preview mode, admin editing tools, image processing, translations, automatic client update checks, and an EXE build.
 
-The MVP remains the compatibility baseline. Version 2 follows [the specification](docs/TZ.md) and the selected stage recorded in [progress](docs/TZ_PROGRESS.md).
+The MVP remains the compatibility baseline. Version 2 follows [the specification](docs/TZ_RECONCILED.md) and the selected stage recorded in [progress](docs/TZ_PROGRESS.md).
 
 ## Development Status
 
-Stage 3 Windows Launcher/storage/service/setup is in progress. Bounded second-PC installation, service, boot/sign-in, Chrome, permissions and HTTPS scenarios have passing evidence. The corrected disk-probe candidate also passed separate-user VM GUI/CLI checks; it was not installed over the existing service package. Prepared Edge reserve-browser acceptance remains pending. See the [current acceptance checklist](docs/TZ_PROGRESS.md#current-stage-3-acceptance-checklist) for evidence, package identities and remaining gates; these checks do not establish a completed release.
+The primary specification is the owner-approved revision 1.2.1 dated 2026-10-27. This status summary reflects the supplied audit/ledger checkpoint; verify the actual checkout and installed build before further implementation or deployment. Approval of requirements does not select the next implementation stage.
+
+Stage 3 Windows Launcher/storage/service/setup is in progress. Bounded second-PC installation, service, boot/sign-in, Chrome, permissions and HTTPS scenarios have passing evidence. The corrected disk-probe candidate also passed separate-user VM GUI/CLI checks; it was not installed over the existing service package. Prepared Edge reserve-browser acceptance remains pending. See the [current acceptance checklist](docs/TZ_PROGRESS.md#current-stage-3-closure-gates) for evidence, package identities and remaining gates; these checks do not establish a completed release.
 
 The development bundle is built in `dist/KioskLauncher`; package checkpoints are documented in [Launcher documentation](kiosk/launcher/README.md). Extract the whole archive before opening `KioskLauncher.exe`; do not transfer only the executable. Its source UI can be inspected with `python launcher.py`; source/uninstalled configuration saving is deliberately rejected. Existing MVP commands remain available.
 
-The MVP baseline is preserved by the annotated Git tag `v1.0.0-mvp`. Version 2 development continues on branch `v2`; version 2 is not a completed release. See [Version 2 Plan](docs/V2_PLAN.md) for priorities, validation limits, and rollback instructions.
+The MVP baseline is preserved by the annotated Git tag `v1.0.0-mvp`. Version 2 development continues on branch `v2`; version 2 is not a completed release. See [the documentation index](docs/README.md), [current target stages](docs/TZ_RECONCILED.md#22-порядок-разработки-и-границы-этапов), [acceptance ledger](docs/TZ_PROGRESS.md) and [development recovery](docs/DEVELOPMENT_RECOVERY.md) for scope, validation limits and baseline inspection.
 
 The MVP Flask application is implemented with SQLite storage, admin management flows, public display routes, public API endpoints, image processing, translations, responsive layouts, and reusable developer smoke tests.
 
@@ -37,7 +39,7 @@ The MVP Flask application is implemented with SQLite storage, admin management f
 Before future tasks, read:
 
 1. [AGENTS.md](AGENTS.md)
-2. [docs/TZ.md](docs/TZ.md), [progress](docs/TZ_PROGRESS.md), [current plan](docs/V2_PLAN.md), and [MVP baseline](docs/MVP_SCOPE.md)
+2. The relevant sections of [approved requirements](docs/TZ_RECONCILED.md), [current progress](docs/TZ_PROGRESS.md), and the [documentation index](docs/README.md); consult [historical MVP scope](docs/MVP_SCOPE.md) when compatibility is relevant
 3. The `README.md` inside the related major feature folder, when that feature exists
 
 Do not analyze the whole repository for every task. Make the smallest useful change, stay inside the selected stage, and update progress and [docs/CHANGELOG.md](docs/CHANGELOG.md) after every stage.

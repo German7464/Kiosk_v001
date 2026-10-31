@@ -1,5 +1,40 @@
 # Changelog
 
+## 2026-10-30
+
+- Added a separate bounded native engine policy fixture referencing the unchanged identified display assembly. Verified25 real WebView2 assertions on the Windows VM, including cancelled external navigation/new window/download, effective CSP, local403 and geolocation denial; display retained and owned processes/shortcut cleaned up. Product code unchanged; see TZ_PROGRESS.md.
+
+- Verified Windows VM Events startup after an ordinary OS restart with program-scoped shell/runtime outbound network blocks, unchanged retained publication/receipt and native text/image readiness. Separate isolated TV rotation passed; test rules/shortcut and owned processes cleaned up. Standing owner VM-test authorization recorded; Android, automatic startup and other stage4 gates remain open. See TZ_PROGRESS.md.
+
+- Added a guarded Windows offline-restart test procedure covering program-scoped Firewall isolation, interactive coordinator restart, evidence and exact-rule cleanup. Read-only VM preflight recorded; OS changes and offline-restart acceptance remain pending. See TZ_PROGRESS.md.
+
+## 2026-10-29
+
+- Added staged same-window WebView activation with exact revision acknowledgements, retained old display on candidate failure, bounded timeout reconciliation and opt-in local publication watching. Verified native versions7 -> 8, failed9 retaining8, then10 in one fullscreen VM process; startup failure and invalid-command checks also passed. Offline OS restart and remaining hardware gates stay open; see TZ_PROGRESS.md.
+- Added an owned native startup coordinator with fresh session/PID/renderer readiness, atomic last-confirmed receipts, profile exclusivity and one verified fallback without publication rollback. Confirmed real WebView2 startup and synthetic renderer-failure recovery on the persistent Windows VM. Running-window switching and offline OS restart remain open; see TZ_PROGRESS.md.
+- Confirmed native TV rotation and same-profile process restart on the persistent Windows VM with bounded opt-in diagnostics. Added a bounded, verified display-artifact cache and view preparation before publication-pointer commit, including quota refusal and actual process-crash/retry tests. Offline OS reboot, live switching, profile retention and Android acceptance remain pending; see TZ_PROGRESS.md.
+- Added an isolated Windows WinForms/WebView2 display candidate with a pinned SDK build helper, local resource/origin restrictions, renderer-code pins and store-to-view preparation. Verified source/policy/tamper checks and initial VM native kiosk/fullscreen behavior; native TV rotation and offline reboot acceptance remain open. See TZ_PROGRESS.md for runtime installation authorization, artifact identities and limits.
+- Added a client-owned offline Events view builder and separate HTML/CSS/JS for kiosk navigation/filter/home and TV rotation. Verified content escaping and package-code separation with automated checks, plus local file-view behavior in VM Chrome. Native WebView/store integration and device-restart acceptance remain pending; see TZ_PROGRESS.md.
+- Added isolated Windows publication storage with verified staging, immutable-by-API revision directories, atomic activation and previous-package recovery. Added capacity, corruption, interruption and actual child-process crash/retry tests. Native renderer/shell and physical offline restart remain pending; see TZ_PROGRESS.md.
+- Added explicit client-runtime compatibility checks to Events package verification before payload processing; reject non-integer resource contract aliases and incompatible clients. Documented client-owned renderer boundary; native activation remains pending.
+- Closed stage3 bounded Windows foundation acceptance under explicit owner delegation after evidence review, including separate-profile A01 and removed Edge gate. Preserved candidate/installed distinctions and future product obligations; no new release artifact or installed upgrade. See TZ_PROGRESS.md.
+- Streamed Events media copying and package hashing/verification without changing the manifest or CLI. Added large-media allocation, corruption, concurrent-source mutation and interrupted/failed staging checks; retained existing internal size bounds and previous-package preservation. See TZ_PROGRESS.md for evidence and remaining stage4 limits.
+- Configured owner-authorized key-only SSH access for Work on the persistent test VM, preserving existing access and strict host verification. Recorded private-key exclusion, configuration backup and rollback in TZ_PROGRESS.md; application acceptance unchanged.
+- Verified A01 initial-load and delayed-response recovery in a separate Chrome profile on the persistent Windows test VM. Preserved identity/request evidence and closed owned test windows. Stage3 formal acceptance remains pending; see TZ_PROGRESS.md.
+
+## 2026-10-28
+
+- Verified A01 recovery in Windows VM Chrome using a disposable fixture through Windows-MCP/RustDesk: initial/repeated failure, automatic recovery without HTML reload, later updates and delayed-response recovery. Preserved request/identity evidence and prior source regressions; stopped the fixture. Existing Chrome profile was used; exact request-order proof remains covered by source regressions. Stage3 formal closure and full offline-client acceptance are not claimed; see TZ_PROGRESS.md.
+
+- Verified the owner-supplied documentation integration: root AGENTS/README, approved reconciled specification, single progress ledger, local paths/headings, external linked-page availability and historical-content hashes. Added administration/public-API READMEs to the index and retargeted three module gate links to the current ledger section; replaced the transport README's retired handoff reference with historical lab context. Preserved six historical links to retired documents and existing owner edits/index. Evidence: `logs/documentation-integration-20261028/verification.json`. No product tests/builds, live operations, stage acceptance or new commit.
+
+## 2026-10-27 — documentation integration
+
+- Integrated the owner-approved specification revision 1.2.1 and single current progress ledger with the existing architecture, HTTPS procedures, historical MVP scope and measurements. Updated root README and the documentation index; obsolete target plans are no longer active inputs.
+- Retained the complete original progress ledger and dated implementation audit, all previous changelog entries, measurement values and command examples. Moved useful baseline recovery procedures into DEVELOPMENT_RECOVERY.md and preserved the historical lab handoff in LAB_CONTEXT.md with a clear non-authoritative boundary.
+- Adjusted documentation links/roles in the supplied approved AGENTS without rewriting its workflow. Stage 2 remains accepted within its scope; stage 3 remains incomplete. No code, dependencies, runtime data, trust, network, account or deployment changes; no runtime acceptance checks rerun.
+
+
 ## 2026-10-27
 
 - Removed the completed initial MVP plan and redundant project-context/workflow documents. Preserved their Git rules in AGENTS.md before removal; retained the specification, earlier owner decisions, audit, acceptance history and feature documentation.
@@ -240,3 +275,22 @@
 
 - Added a fixed isolated Windows HTTP measurement command, deterministic synthetic content, semantic/media checks, latency/throughput/body-size metrics, sampled server memory, queue diagnostics, and bounded server cleanup. No application behavior or dependency changes.
 - Recorded measured local results and explicit acceptance limitations in MVP_BASELINE.md; updated README, stage plan, and specification progress. Added statistics, error-reporting, deadline, diagnostics, and server-cleanup checks. All 50 Python tests, JavaScript checks, compileall, and git diff --check passed; full evidence is recorded in TZ_PROGRESS.md.
+
+
+## 2026-10-28 — A01 source recovery and offline manifest foundation
+
+- Repair kiosk Events initial-load retry, request deadlines and stale/overlapping update protection with focused JavaScript regressions.
+- Add initial internal offline-manifest integrity validation and Python tests; no offline client acceptance claimed.
+- Record owner specification revision 1.2.2 and selected sequential stages 3–6. Actual checks and pending gates: [progress ledger](TZ_PROGRESS.md#active-execution-checkpoint--2026-10-28-takes-precedence-over-earlier-pending-decisions).
+
+
+## 2026-10-28 — Bounded Events export and A01 regression evidence
+
+- Add transactional public Events export, independently verified media/resource inventory and safe new-directory preparation with local export/verify CLI.
+- Extend A01 regression for actual delayed old completion; add disposable Chrome acceptance fixture. Practical acceptance remains pending; see TZ_PROGRESS.md.
+
+
+## 2026-10-28 — Export diagnostics review
+
+- Normalize destination-inspection and staging-cleanup failures to safe CLI codes; add focused regressions.
+- Preserve prior package and document retained staging on cleanup refusal. Current evidence and GUI blocker remain in TZ_PROGRESS.md.

@@ -1,3 +1,10 @@
+# Test-lab context — dated history
+
+This file preserves the supplied historical chat handoff for its unique test-lab paths, tooling, custody and cleanup information. It is **not a live handoff, health check, active authorization or next-task queue**. References to owner permission, running processes, accounts, addresses, credentials, remote access and next actions below describe their original checkpoint only. Verify current state and current task authorization before any operation; do not replay a past action from this text.
+
+Current work is governed by root [AGENTS](../AGENTS.md), the [approved specification](TZ_RECONCILED.md), and the current section of the [single progress ledger](TZ_PROGRESS.md). Only that ledger receives new handoffs. See [development recovery](DEVELOPMENT_RECOVERY.md) and the [documentation index](README.md). Old document names/links in the preserved block are provenance, not required files; the block is excluded from current navigation validation.
+
+<!-- BEGIN HISTORICAL LAB HANDOFF: unchanged source bytes -->
 # Chat handoff — 2026-10-26
 
 ## Current checkpoint: disk probe corrected; ordinary-user acceptance passed

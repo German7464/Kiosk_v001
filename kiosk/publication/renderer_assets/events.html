@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="{{ language }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="events.css">
+    <script src="events.js" defer></script>
+</head>
+<body>
+    <main>
+        <header><button id="home-button" type="button"></button><h1 id="heading"></h1><span id="version"></span></header>
+        <section id="home" hidden><p id="home-label"></p><h2 id="home-heading"></h2><p id="home-description"></p><button id="open-events" type="button"></button></section>
+        <section id="events">
+            <nav id="tags" aria-label="Tags"></nav>
+            <article id="card" aria-live="polite"></article>
+            <footer><button id="previous" type="button"></button><span id="counter"></span><button id="next" type="button"></button></footer>
+        </section>
+        <aside id="inactivity" role="status" hidden></aside>
+    </main>
+    <script type="application/json" id="bootstrap">{{ bootstrap | tojson }}</script>
+</body>
+</html>

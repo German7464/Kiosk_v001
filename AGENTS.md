@@ -1,180 +1,59 @@
-# Project Instructions for Codex
+# Kiosk_v001 — Codex Instructions
 
-## Project goal
+## Scope and authority
 
-Build a local client-server kiosk system for displaying event cards on kiosks, Smart TV, preview screens, and an admin panel.
+Develop the offline-capable local Kiosk system (Flask/SQLite; Events, TV/kiosk, admin, Windows Launcher/service) incrementally. Preserve the MVP, user data, accepted behavior, existing Git changes/tags, Windows Chrome/HTTPS paths, and previous acceptance evidence. Work **only on the owner-authorized task and stage**; approving a specification is not approval to implement all stages.
 
-Preserve the MVP as the compatibility baseline. Version 2 work follows docs/TZ.md and the explicitly selected stage; approval of the specification does not authorize all stages at once.
+Sources have distinct roles:
+- `docs/TZ_RECONCILED.md`: the single product-specification file; use its explicit approval status. Requirements do not establish implementation or stage acceptance.
+- `docs/TZ_PROGRESS.md`: authoritative **factual** stage status, checks, evidence and blockers; not a source of new requirements.
+- [Documentation index](docs/README.md) maps supporting documents. Architecture, HTTPS, measured baseline, historical MVP scope and development recovery instructions are context, not alternate requirements. The stage map, decision map and open technical questions are maintained in the specification and current ledger. Superseded plans/specifications are not required inputs; do not restore them merely to follow an old reference.
+- Existing feature READMEs, source/dependency declarations and relevant logs: targeted technical context. `docs/PROJECT_AUDIT.md` and `docs/TZ_TECHNICAL_AUDIT.md` are dated evidence/review reports, never higher-priority requirements.
+- `docs/TZ_PROGRESS_UPDATE_REPORT.md` and `docs/DOCUMENTATION_GUIDE.md`: delivery/change notes, not another requirements or progress ledger. Historical document names in preserved checkpoints identify their original context; missing superseded documents are not a blocker for current work.
 
-## Technology stack
+The owner approved the corrected reconciled specification as the primary specification on 2026-10-27. Its R§22 stage allocation supersedes conflicting old future plans; recorded acceptance does not change. Approval of requirements does not select a new implementation stage.
 
-Use:
-- Python
-- Flask
-- SQLite
-- HTML
-- CSS
-- JavaScript
-- Pillow
-- Waitress
-- PyInstaller
+Current owner selection (2026-10-28), **verify factual results against the ledger/checkout**: stages 3–6 are selected for sequential bounded implementation; stages 7–10 are not authorized. Stage 2 retains its accepted scope. Mandatory Edge acceptance is removed; do not claim Edge tested or supported. Fix A01 before persistent offline-display implementation; a fix is verified only by recorded checks. Never turn partial tests into full acceptance or assume future features exist.
 
-Do not use React in the first version.
+## Minimal-context workflow
 
-## Code style
+Codex normally receives applicable `AGENTS.md` automatically; avoid rereading it. At task start:
+1. Inspect bounded Git branch/status; **preserve all pre-existing edits and untracked files**.
+2. Start with the current control section and selected stage/check in `docs/TZ_PROGRESS.md`. Read related decisions, dependencies and dated evidence when needed; do not reread the entire history by default.
+3. Read the relevant approved specification paragraphs (or explicitly identified draft material for review tasks). Consult module documentation and dependency declarations when relevant; expand beyond the initial scope when a dependency or failure requires it.
+4. Search affected code/tests narrowly; expand to callers/dependencies only with cause.
 
-Do not write comments inside code files.
+Prefer `rg --files`, `rg -n`, `rg -n -C 4`, heading indexes and short line ranges. Do not dump whole specs, ledgers, code trees, generated files, distributions, or logs. Avoid repeated reads of unchanged text. For a small fix, do not start a repository-wide audit. Report missing or contradictory authority rather than guessing.
 
-Use clear names for functions, classes, variables, modules, and files instead of comments.
+## Execution
 
-Do not create one large app.py file.
+- For substantial work make **one concise plan** with acceptance conditions, then execute it; replan only on new evidence. Name impacted files before editing. Reuse tested code; avoid unrelated refactors and dependencies.
+- Continue independent authorized work when a check is blocked; record the reason. Retry only after a relevant change or new hypothesis. A commit or completed mini-plan is not a reason to stop.
+- Never advance to another stage without owner selection. A stage remains incomplete until all mandatory gates pass or the owner explicitly revises them.
+- Use parallel calls/subagents only for bounded independent tasks **when allowed by active higher-priority instructions**; they cost tokens. Never override a subagent prohibition.
+- Destructive Git operations, deployment, migration of live data, privileged OS changes, working credential/certificate operations and risky physical tests require explicit authorization for their concrete scope. Existing authorization remains valid within that scope; ask again only for a material scope/risk change. Disposable fixture creation and ordinary authorized local tests do not require repeated permission. Never bypass execution/security policy or TLS verification.
 
-Do not mix HTML, business logic, and database logic.
+## Engineering rules
 
-Do not place CSS inside HTML.
+Preserve the existing Windows/server stack: Python, Flask, SQLite, HTML/CSS/JavaScript, Pillow, Waitress and PyInstaller. Android packaging, platform APIs and any WebView integration require a bounded, justified platform decision and tests; they need not use Windows-only tools. Do not replace the server stack or introduce React without an approved redesign. Separate UI, business logic and persistence; avoid giant `app.py`, inline CSS/JS, duplicated display-mode logic and absolute paths. Favor descriptive names and self-explanatory code. Add concise comments only for non-obvious security, compatibility, recovery or algorithmic constraints; avoid comments that merely repeat the code.
 
-Do not place JavaScript inside HTML unless it is absolutely minimal.
+Preserve existing Events/Tags/images/routes, translations, client polling, installed paths and service behavior unless the task changes them. Do not present Android, WebView, offline publication snapshots, replication, signed updates or module isolation as implemented. Preserve separate-admin-PC CA custody, server-local private keys, and tested HTTPS setup; never silently install trust roots or downgrade to HTTP. Use safe compatibility and backup procedures for approved migrations.
 
-Do not duplicate logic between kiosk, TV, preview, and admin modes.
+## Testing: proportional, not repetitive
 
-Do not hardcode absolute paths.
+- **Docs only:** changed references, consistency and diff; no source tests or builds.
+- **Source changes:** focused tests and relevant syntax/compile checks. **Flask/API:** affected test-client routes, auth/security and expected HTTP statuses.
+- **Browser/UI:** targeted automated checks followed by authorized practical checks on the target platform. Use Chrome and available approved desktop automation for the existing Windows path; Edge is excluded from mandatory current acceptance and must not be claimed tested or supported. Android/WebView need their own supported-device checks. An in-app browser, emulator or different engine cannot substitute for target-hardware acceptance. If the required tool/device is unavailable, record the pending check; do not bypass a policy rejection.
+- **Service/ACL/TLS/package/data:** relevant isolated integration/safety tests; mocks are not physical, installed-package, or service-token acceptance.
+- **Stage completion:** consolidated regression and all applicable acceptance checks; blocked/unperformed checks remain pending.
 
-## Documentation rule
+Reuse passing evidence only if source/dependency revision, package, environment, fixture and prior failures do **not** invalidate it. Record requirement, build/source identity, environment, result, evidence path and blocker in `docs/TZ_PROGRESS.md`. Batch independent tests; serialize shared service/DB/port/profile tests. For tests, use disposable fixtures, bounded timeouts and guarded cleanup; do not use working credentials/data as test fixtures. Separately authorized production maintenance or migration remains governed by the explicit-authorization rule above. Store full logs separately and show short summaries. Do not invent success, timing, token savings or physical validation.
 
-For every major feature module, create or update one README.md file in the related feature folder.
+## Documentation, Git and handoff
 
-Do not create separate README.md files for individual functions, small helpers, minor internal changes, or bug fixes.
-
-If a change affects an existing feature module, update that module's README.md instead of creating a new documentation file.
-
-Documentation must be written in English.
-
-Each feature README.md must include:
-- Purpose
-- Related files
-- Related database tables
-- Related routes
-- Related API endpoints
-- How the feature updates content version
-- How the feature is shown in kiosk mode
-- How the feature is shown in TV mode
-- How the feature is managed in admin panel
-
-Update docs/CHANGELOG.md after every completed task.
-
-## Token-saving workflow
-
-Before editing code:
-1. Read AGENTS.md.
-2. Read docs/TZ.md and docs/TZ_PROGRESS.md.
-3. Read docs/V2_PLAN.md and docs/MVP_SCOPE.md for stage scope and compatibility.
-4. Read only the README.md of the feature being changed.
-5. Do not analyze the whole repository unless explicitly asked.
-
-For each task:
-1. State the files that will be changed.
-2. Make the smallest possible change.
-3. Do not refactor unrelated code.
-4. Do not add new dependencies unless necessary.
-5. Update related README.md files only for major feature module changes.
-6. Update docs/TZ_PROGRESS.md and docs/CHANGELOG.md after every completed stage. Record requirement references, evidence, limitations, unresolved decisions, and the next step. Do not mark an entire requirement verified from partial checks.
-7. Provide commands to run and test the change.
-
-## Continuous execution and test batching
-
-Maintain a remaining-check queue for the selected stage in docs/TZ_PROGRESS.md. Each check records its requirement, source/package version, environment, expected outcome, evidence and blocker. Reuse applicable existing evidence; rerun only when related code, package, environment or an unresolved failure justifies it. Source tests, mocked checks and ACL inspection do not establish physical service-token acceptance.
-
-Continue through the queue without ending the session after a few passing checks or a commit. A blocked scenario does not block independent work. Record the failure and move on; retry only with a new diagnostic hypothesis or changed conditions. Do not weaken Windows security or add a permanent privileged product interface solely to make a test pass.
-
-Batch independent automated checks and inspect every result. Serialize tests that share a service, database, port or mutable fixture. After an implementation step run relevant targeted tests, compileall, independent Flask checks and git status. Run consolidated regression before stage closure; repeat it after fixes that invalidate its result. Do not rerun unchanged passing suites merely for documentation updates.
-
-Collect unavoidable manual checks into batches by environment and required owner action. Prefer repeatable isolated automated scenarios with bounded timeouts, exact path/identity guards, evidence and cleanup. Use Windows-MCP for practical Windows/browser behavior; do not use computer-use or IAB. Never modify working credentials or delete working installation data for a test.
-
-Keep full logs in evidence files; show concise summaries, failures and paths. Do not print archives, base64 payloads or large successful logs. Read only relevant documentation sections and changes, not entire historical ledgers repeatedly. Record results after each coherent block; checkpoints and commits are not session-ending events.
-
-When a context-remaining indicator is available, prepare a handoff at 15 percent and stop starting new work at 10 percent. Finish safe cleanup of any active operation. If no exact indicator is available, do not claim an exact percentage: save compact state early in docs/CHAT_HANDOFF.md and use available context compaction. Handoff includes completed/remaining checks, evidence paths, versions, blockers, active processes and exact next action.
-
-End the session only when the selected stage is complete, all available independent work is exhausted and external input is required, the owner stops work, or the context threshold requires a handoff. Preserve stage boundaries: unresolved mandatory checks keep the stage incomplete, and the next stage still requires owner selection. Give progress updates during execution and a consolidated final report when actually stopping.
-
-## Stage completion and transition
-
-At the start of each task, read docs/TZ.md and docs/TZ_PROGRESS.md to identify the selected stage, its acceptance criteria, and outstanding checks.
-
-Mark a stage completed in docs/TZ_PROGRESS.md only when all required work and acceptance checks for that stage are complete. Record supporting evidence and update docs/CHANGELOG.md. In the final response, explicitly state that the stage is completed and identify the next stage that can begin.
-
-If mandatory checks, physical-device verification, or unresolved decisions remain, keep the stage incomplete and state what is still required. Completing a helper task or passing partial checks does not complete the entire stage.
-
-Readiness to begin the next stage does not authorize implementing it automatically. Continue only within the owner's selected scope.
-
-## Git rules
-
-Local commits are allowed when requested or when they are part of the task.
-
-`git push` is not allowed unless the user explicitly requests it.
-
-## MVP boundaries
-
-The first version must include:
-- local server startup
-- /kiosk
-- /kiosk/events
-- /tv
-- /preview
-- /admin
-- event CRUD
-- tag management
-- system title editing
-- icon editing
-- image upload
-- image compression with Pillow
-- SQLite database
-- /api/version auto-update
-- random delay protection against simultaneous client refresh
-- interface translations
-- visual style based on the prototype
-- EXE build
-
-Do not implement in MVP:
-- automatic event translation
-- separate event cards per language
-- complex user roles
-- cloud server
-- internet publishing
-- mobile app
-- React frontend
-- mandatory WebSocket
-- view statistics
-- backup system
-- QR codes
-- weather
-- gallery
-- news
-- schedule
-- ticker
-
-## Communication language
-
-When communicating with the user, answer in Russian.
-
-Project documentation, file names, code identifiers, commit messages, and README files must remain in English.
-
-## Testing and report rules
-
-After each implementation step, run required technical checks.
-
-Use:
-- python -m compileall run.py kiosk
-- Flask test client checks for affected routes
-- git status
-
-Do not use in-app browser checks.
-Do not try to open pages through iab.
-Prioritize automated tests and Flask test client checks; perform them independently. Use Windows-MCP with Google Chrome only when remaining browser behavior needs practical verification. Use isolated test data and never change working credentials for a test. Record unavailable physical-device checks as pending.
-
-After each implementation step, include in the final report:
-- Changed files
-- Technical checks and results
-- Flask test client status codes
-- Git status
-- Local commit hash and message
-- Manual visual check URLs for affected pages
+- `docs/TZ_PROGRESS.md` is the **single current status/check ledger**. Update after coherent work/check blocks, not every command; preserve historical results and limitations.
+- Update `docs/CHANGELOG.md` for meaningful completed tasks/stages. Avoid copying status into multiple documents; link to the ledger.
+- One concise README per **major feature module**, covering relevant files, data, routes/API and display/admin behavior where applicable. No new README for a small fix/helper; update existing docs only when contracts change.
+- Review diffs. Commit only when authorized by the task/stage process, excluding unrelated owner edits. Never invent a commit hash. Do not push unless the owner explicitly requests it.
+- If reliable context remaining is shown: handoff near 15%, stop starting new tasks near 10%, clean up safely. Without telemetry, invent no percentage. Use compaction; record a concise handoff in the current ledger only when needed, listing stage, completed/pending work, evidence, blockers, active processes, Git cautions and exact next action. A separate active CHAT_HANDOFF document is not required; docs/LAB_CONTEXT.md is dated history, not current machine health, new permission or next-task instructions.
+- Report briefly **in Russian**: changed files, actual tests (pass/fail/skipped), relevant HTTP statuses, Git status/real commit if any, pending hardware gates, and stage completion status. Do not claim an unfinished stage complete. Project docs, identifiers and commit messages remain English, except the Russian `docs/TZ_RECONCILED.md` and owner-facing `docs/DOCUMENTATION_GUIDE.md`. Preserved historical text retains its original language. This narrow language exception does not approve new requirements.
