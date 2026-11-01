@@ -1,0 +1,3 @@
+app/src/main/assets/** -text
+app/src/androidTest/assets/** -text
+testdata/** -text

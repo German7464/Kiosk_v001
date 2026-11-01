@@ -1,6 +1,20 @@
 # Changelog
 
+## 2026-11-01
+
+- Added test-only independently pinned PC1 Windows-preparation confirmation and focused capture/store/kiosk/TV/offline-restart checks. Parser, fixed confirmations and inputs remain outside the ordinary APK; all broad admission gates remain open. See [Android scope](../android/README.md).
+
+- Integrated generic native-authorized DEVELOPMENT playback with the existing Android capture/store/coordinator and mode-specific receipts, retaining legacy metadata and all admission gates. Focused integration uncovered and fixed native descriptor ownership; final affected tests and external offline evidence are documented in [Android scope](../android/README.md). No production admission or stage4 closure.
+
+- Added disposable app-private captured Android candidate sessions: bounded streaming, saved-byte binding, provider-independent read scopes, pre-open integrity verification and revocable lifecycle. Focused session/core tests cover failures and isolated store preservation; no activation or production admission. See [Android scope and evidence](../android/README.md).
+
+- Added non-activating Android Events package/kiosk/TV binding against independent typed development witnesses, outside the A/B catalog. Focused JVM/Android checks cover integrity, mismatch and stream failures; source/image/trust/activation gates remain explicit. See [Android API and evidence](../android/README.md).
+
+- Extended the fixed-fixture Android private publication to shared kiosk/TV views, atomic mode choice and separate ready receipts, preserving old TV metadata. Verified navigation, rotation, mode faults, process restart and real same-AVD ADB reboot with changed boot_id and unchanged private hashes; physical/power-loss/production-admission gates and stage4 remain open. See [Android scope and evidence](../android/README.md).
+
 ## 2026-10-31
+
+- Added the owner-selected Android fixed-fixture private-publication experiment: pinned A/B staging, pointer/visible/ready-receipt separation, bounded recovery and process restart from reverified private bytes. New storage/coordinator and affected display/lifecycle checks passed on the read-only phone emulator; physical/image-admission/power-loss gates and stage4 remain open. See [Android evidence and scope](../android/README.md).
 
 - Prepared two-PC ownership/PR workflow, documentation of the existing Events-v1 contract, reproducible synthetic conformance examples and an explicitly gated Android design-task draft. Existing Windows/server sources and stage acceptance are unchanged; see TZ_PROGRESS.md.
 

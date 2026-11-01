@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="Image visual TEST ONLY"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:allowBackup="false" android:usesCleartextTraffic="false">
+        <activity android:name=".VisualHostActivity" android:exported="false" />
+        <uses-library android:name="android.test.runner" android:required="false" />
+    </application>
+</manifest>

@@ -1,0 +1,6 @@
+{
+  "source": "PC1 local-admission 2026-11-01",
+  "inputs_zip_sha256": "713403379bc07d393579f993c9c87f37d6758c60d219e7ae9d7f0cc03c982531",
+  "independent_preparation_sha256": "91f5f9674617d88dc0b32201f5ac70b9b4fc72f1da681cc172019bb6b1d42493",
+  "scope": "synthetic test evidence, not authentication or production authorization"
+}

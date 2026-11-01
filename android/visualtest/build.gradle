@@ -1,0 +1,23 @@
+// Test-only executable host, intentionally separate from the offline harness APK.
+plugins { id 'com.android.application' }
+android {
+    namespace = 'org.kiosk.harness.visualtest'
+    compileSdk = 35
+    buildToolsVersion = '36.0.0'
+    useLibrary 'android.test.runner'
+    useLibrary 'android.test.base'
+    defaultConfig {
+        applicationId = 'org.kiosk.harness.visualtest'
+        minSdk = 30
+        targetSdk = 35
+        versionCode = 1
+        versionName = 'test-only'
+        testInstrumentationRunner = 'android.test.InstrumentationTestRunner'
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    signingConfigs { debug { storeFile = rootProject.file('.gradle/debug.keystore') } }
+    sourceSets { main.assets.srcDir rootProject.file('testdata') }
+}

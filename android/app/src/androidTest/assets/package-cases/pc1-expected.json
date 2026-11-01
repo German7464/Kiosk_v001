@@ -1,0 +1,1 @@
+{"bad-public-data":"invalid_public_data","empty":"ok","extra-file":"inventory_mismatch","missing-resource":"reference_closure_failure","revision-mismatch":"revision_mismatch","tampered":"integrity_failure","unsafe-path":"invalid_package","unsupported-contract":"unsupported_client_contract","valid":"ok"}

@@ -1,0 +1,433 @@
+{
+  "corpus": "image-parity-test-only-v1",
+  "jpeg_status": "included",
+  "schema_version": 1,
+  "scope": "small synthetic vectors; no decoder expectations or admission result",
+  "sources": [
+    {
+      "id": "pc1-card-png",
+      "path": "logs/pc1-harness-fixtures-20261031/files/contract/valid/static/uploads/card.png",
+      "sha256": "4b02621a1639a302da7e368db30b5b96f931f6be98b1154b2e0d787986227a46",
+      "size_bytes": 76
+    },
+    {
+      "id": "supplied-progressive-jpeg",
+      "known_parameters": {
+        "components": 3,
+        "frame_marker": "SOF2",
+        "height": 875,
+        "precision": 8,
+        "width": 1400
+      },
+      "sha256": "91073b508d9fd564ab2967383e193b9bf59cf82a7c0cfdda5bcc568c72f2580c",
+      "size_bytes": 77624
+    }
+  ],
+  "vectors": [
+    {
+      "derivation": "exact copy of pinned PC1 synthetic fixture",
+      "id": "pc1-card-png",
+      "known_parameters": {},
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/pc1-card.png",
+      "purpose": "existing PNG baseline",
+      "sha256": "4b02621a1639a302da7e368db30b5b96f931f6be98b1154b2e0d787986227a46",
+      "size_bytes": 76,
+      "source_identity": "pc1-card-png"
+    },
+    {
+      "derivation": "deterministic formula pixels; filter0; stored DEFLATE; CRC32 chunks",
+      "id": "generated-1x1-rgb-png",
+      "known_parameters": {
+        "alpha_pattern": "none",
+        "bit_depth": 8,
+        "color_type": 2,
+        "height": 1,
+        "width": 1
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/generated-1x1-rgb.png",
+      "purpose": "small constructed PNG baseline",
+      "sha256": "02584355d28f975bcab40aa86f01b7084ee60affcc01fb5a920b9f347b4ff550",
+      "size_bytes": 72,
+      "source_identity": "generator-v1"
+    },
+    {
+      "derivation": "deterministic formula pixels; filter0; stored DEFLATE; CRC32 chunks",
+      "id": "generated-3x2-rgb-png",
+      "known_parameters": {
+        "alpha_pattern": "none",
+        "bit_depth": 8,
+        "color_type": 2,
+        "height": 2,
+        "width": 3
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/generated-3x2-rgb.png",
+      "purpose": "small constructed PNG baseline",
+      "sha256": "2bd2ce4f03b35976d5c645381368275d51f08639afaaf0d8a9f28f858bc2af21",
+      "size_bytes": 88,
+      "source_identity": "generator-v1"
+    },
+    {
+      "derivation": "deterministic formula pixels; filter0; stored DEFLATE; CRC32 chunks",
+      "id": "generated-2x3-rgba-png",
+      "known_parameters": {
+        "alpha_pattern": "(x+y)*63 mod256",
+        "bit_depth": 8,
+        "color_type": 6,
+        "height": 3,
+        "width": 2
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/generated-2x3-rgba.png",
+      "purpose": "small constructed PNG baseline",
+      "sha256": "91fc545ccdfcc76bc21c07b4199c76c5f29f3ab3f99c37f5a5614568b9e0f74a",
+      "size_bytes": 95,
+      "source_identity": "generator-v1"
+    },
+    {
+      "derivation": "deterministic formula pixels; filter0; stored DEFLATE; CRC32 chunks",
+      "id": "generated-7x5-rgba-png",
+      "known_parameters": {
+        "alpha_pattern": "(x+y)*63 mod256",
+        "bit_depth": 8,
+        "color_type": 6,
+        "height": 5,
+        "width": 7
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/generated-7x5-rgba.png",
+      "purpose": "small constructed PNG baseline",
+      "sha256": "833b39d9a8afb0eb5710c60a0064dbbf89fd76f53a001ca9df84d21d7c94956f",
+      "size_bytes": 213,
+      "source_identity": "generator-v1"
+    },
+    {
+      "derivation": "xor bit0 at byte29 (IHDR CRC)",
+      "id": "png-bad-ihdr-crc-png",
+      "known_parameters": {
+        "changed_offset": 29
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/png-bad-ihdr-crc.png",
+      "purpose": "measure CRC handling",
+      "sha256": "7d22175dd0e07f071f906e041c2a72ea4cd76f6cbe1267c2e6ea1e3474be1a9a",
+      "size_bytes": 88,
+      "source_identity": {
+        "id": "generated-3x2-rgb-png",
+        "sha256": "2bd2ce4f03b35976d5c645381368275d51f08639afaaf0d8a9f28f858bc2af21"
+      }
+    },
+    {
+      "derivation": "prefix truncation only",
+      "id": "png-truncated-signature-png",
+      "known_parameters": {
+        "boundary": "signature",
+        "cut_offset": 4
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/png-truncated-signature.png",
+      "purpose": "measure truncation handling",
+      "sha256": "0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543",
+      "size_bytes": 4,
+      "source_identity": {
+        "id": "generated-3x2-rgb-png",
+        "sha256": "2bd2ce4f03b35976d5c645381368275d51f08639afaaf0d8a9f28f858bc2af21"
+      }
+    },
+    {
+      "derivation": "prefix truncation only",
+      "id": "png-truncated-ihdr-png",
+      "known_parameters": {
+        "boundary": "ihdr",
+        "cut_offset": 20
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/png-truncated-ihdr.png",
+      "purpose": "measure truncation handling",
+      "sha256": "703a4ff6e1373416434a39c0b49ac36de9232c1d467412cf2326fba96c88e198",
+      "size_bytes": 20,
+      "source_identity": {
+        "id": "generated-3x2-rgb-png",
+        "sha256": "2bd2ce4f03b35976d5c645381368275d51f08639afaaf0d8a9f28f858bc2af21"
+      }
+    },
+    {
+      "derivation": "prefix truncation only",
+      "id": "png-truncated-idat-png",
+      "known_parameters": {
+        "boundary": "idat",
+        "cut_offset": 45
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/png-truncated-idat.png",
+      "purpose": "measure truncation handling",
+      "sha256": "4c6e1eb628c71d055e97d5694caa3494c4c25a6d6e6d523abec0c9ac889267cc",
+      "size_bytes": 45,
+      "source_identity": {
+        "id": "generated-3x2-rgb-png",
+        "sha256": "2bd2ce4f03b35976d5c645381368275d51f08639afaaf0d8a9f28f858bc2af21"
+      }
+    },
+    {
+      "derivation": "prefix truncation only",
+      "id": "png-truncated-before-iend-png",
+      "known_parameters": {
+        "boundary": "before-iend",
+        "cut_offset": 76
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/png-truncated-before-iend.png",
+      "purpose": "measure truncation handling",
+      "sha256": "146dd66f7806ff770718dc1fdff16dbf9b87a82dd0b27931c902c6cfbfb47f1f",
+      "size_bytes": 76,
+      "source_identity": {
+        "id": "generated-3x2-rgb-png",
+        "sha256": "2bd2ce4f03b35976d5c645381368275d51f08639afaaf0d8a9f28f858bc2af21"
+      }
+    },
+    {
+      "derivation": "append ASCII TEST-TRAILER newline after IEND",
+      "id": "png-trailing-png",
+      "known_parameters": {
+        "original_end": 88
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/png-trailing.png",
+      "purpose": "measure trailing-data tolerance",
+      "sha256": "d9d09f93e64c2b93d2e4aa192033534bd45f86b370bf2156904e9728a9766984",
+      "size_bytes": 101,
+      "source_identity": {
+        "id": "generated-3x2-rgb-png",
+        "sha256": "2bd2ce4f03b35976d5c645381368275d51f08639afaaf0d8a9f28f858bc2af21"
+      }
+    },
+    {
+      "derivation": "zero bytes",
+      "id": "empty-png",
+      "known_parameters": {},
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/empty.png",
+      "purpose": "measure empty input",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "source_identity": "generator-v1"
+    },
+    {
+      "derivation": "literal ASCII text",
+      "id": "not-image-png",
+      "known_parameters": {},
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/not-image.png",
+      "purpose": "measure non-image input with image suffix",
+      "sha256": "8abf2218f5c8311d130faf48000ed8c21a44b99609f9d0f69304f8fc126fa706",
+      "size_bytes": 28,
+      "source_identity": "generator-v1"
+    },
+    {
+      "derivation": "exact copy, filename only varies",
+      "id": "progressive-jpg",
+      "known_parameters": {
+        "components": 3,
+        "frame_marker": "SOF2",
+        "height": 875,
+        "precision": 8,
+        "width": 1400
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/progressive.jpg",
+      "purpose": "progressive baseline / suffix behavior",
+      "sha256": "91073b508d9fd564ab2967383e193b9bf59cf82a7c0cfdda5bcc568c72f2580c",
+      "size_bytes": 77624,
+      "source_identity": "supplied-progressive-jpeg"
+    },
+    {
+      "derivation": "exact copy, filename only varies",
+      "id": "progressive-wrong-png",
+      "known_parameters": {
+        "components": 3,
+        "frame_marker": "SOF2",
+        "height": 875,
+        "precision": 8,
+        "width": 1400
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/progressive-wrong.png",
+      "purpose": "progressive baseline / suffix behavior",
+      "sha256": "91073b508d9fd564ab2967383e193b9bf59cf82a7c0cfdda5bcc568c72f2580c",
+      "size_bytes": 77624,
+      "source_identity": "supplied-progressive-jpeg"
+    },
+    {
+      "derivation": "exact copy, filename only varies",
+      "id": "progressive-no-extension",
+      "known_parameters": {
+        "components": 3,
+        "frame_marker": "SOF2",
+        "height": 875,
+        "precision": 8,
+        "width": 1400
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/progressive-no-extension",
+      "purpose": "progressive baseline / suffix behavior",
+      "sha256": "91073b508d9fd564ab2967383e193b9bf59cf82a7c0cfdda5bcc568c72f2580c",
+      "size_bytes": 77624,
+      "source_identity": "supplied-progressive-jpeg"
+    },
+    {
+      "derivation": "prefix truncation only",
+      "id": "jpeg-truncated-soi-jpg",
+      "known_parameters": {
+        "boundary": "soi",
+        "cut_offset": 1
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/jpeg-truncated-soi.jpg",
+      "purpose": "measure truncation handling",
+      "sha256": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89",
+      "size_bytes": 1,
+      "source_identity": "supplied-progressive-jpeg"
+    },
+    {
+      "derivation": "prefix truncation only",
+      "id": "jpeg-truncated-scan-header-jpg",
+      "known_parameters": {
+        "boundary": "scan-header",
+        "cut_offset": 248
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/jpeg-truncated-scan-header.jpg",
+      "purpose": "measure truncation handling",
+      "sha256": "b02eb69db6074050b75c0c89882f6a5b7833854707f05d59e457f7df11a77736",
+      "size_bytes": 248,
+      "source_identity": "supplied-progressive-jpeg"
+    },
+    {
+      "derivation": "prefix truncation only",
+      "id": "jpeg-truncated-scan-data-jpg",
+      "known_parameters": {
+        "boundary": "scan-data",
+        "cut_offset": 38935
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/jpeg-truncated-scan-data.jpg",
+      "purpose": "measure truncation handling",
+      "sha256": "af20451175ff10df882248f4deac9f4ad907f5e095e2f99df1733c80e7496319",
+      "size_bytes": 38935,
+      "source_identity": "supplied-progressive-jpeg"
+    },
+    {
+      "derivation": "prefix truncation only",
+      "id": "jpeg-truncated-before-eoi-jpg",
+      "known_parameters": {
+        "boundary": "before-eoi",
+        "cut_offset": 77622
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/jpeg-truncated-before-eoi.jpg",
+      "purpose": "measure truncation handling",
+      "sha256": "d2147c7084ea53a1825cc559a80f74fdebeec000097a8697c0442e0f03eff723",
+      "size_bytes": 77622,
+      "source_identity": "supplied-progressive-jpeg"
+    },
+    {
+      "derivation": "append literal after EOI",
+      "id": "jpeg-trailing-jpg",
+      "known_parameters": {
+        "original_end": 77624
+      },
+      "measurements": {
+        "android_decoder": "not_measured",
+        "pillow": "not_measured",
+        "webview": "not_measured"
+      },
+      "path": "vectors/jpeg-trailing.jpg",
+      "purpose": "measure trailing-data tolerance",
+      "sha256": "f3a00eae290241d0bc6af855e446523b75209bf6ad018a3fc7fc337bdc486e7b",
+      "size_bytes": 77637,
+      "source_identity": "supplied-progressive-jpeg"
+    }
+  ]
+}
