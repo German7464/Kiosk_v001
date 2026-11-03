@@ -2,6 +2,8 @@
 
 ## 2026-11-03
 
+- Added mandatory outcome-sized task and evidence-reuse/loop-prevention rules to root AGENTS.md,linked to the sole active progress checkpoint.
+
 - Consolidated the current evidence-reuse checkpoint and owner MVP priority in the single progress ledger:freeze unchanged local-core checks,target one existing-Events server/device outcome,and retain explicit stage/protocol approval boundaries.
 
 - Preserved both working trees and Git history in verified snapshots/bundles;independently checked all780 Android final-inventory files and phone backup. Prepared owner-authorized PC1 branch publication with focused renderer/preparation checks.

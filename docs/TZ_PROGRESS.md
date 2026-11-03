@@ -33,6 +33,8 @@ Keep editorial state (In progress / Ready), persistence (local / standby-confirm
 
 ## Active checkpoint and MVP priority — 2026-11-03
 
+Owner requested making loop prevention persistent in root AGENTS.md. Added mandatory outcome-sized-task rules:evidence-before-repeat with an explicit invalidation cause,finite requirement/stage-traced gates,current-checkpoint precedence over historical pending notes,no helper-task chains or checks substituted for policy decisions,and stop/reuse once the outcome is demonstrated. Real regressions/platform/release acceptance remain required. Docs/instruction change only;links/consistency/diff checked,no runtime tests/builds. No product requirement or stage-acceptance change.
+
 This is the current resume point. Older pending/next-task wording below is historical when superseded here. Owner explicitly requested faster delivery of a minimum viable product and no repeated unchanged acceptance loops. This checkpoint records results and work priority;it does not amend approved requirements or silently accept a stage.
 
 ### Frozen results and evidence reuse
