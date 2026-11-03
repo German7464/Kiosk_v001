@@ -1,4 +1,6 @@
-# Android Codex task — verified dispatch base
+# Android task record — current resume via the progress ledger
+
+Current execution state and exact next action are in [the sole progress ledger](TZ_PROGRESS.md). Completed prompts below are retained for provenance,not redispatch. PC2 preservation-only report remains outstanding;no new Android implementation task is active.
 
 Owner authorized publication, PR integration and remote dispatch on 2026-10-31.
 PR #1 merged: https://github.com/German7464/Kiosk_v001/pull/1
@@ -15,13 +17,13 @@ Owner-authorized physical block completed and PC1 reviewed the evidence archive 
 
 Cleanup removed owned disposable AVD disks,local build/cache outputs and inactive emulator Temp overlays. Preserve source tests/fixtures/provenance and compact evidence archives/phone backup;these are necessary reproducibility,not disposable clutter. Future test runs must clean owned runtime disks/Temp overlays after checked shutdown,keep small config/results and use one bounded evidence archive. Never clean all of system Temp or SDK/global Gradle dependency caches.
 
-## Consolidated candidate delivered — physical data reset pending approval
+## Historical: candidate delivery and then-pending physical reset
 
 PC2 reports two identical clean builds,21 JVM/67 Android checks and the full emulator journey. Do not repeat consolidated builds/regression for unchanged sources. Phone physical gate is blocked by retained63-file synthetic development store,not USB. No install/data reset performed. No further helper/issuer/store task selected.
 
 Proposed next physical scope requires owner approval FIRST:verify exact backup inventory/content and preservation;clear only the known synthetic files/fixture-publications directory of org.kiosk.harness.debug,install compatible final clean candidate APKs,perform one affected physical A/refusal/B/force-stop/private-reopen journey with explicit test-only issuer and record resource observations. No general pm clear/uninstall,other data/settings/security/network/clock operations or automatic restoration. Ordinary no-issuer refusal remains expected. Any archive mismatch,unexpected data/path,signature mismatch or changed candidate stops mutation. This proposal is not dispatch or deletion authorization. See [the ledger](TZ_PROGRESS.md).
 
-## Current next block: consolidated stage4 acceptance candidate — 2026-11-03
+## Historical completed dispatch: consolidated stage4 candidate — 2026-11-03
 
 The integrated local admission task below is delivered and reviewed in inspected scope. Do not create another issuer abstraction,helper or A/B feature. PC1/owner requested larger outcomes. Next PC2 deliverable is ONE reproducible final Android candidate with consolidated regression,affected physical acceptance and precise stage4 residuals;not stage5 source trust.
 
@@ -39,7 +41,7 @@ Before phone mutation retain a bounded app-private inventory and a recoverable d
 
 Return ONE integration/acceptance report with final inventory,source/APK hashes,consolidated results and command logs,source-to-evidence map,phone result or precise blocker,all known limitations and proposed bounded stage4 acceptance statement. Enumerate any actual local-core defect separately from resource-policy decision,stage5 authority dependency and later TV/fleet/release obligation. Main source changes invalidate only affected previous evidence,not every old result. PC1 supplies Windows evidence and owns final ledger/acceptance. No next task,commit/push/merge.
 
-## Current implementation task: local admission pipeline — 2026-11-03
+## Historical completed dispatch: local admission pipeline — 2026-11-03
 
 Owner asked PC1 to proceed after the same-store review. Scope is one bounded Android local-validation/persistence/display implementation,not a production identity authority or stage5 dispatch. This task supersedes waiting wording below for that scope. No new serialized preparation envelope or Events format is selected.
 
@@ -69,7 +71,7 @@ Run focused JVM/native checks,affected build and representative screenshots;reus
 
 PC1 reviewed the delivered same-default-store source/report;the specific synthetic refusal/restart gap is closed within that scope. Do not repeat this task or begin a network task automatically. Generic prepared packages still depend on DevelopmentPlaybackAuthority. PC1 owns the next bounded local admission/image/provenance policy decision;server-only delivery remains the product direction and no manual importer is selected. See [the ledger](TZ_PROGRESS.md) for actual evidence and remaining acceptance.
 
-## Current task: stage4 same-store closure candidate — 2026-11-03
+## Historical completed dispatch: same-store candidate — 2026-11-03
 
 This task supersedes the next-network-block direction for current execution. Stage5/D13 production work is not dispatched. Owner relays the standalone prompt below. Existing source trust is explicitly development/test-only;do not relabel it as production authority or erase unchecked flags merely to obtain acceptance.
 
@@ -95,7 +97,7 @@ Read selectively:root/Android AGENTS,android/README.md,contracts/events-v1/READM
 
 Run focused affected tests/builds and link/diff checks. Reuse valid physical phone,Windows native renderer,image/visual/crypto/reboot evidence;do not rerun unchanged suites. Preserve index. Guard cleanup only of owned emulator/drivers;do not touch physical device settings/data. Return one report to the owner;do not claim stage4 complete or start another block. No commit/push/merge.
 
-## Next coordinated block — not dispatched
+## Historical proposed network block — not dispatched
 
 PC1 consolidated the implementation candidate in [Server delivery design](SERVER_DELIVERY_DESIGN.md),section Consolidated implementation candidate. It proposes trusted native bootstrap paste,separate administrative group signer,strict signed-list bytes,durable authority,client-generated finite device credential with recoverable idempotent enrollment,existing prepared views and durable ready receipts. This is a proposal for approval,not frozen contract or permission to implement.
 

@@ -2,6 +2,10 @@
 
 Primary requirements: **owner-approved TZ_RECONCILED.md revision 1.2.2 (owner decisions through 2026-10-28)**. One current status/check ledger: **[TZ_PROGRESS.md](TZ_PROGRESS.md)**, including stage acceptance and the current owner-selected execution boundary. Specification approval alone does not grant acceptance or select an implementation stage.
 
+## Resuming development
+
+Start with root AGENTS,Git branch/status,and the current handoff/evidence summary at the top of [TZ_PROGRESS.md](TZ_PROGRESS.md). Read only the selected requirements/dependencies after that. The ledger contains next action,PC1/PC2 branch cautions,known acceptance limits and preserved evidence;this index is not another status queue. Historical dispatches in Android task draft and dated plans must not restart completed tests. Root AGENTS defines when prior evidence may be reused and when a rerun is justified.
+
 ## Current working documents
 
 Two-PC entry points: [coordination workflow](TWO_PC_WORKFLOW.md),

@@ -2,6 +2,8 @@
 
 Status: proposed design for review, not an approved protocol, implemented API or stage acceptance. Owner selected server-only publication receipt on2026-11-02. No manual publication importer is selected. Requirements: R5.2,R6,R7,R10,R11,R18,R22,D13. Factual progress stays in [TZ_PROGRESS.md](TZ_PROGRESS.md). Existing [Events-v1](../contracts/events-v1/README.md) is reused unchanged. This document prepares an unresolved technical decision; it does not advance an incomplete stage4 or authorize real pairing/credential work.
 
+For current execution/approval state read the handoff in [the single progress ledger](TZ_PROGRESS.md). The synthetic proof is recorded there;do not rerun it from old future-tense wording in this draft. This document remains a review candidate,not a network-task dispatch.
+
 ## Intended single outcome
 
 An authorized Windows server offers an assigned Events publication; an enrolled Android client downloads into private staging,verifies compatibility/closure/integrity,image capability and client-owned renderer compatibility,then switches atomically and acknowledges actual readiness. Failed/partial/rejected updates preserve usable content. Network absence preserves offline display/navigation/restart. No file-picker/import workflow is added. Existing capture/store/coordinator/receipts are reused; no parallel storage or renderer.
