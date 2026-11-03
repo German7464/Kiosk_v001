@@ -2,6 +2,8 @@
 
 ## 2026-11-03
 
+- Consolidated the current evidence-reuse checkpoint and owner MVP priority in the single progress ledger:freeze unchanged local-core checks,target one existing-Events server/device outcome,and retain explicit stage/protocol approval boundaries.
+
 - Preserved both working trees and Git history in verified snapshots/bundles;independently checked all780 Android final-inventory files and phone backup. Prepared owner-authorized PC1 branch publication with focused renderer/preparation checks.
 
 - Recorded final physical local-admission evidence and independently verified archival copies;removed completed disposable emulator disks,local build caches and stale emulator Temp overlays while preserving source/test provenance and phone backup. Stage/release scope remains explicit in TZ_PROGRESS.md.

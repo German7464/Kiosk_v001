@@ -5,6 +5,10 @@ PR #1 merged: https://github.com/German7464/Kiosk_v001/pull/1
 Remote v2 readback: `5d652d4d99a577e8809a87839800a9f24c6250fa`.
 This fixed task base remains valid if later independent Windows commits advance v2.
 
+## Resume rule: reuse verified local core; target one MVP outcome
+
+Read the [active checkpoint in the sole ledger](TZ_PROGRESS.md) first. The local-core/physical acceptance loops are frozen at their recorded identities;do not rerun or expand them without a stated invalidation cause. No new helper/issuer/corpus task is selected. Owner priority is the minimal existing-Events server-to-device pilot;real stage5 protocol/pairing implementation still requires its concrete approval. The independent preservation-only report is outstanding;do not claim that report completed or infer commit/push permission for PC2 from PC1 publication.
+
 ## Current checkpoint: physical local-core result frozen; cleanup completed
 
 Owner-authorized physical block completed and PC1 reviewed the evidence archive with independent SHA256/CRC verification;see [ledger](TZ_PROGRESS.md). No further local helper/issuer/emulator task is active. Final main APK edeaaef3bbe63c094c6ef280f1e479ea21065440b6a9020aafae64827698b756;physical observer test08627cd249d2c514402351f7caae95b9961613b7b9f820bf5a925df0351c0ad2. Explicit test-only authority remains a limitation,not production trust. Global media/resource defaults and final stage acceptance remain separate decisions. Any next feature work must be one coordinated server-delivery outcome after D13/stage approval;do not restart old pending tasks below.
