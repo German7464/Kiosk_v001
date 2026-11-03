@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-11-03
+
+- Preserved both working trees and Git history in verified snapshots/bundles;independently checked all780 Android final-inventory files and phone backup. Prepared owner-authorized PC1 branch publication with focused renderer/preparation checks.
+
+- Recorded final physical local-admission evidence and independently verified archival copies;removed completed disposable emulator disks,local build caches and stale emulator Temp overlays while preserving source/test provenance and phone backup. Stage/release scope remains explicit in TZ_PROGRESS.md.
+
+- Recorded final Android candidate regression/reproducibility report and isolated the changed-APK physical blocker to retained synthetic data;scoped reset proposal requires owner approval.
+
+- Reviewed integrated Android local admission and prepared one consolidated candidate/regression/affected-physical acceptance block,keeping stage5 source trust and unresolved resource policy explicit.
+
+- Defined bounded local package/image admission implementation boundaries and prepared an integrated Android task with explicit missing-issuer refusal. No production source trust or stage completion claimed.
+
+- Reviewed the Android same-default-store refusal/replacement/restart candidate;recorded closure of that synthetic test gap and remaining non-test admission dependency. Stage4 not accepted;see TZ_PROGRESS.md.
+
+- Clarified stage4 versus stage5 acceptance boundaries and prepared one same-default-store offline failure/replacement/restart Android task. No network or stage acceptance implied;see TZ_PROGRESS.md.
+
+## 2026-11-02
+
+- Consolidated the proposed server-delivery implementation scope,including recoverable enrollment,durable trust and one same-store end-to-end acceptance journey. Pending separate protocol/stage approval;no server or Android implementation.
+
+- Reviewed the bounded synthetic D13 JVM/physical Android proof and recorded authority-first refusal, strict parsing and remaining credential/durable-state protocol decisions. No production pairing/network implementation or stage acceptance; see TZ_PROGRESS.md.
+
+- Recorded owner selection of server-only publication receipt, withdrew the optional manual-import proposal and prepared an unapproved D13 trust/delivery design for review. No network or product implementation is implied; see TZ_PROGRESS.md.
+
+- Verified shared TV pagination in native Windows WebView2 on the restored Windows10 VM: twelve layout cases and an actual reading interval; isolated fixture cleanup completed. Scope and remaining stage4 gates are recorded in TZ_PROGRESS.md.
+
+- Reviewed the bounded physical offline Android pilot on moto g85 5G: kiosk/TV presentation and private startup after owner-performed offline reboot. Recorded exact evidence and the separate-store rejection limitation; production admission, Android TV and stage4 remain open. See TZ_PROGRESS.md.
+
+## 2026-11-01
+
+- Implemented owner-approved automatic TV text parts in the shared offline Events renderer: measured lossless pagination, fixed image/metadata when space permits, per-part reading time and resize/visibility handling. Kiosk/manual scrolling and description selection remain unchanged. Native cross-platform acceptance is pending; see TZ_PROGRESS.md.
+
+- Added isolated Windows preparation/reverification of synthetic Android test publications using the existing full package verifier and shared kiosk/TV renderer. Separate report hashes support explicitly confirmed local tests, not production authentication or a new Events format. See TZ_PROGRESS.md.
+
 ## 2026-10-31
 
 - Prepared two-PC ownership/PR workflow, documentation of the existing Events-v1 contract, reproducible synthetic conformance examples and an explicitly gated Android design-task draft. Existing Windows/server sources and stage acceptance are unchanged; see TZ_PROGRESS.md.

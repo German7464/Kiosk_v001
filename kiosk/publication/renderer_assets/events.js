@@ -28,6 +28,61 @@ function eventsSlideDuration(event, seconds) {
     return Math.min(24000, Math.max(8000, base + text.length * 70));
 }
 
+// Measure only the next page: large publications must not build an unbounded page list.
+function createEventsTextPager(fields, makeNode, fits) {
+    let field = 0;
+    let offset = 0;
+    const segmenter = typeof Intl.Segmenter === "function" ? new Intl.Segmenter(undefined, {granularity: "grapheme"}) : null;
+    function boundary(value, end) {
+        if (end <= 0) return 0;
+        if (end >= value.length) return value.length;
+        if (segmenter) {
+            const item = segmenter.segment(value).containing(end - 1);
+            return item.index + item.segment.length <= end ? end : item.index;
+        }
+        // Older engines still must not split a UTF-16 surrogate pair.
+        return /[\uD800-\uDBFF]/.test(value[end - 1]) ? end - 1 : end;
+    }
+    return {
+        more: () => field < fields.length,
+        next(container) {
+            container.replaceChildren();
+            let visible = "";
+            let progressed = false;
+            while (field < fields.length) {
+                const item = fields[field];
+                if (offset === item.value.length) { field++; offset = 0; continue; }
+                // Limit each layout probe, rather than laying out the entire remaining description.
+                const limit = boundary(item.value, Math.min(item.value.length, offset + 16384));
+                const remaining = item.value.slice(offset, limit);
+                const node = makeNode(item.tag, item.className, "");
+                container.appendChild(node);
+                let low = 0, high = remaining.length;
+                while (low < high) {
+                    const middle = Math.ceil((low + high) / 2);
+                    node.textContent = remaining.slice(0, boundary(remaining, middle));
+                    if (fits()) low = middle; else high = middle - 1;
+                }
+                let end = boundary(remaining, low);
+                // Prefer a nearby word boundary, retaining every whitespace/code unit.
+                if (end < remaining.length || offset + end < item.value.length) {
+                    const prefix = remaining.slice(0, end);
+                    const word = Math.max(prefix.lastIndexOf(" "), prefix.lastIndexOf("\n"));
+                    if (word >= end * .75) end = boundary(remaining, word + 1);
+                }
+                node.textContent = remaining.slice(0, end);
+                if (!end) { node.remove(); break; }
+                progressed = true;
+                visible += node.textContent;
+                offset += end;
+                if (offset < item.value.length) break;
+                field++; offset = 0;
+            }
+            return {visible, progressed, more: field < fields.length};
+        }
+    };
+}
+
 function mountEventsView(document, window, bootstrap) {
     const {data, labels, media, mode} = bootstrap;
     const model = createEventsModel(data);
@@ -41,6 +96,14 @@ function mountEventsView(document, window, bootstrap) {
     let idleTimer = null;
     let countdownTimer = null;
     let idleDeadline = 0;
+    let resizeTimer = null;
+    let advanceSlide = null;
+    let currentDuration = 0;
+
+    function armSlide() {
+        window.clearTimeout(slideTimer);
+        if (advanceSlide && !document.hidden) slideTimer = window.setTimeout(advanceSlide, currentDuration);
+    }
 
     function text(tag, className, value) {
         const node = document.createElement(tag);
@@ -76,7 +139,9 @@ function mountEventsView(document, window, bootstrap) {
 
     function render() {
         window.clearTimeout(slideTimer);
+        advanceSlide = null;
         card.replaceChildren();
+        card.setAttribute("data-tv-layout", "single");
         const event = model.current();
         const count = model.events().length;
         element("counter").textContent = `${count ? model.index() + 1 : 0} / ${count}`;
@@ -99,14 +164,68 @@ function mountEventsView(document, window, bootstrap) {
             image.src = media[reference];
             card.appendChild(image);
         } else card.appendChild(placeholder());
-        card.appendChild(text("p", "event-date", event.event_date || t("common.date_to_be_announced")));
-        card.appendChild(text("h2", "event-title", event.title));
-        card.appendChild(text("p", "event-description", event.short_description || event.full_description || t("common.no_description")));
-        card.appendChild(text("p", "event-place", event.place || t("common.place_to_be_announced")));
-        if (mode === "tv" && count > 1) {
-            slideTimer = window.setTimeout(() => { model.move(1); render(); },
-                eventsSlideDuration(event, data.settings.tv_slide_duration));
+        const fields = [
+            {tag: "p", className: "event-date", value: event.event_date || t("common.date_to_be_announced")},
+            {tag: "h2", className: "event-title", value: event.title},
+            {tag: "p", className: "event-description", value: event.short_description || event.full_description || t("common.no_description")},
+            {tag: "p", className: "event-place", value: event.place || t("common.place_to_be_announced")}
+        ];
+        if (mode !== "tv") {
+            for (const item of fields) card.appendChild(text(item.tag, item.className, item.value));
+            return;
         }
+        const copy = text("div", "tv-copy", "");
+        const content = text("div", "tv-text", "");
+        const part = text("span", "tv-part", "");
+        copy.appendChild(content);
+        copy.appendChild(part);
+        card.appendChild(copy);
+        for (const item of fields) content.appendChild(text(item.tag, item.className, item.value));
+        const fits = () => content.scrollHeight <= content.clientHeight + 1 && content.scrollWidth <= content.clientWidth + 1;
+        const nextEvent = () => { model.move(1); render(); };
+        // A collapsed viewport cannot advance unread content. A later resize retries layout.
+        if (typeof content.clientHeight === "number" && content.clientHeight <= 0) {
+            content.replaceChildren(text("p", "tv-layout-error", t("tv.layout_unavailable")));
+            card.setAttribute("data-tv-layout", "unavailable");
+            return;
+        }
+        if (fits()) {
+            currentDuration = eventsSlideDuration(event, data.settings.tv_slide_duration);
+            advanceSlide = count > 1 ? nextEvent : null;
+            armSlide();
+            return;
+        }
+        const context = text("div", "tv-context", "");
+        for (const index of [0, 1, 3]) {
+            const item = fields[index];
+            context.appendChild(text(item.tag, item.className, item.value));
+        }
+        copy.insertBefore(context, content);
+        // Keep metadata only when it leaves a useful reading area. Otherwise paginate it too.
+        const fixedContext = context.scrollHeight <= copy.clientHeight * .45 && content.clientHeight >= 64;
+        if (!fixedContext) context.remove();
+        const pager = createEventsTextPager(fixedContext ? [fields[2]] : fields, text, fits);
+        let page = 0;
+        function showPart() {
+            const result = pager.next(content);
+            if (!result.progressed) {
+                content.replaceChildren(text("p", "tv-layout-error", t("tv.layout_unavailable")));
+                part.textContent = "";
+                part.style.visibility = "hidden";
+                advanceSlide = null;
+                card.setAttribute("data-tv-layout", "unavailable");
+                return;
+            }
+            page++;
+            card.setAttribute("data-tv-layout", "paginated");
+            part.style.visibility = "visible";
+            part.textContent = `${t("tv.part")} ${page}`;
+            const visible = (fixedContext ? context.textContent : "") + result.visible;
+            currentDuration = eventsSlideDuration({short_description: visible}, data.settings.tv_slide_duration);
+            advanceSlide = result.more ? showPart : nextEvent;
+            armSlide();
+        }
+        showPart();
     }
 
     document.body.classList.toggle("tv", mode === "tv");
@@ -146,11 +265,24 @@ function mountEventsView(document, window, bootstrap) {
             render();
         }
     });
+    if (mode === "tv") {
+        window.addEventListener("resize", () => {
+            window.clearTimeout(slideTimer);
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(render, 150);
+        });
+        document.addEventListener("visibilitychange", armSlide);
+        window.addEventListener("pagehide", () => {
+            window.clearTimeout(slideTimer);
+            window.clearTimeout(resizeTimer);
+        });
+        window.addEventListener("pageshow", render);
+    }
     render();
     resetIdle();
 }
 
-if (typeof module !== "undefined") module.exports = {createEventsModel, eventsSlideDuration, mountEventsView};
+if (typeof module !== "undefined") module.exports = {createEventsModel, eventsSlideDuration, createEventsTextPager, mountEventsView};
 if (typeof document !== "undefined") {
     mountEventsView(document, window, JSON.parse(document.getElementById("bootstrap").textContent));
 }

@@ -1,4 +1,6 @@
 {
+    "tv.part": "Teil",
+    "tv.layout_unavailable": "Bildschirm zu klein. Bitte die Fenstergröße ändern.",
     "kiosk.fullscreen_form_refreshed": "Das Formular wurde aktualisiert. Geben Sie Ihr Passwort erneut ein.",
     "kiosk.fullscreen_form_refresh_failed": "Das Formular konnte nicht aktualisiert werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
     "admin.assigned_events": "Zugeordnete Veranstaltungen",

@@ -1,4 +1,6 @@
 {
+    "tv.part": "Часть",
+    "tv.layout_unavailable": "Экран слишком мал для пока содержимого. Измените размер окна.",
     "kiosk.fullscreen_form_refreshed": "Форма обновлена. Введите пароль ещё раз.",
     "kiosk.fullscreen_form_refresh_failed": "Не удалось обновить форму. Проверьте соединение и повторите попытку.",
     "admin.assigned_events": "Назначенные события",
