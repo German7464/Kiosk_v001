@@ -46,6 +46,9 @@ class DisplaySwitchTests(unittest.TestCase):
         self.state = self.fixture.root / 'state'
         self.profile = self.fixture.root / 'profile'
         self.processes = []
+        storage_check = patch.object(coordinator, '_check_storage')
+        storage_check.start()
+        self.addCleanup(storage_check.stop)
         self.addCleanup(self.stop_children)
         install_for_display(self.fixture.destination, self.store.root, self.cache, mode='tv')
         self.next_source = sessions.DisplaySessionTests.next_package(self)

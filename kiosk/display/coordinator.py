@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -122,7 +123,8 @@ def _separate_roots(*roots):
     paths = [Path(path).absolute() for path in roots]
     for i, path in enumerate(paths):
         for other in paths[i + 1:]:
-            if path == other or path in other.parents or other in path.parents:
+            left, right = os.path.normcase(str(path)), os.path.normcase(str(other))
+            if left == right or left.startswith(right + os.sep) or right.startswith(left + os.sep):
                 raise PackageError('overlapping_display_storage')
     return paths
 
@@ -162,6 +164,20 @@ def _spawn(shell, view, profile, session):
                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def _check_storage(shell, roots):
+    result = subprocess.run([str(shell), '--check-storage', *(str(root) for root in roots)],
+                            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+    if result.returncode:
+        raise PackageError('display_storage_permissions')
+
+
+def check_display_exit(process):
+    if process.returncode == 3:
+        raise PackageError('display_storage_limit')
+    if process.returncode:
+        raise PackageError('display_engine_exited')
+
+
 def _stop(process):
     if process.poll() is None:
         process.terminate()
@@ -176,6 +192,7 @@ def _await_ready(process, profile, session, timeout):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if process.poll() is not None:
+            check_display_exit(process)
             raise PackageError('display_start_failed')
         try:
             status = _read_json(profile, 'display-status.json')
@@ -206,10 +223,9 @@ def display_session(store_root, cache_root, state_root, profile_root, shell, *, 
         _plain_path(shell.parent, shell.name)
         if shell.suffix.lower() != '.exe':
             raise PackageError('invalid_display_shell')
+        _check_storage(shell, (store, cache, state, profile))
         with PublicationStore(state)._lease():
             _directory(profile)
-            if PublicationStore(profile)._usage() > 256 * 1024 * 1024:
-                raise PackageError('display_profile_limit')
             previous = _confirmed_view(store, cache, state, mode)
             try:
                 current = prepare_cached_view(store, cache, mode=mode)
@@ -227,9 +243,11 @@ def display_session(store_root, cache_root, state_root, profile_root, shell, *, 
                     process = _spawn(shell, view, profile, token)
                     _await_ready(process, profile, token, startup_timeout)
                     _save_ready(view, state, mode, process)
-                except (PackageError, OSError, ValueError, KeyError, TypeError, RecursionError):
+                except (PackageError, OSError, ValueError, KeyError, TypeError, RecursionError) as error:
                     if process is not None:
                         _stop(process)
+                    if str(error) == 'display_storage_limit':
+                        raise
                     if index + 1 < len(choices):
                         continue
                     raise PackageError('display_unavailable') from None
@@ -245,7 +263,7 @@ def display_session(store_root, cache_root, state_root, profile_root, shell, *, 
                 return
     except PackageError:
         raise
-    except (OSError, ValueError, KeyError, TypeError, RecursionError):
+    except (OSError, ValueError, KeyError, TypeError, RecursionError, subprocess.TimeoutExpired):
         if yielded:
             raise
         raise PackageError('display_coordinator_failed') from None

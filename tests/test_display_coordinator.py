@@ -18,7 +18,7 @@ import json,os,sys,time
 from pathlib import Path
 profile,token,behavior=sys.argv[1:]
 p=Path(profile);p.mkdir(exist_ok=True,parents=True)
-if behavior=='exit': sys.exit(3)
+if behavior=='exit': sys.exit(4)
 report={'session_id':token,'process_id':os.getpid(),'navigation_success':True,'renderer_ready':True,'startup_failed':False}
 if behavior=='stale': report['session_id']='0'*32
 if behavior=='pid': report['process_id']+=1
@@ -39,6 +39,10 @@ class CoordinatorTests(unittest.TestCase):
         self.state = self.fixture.root / 'state'
         self.profile = self.fixture.root / 'profile'
         self.processes = []
+        self.original_check_storage = coordinator._check_storage
+        storage_check = patch.object(coordinator, '_check_storage')
+        self.check_storage = storage_check.start()
+        self.addCleanup(storage_check.stop)
         self.addCleanup(self.stop_children)
         install_for_display(self.fixture.destination, self.store.root, self.cache, mode='tv')
 
@@ -139,6 +143,29 @@ class CoordinatorTests(unittest.TestCase):
                                                sys.executable):
                 pass
         launch.assert_not_called()
+
+    def test_untrusted_storage_is_refused_before_engine_or_receipt(self):
+        self.check_storage.side_effect = PackageError('display_storage_permissions')
+        with self.spawn() as launch, self.assertRaisesRegex(PackageError, 'display_storage_permissions'):
+            with self.session():
+                self.fail('unsafe storage accepted')
+        launch.assert_not_called()
+        self.assertFalse((self.state / 'last-ready-tv.json').exists())
+
+    def test_storage_exit_is_reported_without_retrying_same_profile(self):
+        with self.spawn('exit'), patch.object(coordinator, '_await_ready', side_effect=PackageError('display_storage_limit')):
+            with self.assertRaisesRegex(PackageError, 'display_storage_limit'):
+                with self.session():
+                    pass
+        self.assertEqual(len(self.processes), 1)
+        self.assertIsNotNone(self.processes[0].poll())
+
+    def test_root_preflight_has_no_ui_and_is_bounded(self):
+        with patch.object(coordinator.subprocess, 'run') as invoke:
+            invoke.return_value.returncode = 1
+            with self.assertRaisesRegex(PackageError, 'display_storage_permissions'):
+                self.original_check_storage(sys.executable, (self.store.root, self.cache, self.state, self.profile))
+            self.assertEqual(invoke.call_args.kwargs['timeout'], 10)
 
     def test_cli_waits_for_owned_native_lifetime(self):
         args = ['display', '--store', str(self.store.root), '--cache', str(self.cache),

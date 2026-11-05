@@ -40,7 +40,8 @@ def build(sdk_archive, destination):
                '/r:' + str(destination / 'Microsoft.Web.WebView2.Core.dll'),
                '/r:' + str(destination / 'Microsoft.Web.WebView2.WinForms.dll'), str(temporary),
                str(ROOT / 'kiosk/display/windows/PreparedView.cs'),
-               str(ROOT / 'kiosk/display/windows/DisplayWindow.cs')]
+               str(ROOT / 'kiosk/display/windows/DisplayWindow.cs'),
+               str(ROOT / 'kiosk/display/windows/RuntimeStorage.cs')]
     subprocess.run(command, check=True, timeout=60)
     temporary.unlink()
     files = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in destination.iterdir() if path.is_file()}

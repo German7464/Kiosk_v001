@@ -5,7 +5,7 @@ import json
 from kiosk.publication.exporter import PackageError
 from .session import install_for_display, prepare_active_view
 from .cache import prepare_cached_view
-from .coordinator import display_session, follow_publications
+from .coordinator import check_display_exit, display_session, follow_publications
 
 
 def main():
@@ -40,8 +40,8 @@ def main():
                 if args.watch:
                     for event in follow_publications(run):
                         print(json.dumps(event), flush=True)
-                if run.process.wait() != 0:
-                    raise PackageError('display_engine_exited')
+                run.process.wait()
+                check_display_exit(run.process)
             return 0
         print(json.dumps({'result': 'prepared', 'mode': args.mode}))
         return 0

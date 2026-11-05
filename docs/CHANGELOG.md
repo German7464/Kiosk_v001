@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-04
+
+- Completed the remaining Windows stage4 resource-safety block: private-root preflight, owned disposable browser data, ongoing profile/free-space checks, process-tree ownership and preserved-publication recovery. Passed focused coordinator/switch and final native filesystem/WebView checks; recorded the bounded Events media/device profile. Owner authorized the separate local stage4 checkpoint; bounded existing-Events stage4 acceptance is recorded, with installed app/server/phone unchanged.
+
 ## 2026-11-03
 
 - Prepared a resumable current handoff in the sole ledger with exact branches,verified identities,preservation/cleanup state,outstanding PC2 report and next approval/implementation boundary;marked completed Android prompts historical and linked documentation entry points.

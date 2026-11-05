@@ -22,6 +22,7 @@ public sealed class DisplayWindow : Form {
     int diagnosticSamples, diagnosticTransitions, diagnosticFailures;
     string diagnosticCounter = "";
     public bool StartupFailed { get; private set; }
+    public bool RuntimeReleased { get; private set; }
 
     public static bool Hex(string value, int length) {
         return value != null && Regex.IsMatch(value, "\\A[0-9a-f]{" + length + "}\\z");
@@ -34,6 +35,7 @@ public sealed class DisplayWindow : Form {
                 denied_requests = denied, blocked_navigation = blocked, host_objects = false,
                 web_messages = false, permissions = "deny", session_id = session,
                 process_id = System.Diagnostics.Process.GetCurrentProcess().Id,
+                browser_process_id = active == null || active.Browser.CoreWebView2 == null ? 0 : active.Browser.CoreWebView2.BrowserProcessId,
                 navigation_success = active != null && !StartupFailed, renderer_ready = active != null && !StartupFailed,
                 startup_failed = StartupFailed, view_key = active == null ? "" : active.View.Key,
                 package_sha256 = active == null ? "" : active.View.PackageIdentity,
@@ -128,7 +130,9 @@ public sealed class DisplayWindow : Form {
         FormBorderStyle = fullscreen ? FormBorderStyle.None : FormBorderStyle.Sizable;
         WindowState = fullscreen ? FormWindowState.Maximized : FormWindowState.Normal;
     }
-    public DisplayWindow(LocalView view, string profile, bool diagnostic, string session, string cacheRoot) {
+    public DisplayWindow(LocalView view, string profile, bool diagnostic, string session, string cacheRoot)
+        : this(view, profile, diagnostic, session, cacheRoot, profile) { }
+    public DisplayWindow(LocalView view, string profile, bool diagnostic, string session, string cacheRoot, string browserDirectory) {
         initial = view; this.profile = profile; this.session = session; this.cacheRoot = cacheRoot;
         Text = "Kiosk Offline Display"; Width = 1280; Height = 800;
         Controls.Add(surface);
@@ -137,7 +141,11 @@ public sealed class DisplayWindow : Form {
         Shown += async (s, e) => {
             Status();
             try {
-                environment = await CoreWebView2Environment.CreateAsync(null, profile);
+                var options = new CoreWebView2EnvironmentOptions(); options.ExclusiveUserDataFolderAccess = true;
+                environment = await CoreWebView2Environment.CreateAsync(null, browserDirectory, options);
+                if (!String.Equals(Path.GetFullPath(environment.UserDataFolder), Path.GetFullPath(browserDirectory), StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("unexpected_runtime_directory");
+                environment.BrowserProcessExited += (sender, args) => { RuntimeReleased = true; };
                 if (closing) return;
                 runtimeVersion = environment.BrowserVersionString;
                 if (!await Prepare(initial)) { if (!closing) Fatal(); return; }

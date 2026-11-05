@@ -134,6 +134,11 @@ public static class OfflineDisplay {
     [STAThread]
     public static int Main(string[] args) {
         try {
+            if (args.Length == 5 && args[0] == "--check-storage") {
+                RuntimeStorage.Separate(args[1], args[2], args[3], args[4]);
+                for (int i = 1; i < args.Length; i++) RuntimeStorage.CheckRoot(args[i]);
+                return 0;
+            }
             if (args.Length == 2 && args[0] == "--check-view") {
                 var view = new LocalView(args[1]);
                 if (view.AllowedPath(LocalView.Origin + "/index.html", "GET") != "index.html" ||
@@ -164,14 +169,45 @@ public static class OfflineDisplay {
             var content = new LocalView(args[1]);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            string profile = LocalView.PlainDirectory(args[3]);
-            Directory.CreateDirectory(profile);
+            string profile = RuntimeStorage.CheckRoot(args[3]);
+            RuntimeStorage.Separate(profile, Path.GetFullPath(args[1]));
+            if (cacheRoot.Length != 0) {
+                RuntimeStorage.Separate(profile, cacheRoot);
+                RuntimeStorage.CheckRoot(cacheRoot);
+            }
+            DisplayProcessJob.OwnProcessTree();
             using (var lease = new FileStream(Path.Combine(profile, "display.lock"), FileMode.OpenOrCreate,
                                               FileAccess.ReadWrite, FileShare.None)) {
-                var window = new DisplayWindow(content, profile, diagnostics, session, cacheRoot);
-                Application.Run(window);
-                return window.StartupFailed ? 1 : 0;
+                using (var storage = new RuntimeStorage(profile)) {
+                    var window = new DisplayWindow(content, profile, diagnostics, session, cacheRoot, storage.BrowserDirectory);
+                    storage.StartWatch(reason => {
+                        try {
+                            byte[] data = Encoding.UTF8.GetBytes(new JavaScriptSerializer().Serialize(
+                                new { session_id = session, code = reason }));
+                            string temporary = Path.Combine(profile, ".storage-status");
+                            if (File.Exists(temporary) && (File.GetAttributes(temporary) & FileAttributes.ReparsePoint) != 0)
+                                throw new InvalidDataException();
+                            File.WriteAllBytes(temporary, data);
+                            string target = Path.Combine(profile, "display-storage.json");
+                            if (File.Exists(target)) File.Replace(temporary, target, null); else File.Move(temporary, target);
+                        } catch { }
+                        // Independent of the UI thread. The private job ends owned descendants.
+                        Environment.Exit(3);
+                    });
+                    Application.Run(window);
+                    var releaseWait = System.Diagnostics.Stopwatch.StartNew();
+                    while (!window.RuntimeReleased && releaseWait.ElapsedMilliseconds < 5000) {
+                        Application.DoEvents(); System.Threading.Thread.Sleep(25);
+                    }
+                    storage.Dispose();
+                    if (window.RuntimeReleased) storage.CleanupAfterBrowserExit();
+                    return window.StartupFailed ? 1 : 0;
+                }
             }
+        } catch (InvalidDataException error) {
+            Console.Error.WriteLine("offline_display_failed");
+            return error.Message.StartsWith("display_profile_", StringComparison.Ordinal) ||
+                error.Message == "display_disk_reserve" ? 3 : 1;
         } catch {
             Console.Error.WriteLine("offline_display_failed");
             return 1;
