@@ -32,6 +32,8 @@ def create_app(config_overrides=None):
     configure_request_security(app)
     app.register_blueprint(admin_blueprint)
     app.register_blueprint(api_blueprint)
+    from kiosk.delivery import configure_delivery
+    configure_delivery(app)
 
     @app.get("/static/<path:filename>", endpoint="static")
     def static_file(filename):

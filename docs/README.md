@@ -12,7 +12,7 @@ Two-PC entry points: [coordination workflow](TWO_PC_WORKFLOW.md),
 [shared Events contract and examples](../contracts/README.md),
 [Android workspace](../android/README.md), [Android execution plan and dispatch history](ANDROID_TASK_DRAFT.md).
 
-[Server-only delivery / D13 design draft](SERVER_DELIVERY_DESIGN.md) records proposed trust and delivery decisions; it is not an approved protocol or implementation status.
+[Server-only delivery / D13 design draft](SERVER_DELIVERY_DESIGN.md) records broader proposed trust decisions. The selected isolated integration uses the concrete [device-delivery-v1 contract](../contracts/device-delivery-v1/README.md) and [server module](../kiosk/delivery/README.md); neither document substitutes for acceptance evidence in the sole ledger.
 
 Client implementation modules: [publication export/store/renderer](../kiosk/publication/README.md) and [native display candidate](../kiosk/display/README.md). These describe implemented interfaces and limits; current acceptance/evidence remains in the progress ledger.
 

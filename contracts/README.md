@@ -1,5 +1,9 @@
 # Shared client contracts
 
+[Native device delivery v1](device-delivery-v1/README.md) defines the isolated server/Android pilot metadata, enrollment and receipt API beside the unchanged Events package format. Current implementation/acceptance is recorded only in the progress ledger.
+
+[Interrupted/incremental capture](device-delivery-v1/TRANSFER_RESUME.md) adds exact byte ranges and bounded transfer semantics without changing trust or the frozen lab protocol.
+
 [Events package v1](events-v1/README.md) documents the existing Python format,
 not a replacement protocol. Documentation edition 1 describes the compatibility
 tuple `(1, events, events-v1, 1)`; changing this document does not negotiate a new

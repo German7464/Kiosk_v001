@@ -4,6 +4,24 @@
 
 - Completed the remaining Windows stage4 resource-safety block: private-root preflight, owned disposable browser data, ongoing profile/free-space checks, process-tree ownership and preserved-publication recovery. Passed focused coordinator/switch and final native filesystem/WebView checks; recorded the bounded Events media/device profile. Owner authorized the separate local stage4 checkpoint; bounded existing-Events stage4 acceptance is recorded, with installed app/server/phone unchanged.
 
+- Reviewed PC2's completed incremental/resumable Events delivery: verified46 delivered/806 source inventory entries, retained real206/unchanged-file reuse/TV-ready200 evidence and the intervening APK-update limitation. Closed only that bounded task and marked its prompt historical; no test repetition or stage4/5 completion claim.
+
+- Corrected only isolated r2 lab static/upload root consistency so normal admin image uploads generate valid public paths, preserving existing files, registration and trust identities.
+
+- Consolidated stage4 acceptance evidence: reused Windows offline OS restart, current native pagination and physical Android recovery; isolated remaining Windows runtime-profile/resource safety and supported Events profile disposition. Corrected superseded active-table tasks without repeating tests or declaring stage completion.
+
+- Added verified strong-ETag byte-range artifact responses, bounded stream concurrency/pacing and focused interrupted-transfer checks. Prepared one coordinated native incremental/resumable capture task; original trust protocol and prior phone acceptance remain unchanged.
+
+- Reviewed and independently verified PC2's final801-file source/70-file delivery inventory and bounded physical server-to-phone journey:automatic A/B,safe refusals,real offline reboot,ready receipt recovery and credential revocation. Closed that laboratory outcome only;retained explicit trusted-time confirmation and broader stage4/5 acceptance limits in the sole ledger. No phone-test repetition or stage completion claim.
+
+- Reviewed PC2's nine-test/build candidate and exact changed-source identities;verified the179-file synthetic phone backup and recorded the lost debug-signer gate. Identified automatic synchronization/reboot recovery gaps inside the same integration task;proposed a separately authorized data-preserving test reinstall without claiming phone or stage acceptance.
+
+- Reconciled the remaining selected-stage obligations into complete user outcomes;corrected the current summary to preserve the accepted2026-10-29 stage3 baseline. Kept PC2's single server-to-phone task intact and separated pilot acceptance from wider delivery/authoring requirements without new runtime checks.
+
+- Implemented opt-in isolated native-device Events server delivery, transactional enrollment/revocation, immutable two-mode artifacts, assignment history and idempotent receipts. Added the v1 lab contract and direct strict-TLS/automatic-publication checks; Android integration and physical acceptance remain pending in the sole ledger.
+
+- Reviewed the stage4/5 boundary and prepared one complete server-authorized Android Events task with explicit approval/contract gates, a finite joint acceptance journey and evidence reuse. No implementation or stage acceptance inferred; see TZ_PROGRESS.md.
+
 ## 2026-11-03
 
 - Prepared a resumable current handoff in the sole ledger with exact branches,verified identities,preservation/cleanup state,outstanding PC2 report and next approval/implementation boundary;marked completed Android prompts historical and linked documentation entry points.
