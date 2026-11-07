@@ -2,6 +2,7 @@ param(
     [Parameter(Mandatory=$true)][string]$BuildJdk,
     [Parameter(Mandatory=$true)][string]$AndroidSdk,
     [string]$ReadOnlyDependencyCache = '',
+    [string]$DebugKeystore = '',
     [string[]]$Tasks = @(':app:testDebugUnitTest', ':app:assembleDebug', ':app:assembleDebugAndroidTest')
 )
 $ErrorActionPreference = 'Stop'
@@ -19,8 +20,7 @@ $env:ANDROID_HOME = $AndroidSdk
 $env:GRADLE_USER_HOME = "$harnessRoot/.gradle/user-home"
 if ($ReadOnlyDependencyCache) { $env:GRADLE_RO_DEP_CACHE = $ReadOnlyDependencyCache }
 New-Item -ItemType Directory -Force -Path "$harnessRoot/.gradle" | Out-Null
-if (!(Test-Path -LiteralPath "$harnessRoot/.gradle/debug.keystore")) {
-    # Disposable harness signing identity, never a product/release key or machine trust change.
-    Invoke-HarnessNative "$BuildJdk/bin/keytool.exe" @('-genkeypair', '-keystore', "$harnessRoot/.gradle/debug.keystore", '-storepass', 'android', '-alias', 'androiddebugkey', '-keypass', 'android', '-dname', 'CN=Android Debug,O=Android,C=US', '-keyalg', 'RSA', '-keysize', '2048', '-validity', '3650')
-}
-Invoke-HarnessNative "$harnessRoot/gradlew.bat" (@('-p', $harnessRoot) + $Tasks)
+if (!$DebugKeystore) { $DebugKeystore = "$harnessRoot/.gradle/debug.keystore" }
+if (!(Test-Path -LiteralPath $DebugKeystore -PathType Leaf)) { throw 'Existing debug signer required; never regenerate a lost device signer during build' }
+$resolvedDebugKeystore = (Resolve-Path -LiteralPath $DebugKeystore).Path
+Invoke-HarnessNative "$harnessRoot/gradlew.bat" (@('-p', $harnessRoot, "-PkioskDebugKeystore=$resolvedDebugKeystore") + $Tasks)

@@ -17,11 +17,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    signingConfigs { debug { storeFile = rootProject.file('.gradle/debug.keystore') } }
+    signingConfigs { debug { storeFile = rootProject.file(providers.gradleProperty('kioskDebugKeystore').getOrElse('.gradle/debug.keystore')) } }
     buildTypes { debug { applicationIdSuffix = '.debug' } }
     testOptions { unitTests.all {
         systemProperty 'fixtureRoot', file('src/main/assets/views').absolutePath
         systemProperty 'packageFixtureRoot', file('src/androidTest/assets/package-cases').absolutePath
+        systemProperty 'tvPaginationRoot', rootProject.file('testdata/tv-pagination').absolutePath
+        systemProperty 'contentFitnessRoot', rootProject.file('testdata/content-fitness').absolutePath
         systemProperty 'preparationFixtureRoot', rootProject.file('testdata/local-admission').absolutePath
         systemProperty 'bindingFixtureRoot', rootProject.file('testdata/generic-binding').absolutePath
     } }

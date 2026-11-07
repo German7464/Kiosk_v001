@@ -1,0 +1,7 @@
+{
+  "source": "PC1 exact local shared-TV-pagination preparation; not release/production authority",
+  "task_sha256": "e9573e6873d3f61d05235000cba68b6aabd0c289f60c1121a4b2fc59dd6e4601",
+  "archive_sha256": "643009835106b2ee24d0a0f071874251502e0f248be21a95cf7c02807348aa2d",
+  "independent_preparation_sha256": "6df433c6858305645b847a752fc0e0801ef3fbe57d51f33e8b580aa867fb5edc",
+  "renderer_identity_kind": "PC1 caller-attested local working-source identity; no fabricated release commit"
+}

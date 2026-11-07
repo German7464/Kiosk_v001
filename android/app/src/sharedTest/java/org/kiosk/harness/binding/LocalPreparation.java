@@ -13,7 +13,17 @@ import android.content.Context;
 public final class LocalPreparation {
     public enum Confirmation {
         C("5fc915b121f36120e787412c0c28bbefd585b80efcc1c5865083f136593302b3"),
-        B("91f5f9674617d88dc0b32201f5ac70b9b4fc72f1da681cc172019bb6b1d42493");
+        B("91f5f9674617d88dc0b32201f5ac70b9b4fc72f1da681cc172019bb6b1d42493"),
+        EMPTY("a35b740d4e4b9f55a9690821b72f8e4fd63bfb79dea3a5efc63d44fb2b9fac6c"),
+        CONTROL("84a0f5ef02b8df6766676edb003fdb54e86f615a934950d113be03a153bf9572"),
+        LONG_TEXT_TAGS("fc1c181625cd7d19e238b1e57990fcd118f9f1f280b6bec34ae669453c18dc80"),
+        IMAGE_SHAPES("74aa8c97ddbd4f4bcc29f0d5a61c0eca4212b17063965f741de9b36e5cffbcfc"),
+        TV_EMPTY("d8d584f15594841c4fbbd061daba030a39340ce03ee686b6639417fd9240d58c"),
+        TV_CONTROL("c13c41ab5d5b2e401f4ff2ce7a220ceecbdc7ac45ef1d55f194c87c34d54c4c0"),
+        TV_LONG_TEXT_TAGS("6df433c6858305645b847a752fc0e0801ef3fbe57d51f33e8b580aa867fb5edc"),
+        TV_IMAGE_SHAPES("df58d5e3e6f50e354be08ccc835087934cc9582103a5a82f3c5abe442ade1527"),
+        TV_TWO_EVENTS("f6c1f37fa09cf1f37e8f19917a9da8275f9c0a584386bd6a2a6033c4c6052f93"),
+        TV_DESCRIPTION_ONLY("592152949f2c766e899eb23ddc65af4547a9be6f532daed3cb8512320f107368");
         public final String sha256;
         Confirmation(String sha256){this.sha256=sha256;}
     }

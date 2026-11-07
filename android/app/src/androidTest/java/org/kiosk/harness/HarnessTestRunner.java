@@ -16,6 +16,7 @@ public final class HarnessTestRunner extends InstrumentationTestRunner {
         StoreAdapters(org.kiosk.harness.storage.FixturePublicationStore.Checkpoint faults,PreparedWebView.Factory factory,java.nio.file.Path root){this.faults=faults;this.factory=factory;this.root=root;}
     }
     static final AtomicReference<StoreAdapters> nextStoreAdapters=new AtomicReference<>();
+    static final AtomicReference<org.kiosk.harness.storage.PreparedAdmission.VerifierProvider> nextAdmissionVerifier=new AtomicReference<>();
     static final class Adapters {
         final HarnessActivity.Preflight preflight;
         final PreparedWebView.Factory factory;
@@ -26,6 +27,8 @@ public final class HarnessTestRunner extends InstrumentationTestRunner {
     static final AtomicReference<Adapters> nextAdapters = new AtomicReference<>();
     @Override public void callActivityOnCreate(Activity activity, Bundle saved) {
         if(activity instanceof StoredHarnessActivity){
+            var admission=nextAdmissionVerifier.getAndSet(null);
+            if(admission!=null)((StoredHarnessActivity)activity).configureAdmission(admission);
             StoreAdapters injected=nextStoreAdapters.getAndSet(null);
             if(injected!=null){((StoredHarnessActivity)activity).configure(injected.faults,injected.factory);((StoredHarnessActivity)activity).configureRoot(injected.root);}
         }

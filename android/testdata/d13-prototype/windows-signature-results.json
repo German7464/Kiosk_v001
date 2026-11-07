@@ -1,0 +1,92 @@
+[
+  {
+    "name": "valid-list",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "changed-payload",
+    "expected_signature_valid": false,
+    "actual_signature_valid": false
+  },
+  {
+    "name": "wrong-public-key",
+    "expected_signature_valid": false,
+    "actual_signature_valid": false
+  },
+  {
+    "name": "wrong-domain-prefix",
+    "expected_signature_valid": false,
+    "actual_signature_valid": false
+  },
+  {
+    "name": "unknown-algorithm",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "wrong-group",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "old-generation",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "equal-generation-divergence",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "expired-list",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "boolean-generation",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "unknown-payload-version",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "duplicate-server-id",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "no-publisher-role",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "cleartext-origin",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "userinfo-origin",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "unlisted-peer",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "wrong-peer-spki",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  },
+  {
+    "name": "duplicate-payload-field",
+    "expected_signature_valid": true,
+    "actual_signature_valid": true
+  }
+]

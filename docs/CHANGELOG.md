@@ -1,6 +1,26 @@
 # Changelog
 
+## 2026-11-03
+
+- Completed the bounded native-admission hardware chain on moto g85 using the clean candidate main APK after explicitly authorized synthetic-store cleanup and verified backup. A/nine refusals/B/external stop/no-issuer refusal/test-only private reopen preserve exact bytes and receipts with zero assets reseeding. Added only one existing-test measurement observer for physical image time/allocation samples; production trust/resource policy and stage4 acceptance remain open. See [Android physical report](../android/README.md).
+
+- Consolidated the accumulated Android candidate into a source-only reproducible delivery: two identical clean offline APK builds,21 focused JVM and67 Android checks, including same-store native admission/refusals/restart. Read-only moto g85 backup preserved63 synthetic files; changed-APK physical testing remains blocked by retained legacy-store data under the no-clear/no-conversion boundary. No application/test mechanism or production authority added; stage4 remains open. See [Android candidate report](../android/README.md).
+
+- Integrated a typed local prepared-Events admission path into existing capture/store/coordinator/private startup: independently checked source interface, exact Windows image evidence, sequential Android readability with explicit experimental budgets, persisted internal evidence and fail-closed issuer revalidation. Test-only issuer proves same-store preservation/replacement/restart; ordinary no-issuer path refuses, legacy development grants cannot authorize this path. No production source trust or stage4 closure. See [Android mechanism/report](../android/README.md).
+
+- Recorded one Android local-core acceptance candidate in the ordinary default store on a new owned disposable emulator: pinned A, capture/resource refusals preserving A, pinned B, external force-stop and normal-launcher private recovery with both receipts. Added only the focused test driver and documentation; mapped unchecked evidence boundaries without changing policy/flags or claiming stage4 completion. See [Android candidate and report](../android/README.md).
+
+## 2026-11-02
+
+- Added only test-source/fixture D13 exact-byte RSA interoperability and strict parsing checks plus a serial offline enrollment/authority model. Focused JVM and phone results match; recorded Android/JVM JSON differences and wrong-envelope-key classification, with main APK/private publication data preserved. Real pairing, native transport and production protocol remain unimplemented. See [Android prototype report](../android/README.md).
+
+- Recorded the owner-assisted physical moto g85 5G offline harness pilot: real touch/lifecycle, bounded shared-renderer kiosk/TV checks, publication replacement and explicit private-start after force-stop and owner reboot with network absent. Preserved source/data and documented the separate-store corruption-check limitation; no production/Android TV admission or stage4 closure. See [Android report and evidence](../android/README.md).
+
 ## 2026-11-01
+
+- Validated PC1 shared TV text pagination with test-only pinned preparations, exact part reconstruction, native resize/visibility, one real reading interval and new-renderer private restart. Main APK/shared sources unchanged; physical and admission gates remain open. See [Android evidence](../android/README.md).
+
+- Added test-only PC1 complex-content preparations and attached Android kiosk/TV fitness measurements, native access/rotation and candidate-failure preservation checks. Recorded shared-renderer full-description/passive-TV review findings without changing renderer or production admission. See [Android evidence and limitations](../android/README.md).
 
 - Added test-only independently pinned PC1 Windows-preparation confirmation and focused capture/store/kiosk/TV/offline-restart checks. Parser, fixed confirmations and inputs remain outside the ordinary APK; all broad admission gates remain open. See [Android scope](../android/README.md).
 

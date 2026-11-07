@@ -1,0 +1,6 @@
+{
+  "source": "PC1 content-fitness synthetic Windows preparation2026-11-01",
+  "inputs_zip_sha256": "67f96725fcc0c493850052caa85dd349482187bbdf6a04892b622784d8e0ccd3",
+  "independent_preparation_sha256": "74aa8c97ddbd4f4bcc29f0d5a61c0eca4212b17063965f741de9b36e5cffbcfc",
+  "scope": "exact local test confirmation only, not production trust/admission"
+}

@@ -31,6 +31,10 @@ final class StoreMetadata {
         if(!receipt(id,mode,path.getParent()).equals(raw))throw PrivateFiles.refusal("invalid_receipt");return id;
     }
     static String receipt(String id,String mode,Path root)throws Exception{
+        var admitted=AdmissionRecord.load(root,id);
+        if(admitted!=null){var r=admitted.request;var files=mode.equals("tv")?r.tv().files():r.kiosk().files();PublicationFixtures.mode(mode);
+            return "{\"schema\":1,\"id\":\""+id+"\",\"mode\":\""+mode+"\",\"view\":\""+files.get("view.json").sha256()+"\",\"renderer\":\""+r.renderer().identity()+"\"}";
+        }
         var grant=DevelopmentGrant.load(root,id);if(grant==null)return receipt(id,mode);
         var p=grant.permit;var files=mode.equals("tv")?p.tv.files():p.kiosk.files();PublicationFixtures.mode(mode);
         return "{\"schema\":1,\"id\":\""+id+"\",\"mode\":\""+mode+"\",\"view\":\""+files.get("view.json").sha256()+"\",\"renderer\":\""+p.renderer.identity()+"\"}";

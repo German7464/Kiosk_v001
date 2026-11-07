@@ -37,26 +37,93 @@ public final class StoredHarnessActivity extends Activity {
     private PreparedWebView.Factory factory=PreparedWebView.PLATFORM;
     private boolean created;
     private java.nio.file.Path configuredRoot;
+    private PreparedAdmission.VerifierProvider admissionVerifiers=PreparedAdmission.UNAVAILABLE;
+    private org.kiosk.harness.delivery.DeliveryClient delivery;
+    private TextView deliveryStatus;
+    private org.kiosk.harness.discovery.DiscoveryDialog discovery;
+    private final ExecutorService network=Executors.newSingleThreadExecutor();
+    private Runnable deliveryRetry;
+    private final org.kiosk.harness.delivery.DeliverySchedule deliverySchedule=new org.kiosk.harness.delivery.DeliverySchedule();
 
     void configure(FixturePublicationStore.Checkpoint faults,PreparedWebView.Factory factory){
         if(created)throw new IllegalStateException("activity_already_created");this.faults=faults;this.factory=factory;
     }
     void configureRoot(java.nio.file.Path root){if(created)throw new IllegalStateException("activity_already_created");configuredRoot=root;}
+    void configureAdmission(PreparedAdmission.VerifierProvider verifiers){if(created)throw new IllegalStateException("activity_already_created");admissionVerifiers=verifiers;}
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);created=true;
+        if(admissionVerifiers==PreparedAdmission.UNAVAILABLE)try{
+            delivery=new org.kiosk.harness.delivery.DeliveryClient(this);
+            admissionVerifiers=()->delivery.confirmed()?delivery:null;
+        }catch(Exception refused){Log.w("StoredHarness","delivery_state_unavailable");}
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
         status=new TextView(this);root.addView(status);
+        if(delivery!=null){
+            deliveryStatus=new TextView(this);root.addView(deliveryStatus);
+            LinearLayout nativeControls=new LinearLayout(this);Button connect=new Button(this),sync=new Button(this),reenroll=new Button(this);
+            connect.setText("Connect server");sync.setText("Sync Events");reenroll.setText("Re-enroll");nativeControls.addView(connect);nativeControls.addView(sync);nativeControls.addView(reenroll);root.addView(nativeControls);
+            connect.setOnClickListener(v->connectServer());sync.setOnClickListener(v->syncServer());
+            Button resync=new Button(this);resync.setText("Full resync");root.addView(resync);
+            resync.setOnClickListener(v->{if(!busy)network.execute(()->{try{delivery.fullResync();nativeStatus("Incomplete capture discarded; checking Events.");ui.post(()->scheduleDelivery(0));}catch(Exception unavailable){nativeStatus("Capture is busy; retry full resync later.");}});});
+            Button confirmTime=new Button(this);confirmTime.setText("Confirm device time");root.addView(confirmTime);
+            confirmTime.setOnClickListener(v->new android.app.AlertDialog.Builder(this).setTitle("Confirm device date and time")
+                .setMessage("Check the device date and time against an independent trusted clock. Resume updates with the existing enrollment only if they are correct.")
+                .setNegativeButton("Cancel",null).setPositiveButton("Confirm",(d,w)->network.execute(()->{try{delivery.confirmClock();nativeStatus("Time confirmed; checking Events.");ui.post(()->scheduleDelivery(0));}catch(Exception e){nativeStatus("Time refused; saved Events retained.");}})).show());
+            reenroll.setOnClickListener(v->{if(delivery.confirmed())new android.app.AlertDialog.Builder(this).setTitle("Explicit re-enrollment")
+                .setMessage("Confirm current automatic device time is correct. Replace this device credential through external PC1 approval; retain saved offline Events and the same trust anchor.")
+                .setNegativeButton("Cancel",null).setPositiveButton("Confirm",(d,w)->network.execute(()->{try{delivery.reenroll();delivery.authorize();nativeStatus("Approve on PC1: "+delivery.humanCode());}catch(Exception e){nativeStatus("Re-enrollment refused; check trusted time and bootstrap expiry.");}})).show();});
+        }
         LinearLayout controls=new LinearLayout(this);installA=new Button(this);installB=new Button(this);
         installA.setText("Install / resume A");installB.setText("Install / resume B");controls.addView(installA);controls.addView(installB);root.addView(controls);
         LinearLayout modes=new LinearLayout(this);kiosk=new Button(this);tv=new Button(this);kiosk.setText("Kiosk mode");tv.setText("TV mode");modes.addView(kiosk);modes.addView(tv);root.addView(modes);
         frame=new FrameLayout(this);message=new TextView(this);message.setGravity(Gravity.CENTER);frame.addView(message,new FrameLayout.LayoutParams(-1,-1));root.addView(frame,new LinearLayout.LayoutParams(-1,0,1));
         setContentView(root);
-        try{store=new FixturePublicationStore(configuredRoot==null?getFilesDir().getCanonicalFile().toPath().resolve("fixture-publications"):configuredRoot,faults);}
+        try{store=new FixturePublicationStore(configuredRoot==null?getFilesDir().getCanonicalFile().toPath().resolve("fixture-publications"):configuredRoot,faults,admissionVerifiers);}
         catch(IOException unavailable){state="failed";message.setText("Private offline storage unavailable.");controls(false);update();return;}
         root.setOnApplyWindowInsetsListener((v,insets)->{var b=insets.getInsets(WindowInsets.Type.systemBars());v.setPadding(b.left,b.top,b.right,b.bottom);return insets;});
         installA.setOnClickListener(v->install("A"));installB.setOnClickListener(v->install("B"));
         kiosk.setOnClickListener(v->chooseMode("kiosk"));tv.setOnClickListener(v->chooseMode("tv"));
         startup();
+        if(delivery!=null){deliveryRetry=this::syncServer;scheduleDelivery(0);}
+    }
+    private void nativeStatus(String text){ui.post(()->{if(!closed&&deliveryStatus!=null)deliveryStatus.setText(text);});}
+    private void connectServer(){
+        if(discovery!=null)discovery.close();
+        discovery=new org.kiosk.harness.discovery.DiscoveryDialog(this,this::confirmServer);
+        discovery.show(delivery.trustedOrigin());
+    }
+    private void confirmServer(String origin){
+        if(delivery.confirmed()&&!delivery.trustedOrigin().equals(origin)){nativeStatus("Origin mismatch refused before connection. Saved registration and Events retained.");return;}
+        if(delivery.confirmed()){network.execute(()->{try{if(!delivery.enrolled()){delivery.authorize();nativeStatus("Approve on PC1: "+delivery.humanCode());}else nativeStatus("Enrolled; Sync Events is available.");}catch(Exception e){nativeStatus("Enrollment refused or server unavailable.");}});return;}
+        try {
+            byte[] bytes=org.kiosk.harness.core.LocalView.readBounded(getAssets().open("delivery-bootstrap.json"),16384);
+            var b=org.kiosk.harness.delivery.DeliveryProtocol.bootstrap(bytes,System.currentTimeMillis()/1000);
+            if(!b.origin().equals(origin)){nativeStatus("Origin differs from independent bootstrap; refused before connection.");return;}
+            new android.app.AlertDialog.Builder(this).setTitle("Confirm independent bootstrap")
+                .setMessage("Server: "+b.origin()+"\nGroup: "+b.group()+"\nServer ID: "+b.server()+"\nGroup key SHA256:\n"+b.keyId())
+                .setNegativeButton("Cancel",null).setPositiveButton("Confirm",(dialog,which)->network.execute(()->{try{delivery.confirm(bytes);delivery.authorize();nativeStatus("Approve on PC1: "+delivery.humanCode());}catch(Exception e){nativeStatus("Bootstrap/enrollment refused.");}})).show();
+        }catch(Exception e){nativeStatus("Independent bootstrap unavailable or expired.");}
+    }
+    private void pollEnrollment()throws Exception {String result=delivery.poll();nativeStatus("approved".equals(result)?"Approved. Checking Events automatically.":"pending".equals(result)?"Approve on PC1: "+delivery.humanCode():"Enrollment "+result);}
+    private void scheduleDelivery(long delay){if(!closed&&!closing&&deliveryRetry!=null){ui.removeCallbacks(deliveryRetry);ui.postDelayed(deliveryRetry,delay);}}
+    private void finishDelivery(boolean success){scheduleDelivery(Math.max(deliverySchedule.finish(success),delivery==null?0:delivery.transferRetryMillis()));}
+    private void syncServer(){
+        if(delivery==null||closed||closing)return;
+        if(busy){scheduleDelivery(1000);return;}if(!deliverySchedule.begin())return;
+        String locallyComplete=active!=null?visible:null;
+        network.execute(()->{try{
+            if(!delivery.confirmed()){ui.post(()->finishDelivery(true));return;}
+            if(!delivery.enrolled()){
+                // The same persisted enrollment request recovers an authorize response lost before saving its code.
+                if(delivery.humanCode().isEmpty())delivery.authorize();pollEnrollment();
+                if(!delivery.enrolled()){ui.post(()->finishDelivery(false));return;}
+            }
+            try{delivery.flush();}catch(Exception pending){nativeStatus("Ready receipts retained for retry.");}
+            var downloaded=delivery.download(locallyComplete);
+            if(downloaded==null){nativeStatus("Events are current.");ui.post(()->finishDelivery(true));return;}
+            ui.post(()->{if(closed||closing||!installPrepared(downloaded.capture(),downloaded.request())){try{downloaded.capture().close();}catch(Exception ignored){}finishDelivery(false);}});
+            nativeStatus("Candidate captured; native admission pending.");
+        }catch(Exception e){nativeStatus("Update pending: check connection, credential and device time. Saved display retained.");ui.post(()->finishDelivery(false));}});
     }
     private long begin(){
         busy=true;long current=++token;state="loading";controls(false);
@@ -133,7 +200,31 @@ public final class StoredHarnessActivity extends Activity {
             }catch(Exception failure){postFailure(current,"development_candidate_refused");}
         }
     }
-    private void shutdownWorker(){for(Runnable pending:worker.shutdownNow())if(pending instanceof DevelopmentJob)((DevelopmentJob)pending).abandon();}
+    /** Native typed caller only; no path/Intent/page importer or authority parameter. */
+    boolean installPrepared(CapturedCandidate capture,PreparedAdmission.Request request){
+        if(busy||closed||closing)return false;long current=begin();choices=List.of();
+        try{worker.execute(new PreparedJob(capture,request,current));return true;}
+        catch(RejectedExecutionException rejected){failed("admission_worker_unavailable",false);return false;}
+    }
+    private final class PreparedJob implements Runnable {
+        final CapturedCandidate capture;final PreparedAdmission.Request request;final long current;
+        final java.util.concurrent.atomic.AtomicBoolean claimed=new java.util.concurrent.atomic.AtomicBoolean();
+        PreparedJob(CapturedCandidate c,PreparedAdmission.Request r,long token){capture=c;request=r;current=token;}
+        void abandon(){if(claimed.compareAndSet(false,true))try{capture.close();}catch(Exception e){Log.w("StoredHarness","capture_cleanup_failed");}}
+        public void run(){
+            if(!claimed.compareAndSet(false,true))return;
+            boolean admitted=false;
+            try(capture){var result=store.installPrepared(capture,request,point->{if(!alive(current))throw new IOException("cancelled");});
+                admitted=true;
+                ui.post(()->{if(alive(current)){selectedMode=store.modeOrInvalid();prepare(result,current);}});
+            }catch(Exception failure){postFailure(current,"local_admission_refused");}
+            finally{boolean success=admitted;if(delivery!=null)ui.post(()->finishDelivery(success));}
+        }
+    }
+    private void shutdownWorker(){if(discovery!=null)discovery.close();network.shutdownNow();if(deliveryRetry!=null)ui.removeCallbacks(deliveryRetry);for(Runnable pending:worker.shutdownNow()){
+        if(pending instanceof DevelopmentJob)((DevelopmentJob)pending).abandon();
+        if(pending instanceof PreparedJob)((PreparedJob)pending).abandon();
+    }}
     private void postFailure(long current,String code){
         String actual=store.modeOrInvalid();ui.post(()->{if(alive(current)){selectedMode=actual;failed(code,false);}});
     }
@@ -151,6 +242,7 @@ public final class StoredHarnessActivity extends Activity {
                     update();
                     worker.execute(()->{
                         boolean saved=false;
+                        if(delivery!=null&&delivery.confirmed())try{delivery.queueReady(selection.id(),selection.view().mode,session);network.execute(()->{try{delivery.flush();nativeStatus("Ready receipt delivered.");}catch(Exception pending){nativeStatus("Ready receipt queued for reconnect.");}});}catch(Exception queueFailure){nativeStatus("Ready receipt queue unavailable.");}
                         try{if(alive(current)){store.saveReady(selection.id(),selection.view().mode,point->{if(!alive(current))throw new IOException("cancelled");});saved=true;}}catch(Exception e){Log.w("StoredHarness","receipt_pending");}
                         boolean confirmed=saved;
                         ui.post(()->{if(alive(current)){state=confirmed?"ready":"ready_receipt_pending";done();}});
@@ -191,12 +283,15 @@ public final class StoredHarnessActivity extends Activity {
                     .put("receipt",store.receipt(store.modeOrInvalid())).put("receipt_tv",store.receipt("tv")).put("receipt_kiosk",store.receipt("kiosk"))
                     .put("private_reads",store.privateReads.get()).put("asset_reads",assetReads.get()+packageAssetReads.get()).put("package_asset_reads",packageAssetReads.get()).put("source","private_storage")
                     .put("development_authorized",store.developmentAuthorized(store.pointer())).put("admission_gates_unchecked",5)
+                    .put("admission_record_issuer",store.admissionIssuer(store.pointer()))
+                    .put("transfer",delivery==null?JSONObject.NULL:new JSONObject(delivery.transferSummary()))
                     .put("elapsed_realtime_ms",SystemClock.elapsedRealtime());
                 store.diagnostic(record.toString());Log.i("StoredHarness",record.toString());
             }catch(Exception e){Log.w("StoredHarness","diagnostic_write_failed");}
         });
     }
     @Override protected void onPause(){if(active!=null)active.pause();super.onPause();}
+    @Override protected void onStop(){if(discovery!=null)discovery.close();super.onStop();}
     @Override protected void onResume(){super.onResume();if(active!=null)active.resume();}
     @Override public void finish(){
         closing=true;++token;ui.removeCallbacksAndMessages(null);shutdownWorker();

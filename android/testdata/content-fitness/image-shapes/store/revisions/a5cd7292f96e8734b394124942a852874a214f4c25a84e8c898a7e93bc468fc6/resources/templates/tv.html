@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t("preview.tv") }}{% endblock %}
+
+{% block content %}
+<section class="tv-screen{% if not has_active_events %} tv-screen--empty{% endif %}"
+    data-slide-duration="{{ (settings.tv_slide_duration|int) * 1000 }}"
+    data-version-poll-interval="10000"
+    data-update-delay-max="10000"
+    data-version-label="{{ t('common.version') }}"
+    data-version-unavailable="{{ t('common.version_unavailable') }}"
+    data-date-placeholder="{{ t('common.date_to_be_announced') }}"
+    data-place-placeholder="{{ t('common.place_to_be_announced') }}"
+    data-description-placeholder="{{ t('common.no_description') }}"
+    data-image-area="{{ t('common.image_area') }}">
+    <div class="tv-system-name">{{ settings.site_title }}</div>
+    <div class="tv-version" data-tv-version>{{ t("common.version_loading") }}</div>
+    <article class="tv-card" data-tv-card {% if not has_active_events %}hidden{% endif %}>
+        <div class="tv-image-area" data-tv-image>
+            <span>{{ t("common.image_area") }}</span>
+        </div>
+        <div class="tv-card-content">
+            <p class="tv-date" data-tv-date>{{ t("common.date_to_be_announced") }}</p>
+            <h1 data-tv-title>{{ t("tv.ready_title") }}</h1>
+            <p class="tv-place" data-tv-place>{{ t("common.place_to_be_announced") }}</p>
+            <p class="tv-description" data-tv-description>{{ t("tv.ready_description") }}</p>
+        </div>
+    </article>
+    <div class="tv-empty-state" data-tv-empty-state {% if has_active_events %}hidden{% endif %}>
+        <p class="label">{{ t("tv.no_active_events") }}</p>
+        <h1>{{ t("tv.empty_title") }}</h1>
+        <p>{{ t("tv.empty_description") }}</p>
+    </div>
+    <button
+        class="tv-fullscreen-button"
+        type="button"
+        data-tv-fullscreen
+        data-fullscreen-enter="{{ t('tv.fullscreen_enter') }}"
+        data-fullscreen-exit="{{ t('tv.fullscreen_exit') }}"
+        aria-label="{{ t('tv.fullscreen_enter') }}"
+        title="{{ t('tv.fullscreen_enter') }}">⛶</button>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tv.js') }}"></script>
+{% endblock %}

@@ -1,5 +1,774 @@
 # Android offline Events harness and conformance design
 
+## Advisory native LAN discovery (2026-11-06)
+
+Bounded stage5 implementation and phone search/refusal checks; the authenticated
+9443 journey is **BLOCKED**, not accepted. See the single
+[PC2 report](../logs/pc2-lan-discovery-20261106/report.md) for exact source/APK/signer
+identities, datagrams, screenshots, checks and the saved-authority prerequisite.
+The coordinator-owned `device-discovery-v1` handoff contract remains unchanged;
+PC1 reference Python/Windows files were not copied into Android.
+
+`discovery/DiscoveryProtocol.java` reuses the strict native `DeliveryJson` grammar:
+512-byte space-padded query, fresh 16-byte nonce, strict reply schema/UTF-8,
+duplicate/type/HTTPS-origin/printable-label checks, exact-origin dedup32 and input256.
+`DiscoverySearch.java` owns one ephemeral socket off the UI thread, sends at most
+three limited broadcasts to255.255.255.255:47751, and uses a monotonic2.9s receive
+window with100ms reserve within the3s budget. It rejects packets after deadline,
+detects oversize/truncation with513-byte buffers, and closes on cancellation/error.
+Only bounded public query/accepted-hint datagrams are logged; no delivery credential.
+
+`AndroidLanDiscovery.java` checks the active default Network, requires non-VPN
+Wi-Fi/Ethernet and exactly one usable IPv4 LinkAddress, then binds the unconnected
+DatagramSocket to that Android Network AND explicit source address. It neither
+changes process routing nor scans IPs/subnets. `ACCESS_NETWORK_STATE` is the only
+added normal install-time permission; existing `INTERNET` remains. No location,
+multicast lock, radio toggle, trust-store or system-setting change is needed for
+this limited broadcast. Platform references checked through Context7:
+[Network.bindSocket](https://developer.android.com/reference/android/net/Network#bindSocket(java.net.DatagramSocket)),
+[network state](https://developer.android.com/develop/connectivity/network-ops/reading-network-state).
+Other target SDK/device network policies remain separate gates.
+
+`DiscoveryDialog.java` is native UI outside WebView. Connect server opens manual
+address/search, explicit Search/Cancel and a bounded scrollable plain-text list.
+Selection only stages an address; Use address separately invokes the existing
+independent bootstrap or saved-registration flow. There is no URL/bootstrap fetch
+from a hint. Wrong saved origin is refused before transport; saved authority,
+group and accepted content are retained. Generations suppress stale callbacks;
+cancel/dismiss and Activity stop/destroy/recreation close the search and worker.
+No confirmation is cached by discovery. An empty/unavailable search retains manual
+input and explains fallback. `DeliveryClient.trustedOrigin()` exposes only the
+public saved exact origin; transport/trust/time/receipt policies are unchanged.
+
+Focused tests: JVM `discovery/DiscoveryTest`; Android `DiscoveryDialogTest`,
+`DiscoveryLifecycleTest` (disposable empty store), and
+`delivery/DiscoveryAuthorityPhoneTest` (read-only prerequisite and zero-transport
+wrong-origin check). Real moto g85/Android16 search found PC1 over wlan0; final
+window measured2902ms. Saved phone registration is8443 with an expired bootstrap
+and unconfirmed new boot; discovered server is9443. No migration, renewal,
+re-enrollment, time confirmation or new ready200 was performed. Existing Version7
+TV content is retained. Stage5 remains partial; no stage6/Android TV/release claim.
+
+## Incremental/resumable capture (2026-11-04)
+
+This bounded task starts from the already accepted B; it does not replay the old
+A/seven-refusal/B/reboot/revoke journey. Frozen device-delivery-v1 remains unchanged;
+the additive `TRANSFER_RESUME.md` governs Range transport. See the
+[task-specific report](../logs/pc2-resumable-delivery-20261104/report.md) for source,
+APK/signer identities, checks, actual headers/counters and failed-attempt evidence.
+
+`binding/ResumableCapture.java` extends the existing pre-admission capture path.
+One app-private `no_backup/captured-candidates/incomplete` plus a file lease retains
+assignment/facts scope, file identity, durable prefix length/hash and bounded
+counters across a process. New authority/current assignment is always revalidated.
+Complete files are size/SHA256-checked before reuse from retained revisions or the
+same capture; accepted/recovery files are never mutated/evicted. NativeTransport
+sends exact Range/If-Range and exposes the real response. Before append, strict206
+Content-Range/strong ETag/length/encoding checks apply;200 replaces,416 causes
+bounded reconciliation/refetch,409 refetches,401 stops new content, and429 retains
+bounded Retry-After across a same-boot fresh process. Existing file/byte/free-space
+budgets account prefixes, copies, abandoned captures and metadata reserve.
+
+CapturedCandidate adopts the complete verified owned capture with its lease;
+the unchanged publication/image/preparation/source gates still precede activation.
+Close is idempotent and cannot remove a later capture. Full resync discards only
+owned incomplete work, forces a fresh complete transfer and retains registration/
+accepted content. There is no new publication store, importer, issuer or renderer.
+
+Private `files/transfer-state.json` holds bounded byte counters and last12 response
+headers; display-state carries only a compact summary to respect its existing4KiB
+limit. `receipt-delivery.json` records actual queued-ready response status/body hash,
+never download-as-ready. These are diagnostics, not authority or readiness grants.
+
+Actual phone: after normal same-signer update, B remained ready while a new valid
+image request was cancelled after262144/748439 bytes. A fresh ordinary process
+received206 `bytes 262144-748438/748439`, completed all32 files and reached real
+source TV ready with its HTTP200 ready receipt.17 unchanged B files (601278bytes)
+had zero artifact GET. Capture received1763568bytes and reused4083926bytes, including
+cross-part copies;584519bytes came directly from retained revisions. All previous
+119 revision files remained identical, registration unchanged, no reboot/radio/
+uninstall/data-clear/trust-reset/signing replacement. Phone is left on verified
+`Laboratory Resumable Events` revision7, TV, package87a1cd8dad5b8d9d8c1185a462389bc214fe79d67d1d6f4d480cd4a66f6ab124.
+
+PASS:14 new distinct JVM methods and3 targeted native methods (the interrupted
+native method was retried only after an external upload blocker was fixed).
+Preserved failures: Play Protect/user-confirmation install timeouts, an upload
+connection reset, r2 admin upload400 from inconsistent STATIC_DIR/PUBLIC_UPLOAD_DIR,
+and the first native waiting timeout when no candidate had been published. PC1
+fixed its laboratory path setting; PC2 did not alter shared contracts/server code.
+A final UI-only compact-diagnostic fix preserved the prefix/journal/registration
+byte-for-byte across its compatible update before the fresh ordinary resume.
+
+Power-loss durability, native forced429/416/409 and full-resync UI execution, fleet/
+release/RSS/hard native-decode deadlines are not claimed by this one demonstration.
+Their applicable bounded client paths have targeted JVM evidence; prior renderer/
+image/authority/reboot evidence is reused. Stage4/5 completion remains PC1/owner's
+decision in the single ledger. The existing explicit uncertain-boot time policy
+is unchanged; no new trusted-time source or automatic renewal was added.
+
+## Device delivery v1 phone journey (2026-11-04)
+
+Owner approved replacing ONLY the main/test laboratory packages on USB phone
+ZY22KDWDNH, then separately approved reversible offline network isolation. Both old
+signed APKs and179-file backup are retained; only74 verified synthetic publication
+files were restored to the same normal default store, all hashes matched. This is
+reinstall/restoration evidence, not signing-continuity/in-place-update acceptance.
+Stable signer and an independently checked copy are owner-private OUTSIDE caches;
+see the [consolidated report](../logs/pc2-device-delivery-20261104/report.md).
+
+Actual moto g85 / Android16 / WebView156.0.8078.47: native bootstrap confirmation,
+external approval, automatic server A kiosk/TV ready, seven bounded refusals
+preserving actual A, external Events edit ->automatic B kiosk/TV ready, force-stop
+and ordinary offline B, real device boot238->239, ordinary offline B ready without
+test issuer, same credential/secret/request preserved, network restored, automatic
+ready outbox delivery and duplicate HTTP200. Actual revocation produced native401
+while private B remained usable; explicit re-enrollment restored working access.
+Native expiry-seam refused new admission without changing the real phone clock.
+Final phone state: ordinary B TV ready; original Wi-Fi/mobile-data settings restored.
+All119 revision files are identical across offline reboot/reconnect/re-enrollment;
+publication/view APK-asset counters0, issuer `native-device-delivery-v1`.
+
+Main APK SHA256 `9bde49ad471500d08d1b4b320bac581d0fe80ccfc1cbcea04150fa97ab04ef6c`
+was unchanged throughout the physical journey. Test APK evolved only for targeted
+instrumentation. Source/APK identities, exact-method checks, screenshots, sanitized
+HTTP evidence, failed-attempt limitations and a deliverable ZIP are in the report.
+The class-only refusal launch accidentally ran inherited tests (one unrelated
+failure); later methods were explicitly selected, and the required refusal scenario
+had passed. The revocation test's noncanonical path was corrected and its failed
+case rerun. Do not present the first failed offline toggle/stale diagnostic as a PASS.
+
+Remaining boundary: after a new boot, uncertain time still blocks NEW authority.
+Native confirmation of independently checked time resumes checking with the same
+enrollment. Offline display and queued receipts already work without that action.
+No unattended boot-autostart/background service or new trusted-time protocol is
+implemented; PC1 must decide any stronger unattended-time policy. This phone-lab
+result does not complete stage4/5, Android TV/fleet/release/RSS/hard decode deadline
+or power-cut acceptance. PC1 owns the single ledger and stage decision.
+
+## Pre-phone device delivery candidate (2026-11-04; historical checkpoint)
+
+Owner-selected PC1/PC2 laboratory task: native HTTPS/bootstrap confirmation,
+external enrollment, signed v1 group authority, live assignment/capture admission,
+Keystore-authenticated private authorization associations and durable ready outbox.
+Implementation is a **buildable candidate, not a verified phone outcome**.
+[One task report](../logs/pc2-device-delivery-20261104/report.md) records evidence,
+exact source/APK identities, actual checks and remaining gates. No stage4/5 acceptance.
+
+New files live in `app/src/main/java/org/kiosk/harness/delivery/`:
+`DeliveryJson` (bounded strict UTF-8 grammar), `DeliveryProtocol` (frozen v1 schema,
+RSA3072 signature/domain and independent renderer pins), `NativeTransport`
+(bootstrap CA + platform hostname validation, exact origin/SPKI, redirect refusal),
+`PrivateDeliveryState` (AndroidKeyStore AES-GCM + AtomicFile), `DeliveryClock`
+(fail-closed new-admission time checks), and `DeliveryClient` (enrollment,
+assignment-backed SourceVerifier, existing CapturedCandidate and receipt outbox).
+The independent public `assets/delivery-bootstrap.json` is lab authority only,
+requiring explicit native confirmation. No admin credential/private key is packaged.
+
+Ordinary `StoredHarnessActivity` connects this verifier to the existing default
+`files/fixture-publications` store and existing local-only PreparedWebView renderer.
+Native Connect server / Confirm displays the externally approved human code;
+Sync Events fetches live candidates. No publication file import exists.
+Re-enroll is an explicit confirmation retaining the anchor/accepted content while
+replacing enrollment request/nonce/secret. Expired bootstrap requires a separately
+authorized recovery design; no silent key/trust reset is provided.
+New admission after a changed/unknown boot clock is blocked until explicit native
+time confirmation, **without replacing valid enrollment**. Accepted offline display
+and historical queued receipts do not obtain new authority. Android network time
+is not treated as a security authority: automatic post-reboot NEW admission remains
+blocked while time is uncertain. PC1 must review that exact policy boundary if fully
+unattended post-reboot admissions are required; no unsigned HTTP Date is used.
+Events are checked automatically after approval, ordinary enrolled startup and
+reconnect while Activity lives. One network/admission cycle runs at a time;
+success checks every30s, failure backoff10/20/40/80/120s, with no pending timer backlog.
+Unchanged locally complete/authorized visible packages are not downloaded again.
+Manual Sync Events remains available. A busy local startup completes before sync.
+No background service or boot-autostart guarantee is implemented.
+
+Private `no_backup/delivery-v1.enc` contains encrypted secret, anchor, trust
+generation/exact signed envelope, time floor, assignment floor, accepted fact/budget
+bindings and ready outbox. Association limits64; queue limit256, no silent eviction.
+Corrupt/missing-key state fails closed. Existing store revalidates captured bytes,
+both views and Android image checks. A newly verified real source may replace an
+unplayable old test-only grant while retaining its files/pointer reference; that
+reference confers no real authority. Accepted association persistence precedes
+store private revalidation/pointer commit and never means ready. Ready is queued
+only from actual PreparedWebView completion, with exact serialized body/ID retries;
+transport failure is independent of local display readiness.
+
+PASS: final targeted JVM tests9 (new protocol6 + affected admission3), main/test
+APK build, all11 handoff inventory hashes, strict real PC2->PC1 TLS/IP and wrong-root
+refusal, with unknown-SNI refusal explicitly performed by Caddy. Two new
+`NativeDeliveryBoundaryTest` methods compile but were **NOT RUN**.
+No unchanged67-test/image/layout/synthetic-v0 suite was repeated.
+
+Before installation, all179 app-private files and installed APK were backed up.
+Candidate installation was refused BEFORE adb install because its available signer
+does not match installed certificate SHA256
+`606fb00df2c1dc68743b0ca4bc0136be9ba79c43ed90c2ebf2522875268da7ea`.
+All67 old revision files remain identical; installed APK stays
+`edeaaef3bbe63c094c6ef280f1e479ea21065440b6a9020aafae64827698b756`.
+Only old-app diagnostic `display-state.json` changed after ordinary launch.
+No clear/uninstall/reset, network/security setting change, approval/publish/revoke,
+phone reboot or affected APK execution occurred. The real-authority phone
+A/refusals/B/offline-reboot/reconnect journey and native enrollment/replay,
+transport-negative, queue/interruption and store-transition tests remain pending.
+The initial key-location request is superseded by PC1's continuation below;
+do not erase retained phone data to bypass this gate.
+
+Continuation supersedes that earlier key-location request: PC1 confirmed that the
+old signer was deleted with test cache and is absent from checked backups. Do not
+repeat the search. PC1 verified all179 backup files. The original matching test APK
+has now also been preserved read-only, SHA256
+`08627cd249d2c514402351f7caae95b9961613b7b9f820bf5a925df0351c0ad2`.
+Owner approval for replacement of only the main/test lab packages with restoration
+of74 verified publication files is **still pending**; no install/uninstall/restore
+was performed in continuation. It would be a reinstall/restoration test, not signer
+continuity. `tools/build.ps1` now refuses to generate a missing signer and accepts
+`-DebugKeystore <existing-owner-private-path>`; both APKs use that same supplied key.
+
+New continuation coverage:9 client/capture/scheduling recovery methods and3
+connection-adapter transport methods passed. Changed enrollment/reboot methods were
+checked separately after their last edits. Prior unchanged9 JVM checks were reused.
+Adapters are package-private constructor seams (`DeliveryIO`, NativeTransport
+Connections), never an Intent/page/global bypass; production constructors still use
+AndroidKeyStore, platform clock, strict TLS and existing CapturedCandidate.
+Tests cover actual capture of existing independently pinned fixture bytes, bounded
+partial/tampered/unauthorized/malformed/unsupported candidates, persisted trust/
+assignment floors, exact fact/budget reopen bindings, same-body receipt retries,
+association/outbox interruption, unchanged download suppression and single-flight
+backoff. They do not replace same-default-store physical display acceptance or a
+real phone reboot. The report records the remaining hardware gates and exact
+uncertain-time condition; no new shared contract field or renderer was introduced.
+
+`tools/delivery-phone-lab.py` provides guarded backup, signer comparison/install,
+sanitized UI observation, native-control taps, external approval and revision
+integrity checks. Its phone serial/path constants are lab tooling, never app state.
+It never prints pairing codes or the external admin credential. Do not publish
+raw private backups; evidence remains local. PC1 retains the single progress ledger.
+
+## Physical native-admission completion (2026-11-03)
+
+The owner explicitly authorized deleting only the old synthetic default store.
+The backup and live store matched all63 known files, safe paths and SHA256;
+only canonical `files/fixture-publications` was removed through exact-package
+run-as after force-stop. All47 neighbouring files were unchanged by removal.
+The old backup is retained; no pm clear/uninstall/settings changes or restoration.
+
+On moto g85 5G / Android16 API36 / arm64-v8a / WebView156.0.8078.47,
+main APK `edeaaef3bbe63c094c6ef280f1e479ea21065440b6a9020aafae64827698b756`
+and the original clean test APK completed A ->9 refusals preserving A ->B ->
+external force-stop ->ordinary no-issuer refusal ->explicit TEST_ONLY_ISSUER
+private reopen. Both receipts/navigation/real TV transition passed,67 private
+revision/evidence files and metadata survived exactly, APK-asset reads0.
+This resolves the preceding candidate's physical retained-data blocker only.
+
+The existing ImageParityTest gained one bounded A/B measurement observer after
+whole-method profiling proved unsuitable. No main/issuer/store/importer changes.
+Final observer test APK `08627cd249d2c514402351f7caae95b9961613b7b9f820bf5a925df0351c0ad2`
+passed its focused method and private reopen. Native image-pass samples:20.85ms A,
+84.26ms B. PNG icon1280x1214: bitmap6,215,680bytes,12?13ms separate decode;
+JPEG800x600:1,920,000bytes,3ms. Samples are not RSS bounds or hard native deadlines.
+Explicit2Mpixel/32MiB/5s-image/15s-pass guards remain experimental, not product defaults.
+
+[Full physical report](../logs/pc2-physical-final-20261103/report.md),
+[physical evidence](../logs/pc2-physical-final-20261103.zip),
+[measurements](../logs/pc2-physical-final-20261103/physical-native-image-observations.json).
+The final app/A/B remain installed; test activities/drivers have finished, and
+ordinary startup still requires a real verifier to show admitted content.
+No persistent test issuer is installed. Stage4 acceptance remains PC1/owner review;
+resource/media policy, stage5 real source trust and future TV/fleet/release gates
+are not replaced by this physical test.
+
+
+## Consolidated clean-build candidate (2026-11-03)
+
+The accumulated source/input delivery was rebuilt offline twice from a separate
+source-only copy using the existing toolchain/cache and retained local debug
+signer: identical main APK `edeaaef3bbe63c094c6ef280f1e479ea21065440b6a9020aafae64827698b756`
+and test APK `d38825e278f06be479e0aa5828957a395199849a3efb9a3393da3f14bad2d285`.
+No source/runtime mechanism changed in this consolidation. Delivery excludes
+build/cache/logs/keys; local signing identity is an external build prerequisite.
+
+PASS:21 focused JVM tests;64 consolidated Android storage/capture/binding/
+coordinator/lifecycle/legacy-data checks plus3 focused native-admission methods.
+One ordinary default-store chain accepted A, preserved it across9 refusals,
+accepted B, then externally force-stopped. Normal issuer-less startup refused
+while retaining B; explicit test-only private reopen reached both real mode
+receipts/navigation/TV transition with67 revision/evidence files unchanged and
+zero APK-asset reads. Representative screenshots were inspected.
+
+The attached moto g85 was inventoried/backed up read-only:63 synthetic files
+unchanged and signer compatible. **Changed-APK physical scenario PENDING:** its
+retained default store contains legacy development grants, whereas the existing
+admission journey requires an empty store. No install/clear/conversion/second
+store was used to bypass preservation. Earlier phone evidence covers the old APK.
+Historical PNG/JPEG decode timing/allocation samples remain measurements, not
+new phone results, RSS bounds or hard native-decode deadlines. Resource/media
+policy and real source verification remain unresolved for non-test use.
+
+[Single PC1 acceptance-candidate report](../logs/pc2-final-candidate-20261103/report.md),
+[source-only delivery](../logs/pc2-final-candidate-20261103/source-delivery.zip),
+[full inventory](../logs/pc2-final-candidate-20261103/inventory.json).
+Stage4 is not declared complete; stage5 trust/pairing/delivery is not implemented.
+
+
+## Integrated local prepared-publication admission (2026-11-03)
+
+New native typed path: `CapturedCandidate` ->independent issuer +Windows image
+evidence +Android readability checks ->existing private store ->hidden candidate
+->actual mode-ready receipt ->private reopen. It does **not** use
+DevelopmentPlaybackAuthority as permission. No network/import UI/key/dependency,
+Events contract or renderer changes; production source trust is not implemented.
+
+Main files: [PreparedAdmission](app/src/main/java/org/kiosk/harness/storage/PreparedAdmission.java)
+defines immutable request/evidence/budgets and the future native SourceVerifier;
+[AndroidImageValidation](app/src/main/java/org/kiosk/harness/storage/AndroidImageValidation.java)
+performs sequential captured-byte checks;
+[AdmissionRecord](app/src/main/java/org/kiosk/harness/storage/AdmissionRecord.java)
+persists internal data, not trust. Existing FixturePublicationStore,
+StoredHarnessActivity worker/hidden-candidate/receipts and StoreMetadata integrate
+the path in the **same default store/revisions tree**. No parallel store.
+
+Every referenced event image and configured site_icon, plus packaged default site
+icon, needs exact-hash VERIFIED Windows evidence and platform PNG/JPEG bounds/full
+decode. Missing/negative evidence is refused before native decode can authorize
+anything. SourceVerifier must independently approve exact request facts, preparation,
+renderer and permission; no candidate `authorized=true`/self-hash establishes this.
+The ordinary Activity installs no verifier and refuses the new path. Only the test
+APK supplies a fixed independently pinned **TEST_ONLY_ISSUER**; no public boolean
+factory creates permissions. Legacy development grants are not converted. A selected
+admitted revision cannot be replaced through the old development/fixture entry;
+its marker prevents a missing admission record from falling into legacy loading.
+
+`revisions/<id>/admission.json` and `admission-required` are internal store metadata,
+not a new serialized preparation/Events/network contract. Startup requires the
+configured issuer ID to match, calls its PRIVATE_REOPEN verification, rebinds exact
+stored package/views/Windows hashes and repeats image checks before ready. A JSON
+record or its issuer label alone is not authority. No verifier ->no new activation
+or admitted private-start; existing bytes/pointer/receipts are retained. Old fixed
+fixture/development behavior in stores that have not selected this path remains a
+separate historical experiment, not permission for the new mechanism.
+
+All budgets are mandatory native inputs, **experimental fixture values** here:
+2,000,000 pixels/image;32MiB accounted encoded-buffer/bitmap live budget;5,000ms/image;
+15,000ms/image pass. Existing capture/store budget8MiB/100 files/1KiB free reserve
+is explicitly passed, not changed into a product quota. Checked arithmetic and
+pre-decode estimates precede bitmap allocation; actual allocation is checked,
+bitmaps recycled, streams closed, cancellation/deadlines polled off the UI thread.
+Native decoder execution is not preemptible by these polls; this is not a hard
+wall-time/RSS/native-workspace guarantee or support for all PNG/JPEG variants.
+
+PASS:3 focused JVM methods; the integrated default-store A/refusals/B method and
+fresh-start method, targeted new image-guard branches, two affected legacy store
+methods and the restored original preparation journey. Final A/refusals/B16.2s;
+fresh-start timings/raw outputs are in the report. All nine refused attempts
+preserved A, including the existing truncated PNG which Android decoded but whose
+independently pinned Windows oracle says invalid_image. No whole image/parity,
+visual,D13,physical,reboot suite repeated. No new corpus: two existing Windows
+preparations and small transient negative mutations of existing measured vectors.
+
+Single own disposable KioskAdmission_20261103/emulator-5584, Android17/API37 x86_64,
+WebView145.0.7632.218. Final live B ->external force-stop (6s no-self-start)
+->ordinary launcher WITHOUT issuer refused ->fresh process WITH explicitly
+installed test-only issuer ready. PIDs9434 ->9844(refused) ->10109(ready).
+All67 stored revision/evidence files and pointer/mode/receipt metadata match;
+858 private reads, zero APK/package asset reads, development_authorized=false.
+Fake issuer uses compiled independent fact pins on reopen, no asset reimport.
+Actual kiosk Next2/4, TV transition, mode receipts and representative screenshots
+checked. Structural inspector still reports all five unchecked directions.
+
+Main APK `64e45d2093aef14fbb57dffe9e8903d58242b42b584e1ab15ebfdb498154bd34`;
+test APK `4c4087c9ed29c37f1a1641f7eb9ea168e5eb67cdee43f856dad7490c90fe3d33`.
+Main bytes changed for this authorized mechanism; no physical-phone install/check
+is inferred from older APK evidence. Phone untouched; own emulator stopped.
+All previous work/index preserved; original LocalAdmissionTest restored exactly
+after a new-test naming collision, with new tests in PreparedAdmissionIntegrationTest.
+No commit/push/merge; ledger remains PC1-owned.
+
+[Single implementation report and identities](../logs/pc2-local-admission-20261103/report.md)
+records exact sources/inputs, commands, initial errors, final-package recheck and
+remaining non-test issuer/custody/offline-policy decisions. A fake issuer proves
+local mechanics only; real source trust remains stage5/approval work. The earlier
+development-only candidate section below is historical. Stage4 is **not** declared
+complete, and no next implementation task is selected by this work.
+
+## Stage4 same-default-store acceptance candidate (2026-11-03)
+
+One owner-selected **local Android core candidate**, not stage4 acceptance or a
+stage5 delivery/pairing implementation. Branch/HEAD remain
+`android/events-conformance-design` / `37f01b7f655573ec101bff99cb60b0efa16966bc`
+plus all preserved dirty work. Main APK stays
+`851321eada7d200a0bc50524d6c93658fdce8a4c70a458dd49a4f66e88ec131d`;
+candidate test APK `d8fccb45018e8293933fc1d0a4e5b48f13d491181cb289de6de6f9072ebb736e`.
+
+[DefaultStoreAcceptanceTest](app/src/androidTest/java/org/kiosk/harness/DefaultStoreAcceptanceTest.java)
+adds one explicit test-only driver. It reuses the independently pinned Windows
+`tv-pagination/control` (A) and `image-shapes` (B) preparations and their existing
+shared renderer; no new corpus/protocol or alternate publication store.
+All steps use ordinary `files/fixture-publications`, asserted against the Activity's
+actual default path. A reaches kiosk/TV ready. Changed bytes, a missing required
+file, incompatible renderer witness and stream-triggered cancellation refuse at
+capture. Existing `development.space_checked` and `copy_chunk` faults refuse in
+the coordinator/store. Each refusal retains the same visible A WebView, pointer,
+both receipts, active/mode/receipt metadata hashes and all27 revision-file hashes;
+both private modes revalidate and A's Home/events navigation remains usable.
+The resource faults are injected failures, not actual disk exhaustion.
+
+B then reaches kiosk ready while TV receipt still honestly names A; Next/Previous
+and real TV transition pass, then both receipts name B. PASS1 final native method
+in19.355s, on the single newly created disposable `KioskStage4_20261103` AVD,
+`emulator-5582`, Android17/API37 x86_64, WebView145.0.7632.218, 1080x2400/420dpi.
+No commands were sent to the physical phone or existing AVDs.
+
+External exact-package force-stop gives no process/self-start during6s. Normal
+resolved MAIN/LAUNCHER entry creates PID7349 (was6991), a new session, B/selectedTV
+and real ready/receipts with142 private reads, zero APK/package asset reads.
+All retained revision/authority/active/mode/receipt hashes passed restart comparison;
+persisted A/B revision hashes also match native observations. Real fresh TV rotation
+and kiosk Next2/4 pass; representative raw screenshots were viewed. No renderer
+termination after pointer commit was injected; earlier bounded evidence of that
+different failure is not reclassified as automatic rollback.
+
+This closes the previously documented **same-default-store refusal gap on an
+owned emulator**; it does not expand the historical phone pilot's actual scope.
+The five unchecked enum labels are not five standalone specification requirements.
+The [single report](../logs/pc2-stage4-candidate-20261103/report.md) maps each to
+R10.4/R10.5/R11/R22, implementation, evidence and the remaining scoped gap.
+In particular, hashes are not full image validation; universal Pillow/Android
+equality, root resistance and physical power-cut tests are not invented gates.
+Local fixture provenance and stage5 server/group trust remain separate.
+
+No main/renderer/contract/dependency/Windows/server/ledger change. Generic prepared
+publication playback still uses `DevelopmentPlaybackAuthority` and a persisted
+development-only grant, including on fresh start; it is not production admission.
+No unchecked flags were cleared. Policy for bounded non-test admission/image
+evidence and owner/PC1 acceptance remain open; stage4 is not declared complete.
+Initial test-sentinel and external launcher/AX observer mistakes, their targeted
+corrections and all commands/identities are preserved in the report/evidence.
+The observer resumed after its failures without repeating the native journey or
+force-stop. Own emulator stopped without snapshot save; phone/data/ADB untouched.
+Only this affected test/build was run; no image/visual/crypto/reboot/physical suites.
+
+Reproduce with the existing build toolchain and a new owned empty emulator:
+
+```powershell
+& ./android/tools/build.ps1 -BuildJdk <existing-jdk> -AndroidSdk <existing-sdk> -ReadOnlyDependencyCache <existing-cache> -Tasks ':app:assembleDebug',':app:assembleDebugAndroidTest','--offline'
+adb -s <owned-empty-emulator> install -r android/app/build/outputs/apk/debug/app-debug.apk
+adb -s <owned-empty-emulator> install -r android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb -s <owned-empty-emulator> shell am instrument -w -r -e class org.kiosk.harness.DefaultStoreAcceptanceTest#testOneDefaultStoreJourney org.kiosk.harness.debug.test/org.kiosk.harness.HarnessTestRunner
+# Then use the bounded external observer in evidence for PID/force-stop/normal-launch checks.
+```
+
+## Synthetic offline D13 protocol feasibility prototype (2026-11-02)
+
+Owner task SHA256 `22bf219b3d50fc9efac16cc8a15eaf9ef177bd2df52c0530c76008be893bdea8`
+was verified before reading. This is a **test-only feasibility proof**, not a
+production trust protocol, bootstrap, real pairing or authorization to implement
+the supplied server-delivery review draft. Events/shared renderer, main source,
+Windows/server, dependencies and progress ledger are unchanged.
+
+Reproducible inputs/pins are vendored in [testdata/d13-prototype](testdata/d13-prototype/):
+vectors SHA256 `88013034624d01d9ff36ab9a9da73b115596f26e5d9734a4072e2387d9da8dcb`,
+independent public SPKI DER `b702e6c9d2d3546b0ce60746fe0ffc6c21a0e728c23af9c3021610647c1c49d0`.
+No private keys were transferred/generated. The public fixture is not a production
+bootstrap channel. [Shared test sources](app/src/sharedTest/java/org/kiosk/harness/d13/)
+contain the strict UTF-8 JSON parser, fixed-anchor verifier, serial enrollment model
+and common checks; tiny JVM/instrumentation entry points invoke the same checks.
+No new Gradle property or dependency was needed; JVM locates this sibling fixture
+through the existing preparationFixtureRoot. Test APK reads its own assets only.
+
+PASS1 focused JVM wrapper (JBR25.0.3/SunRsaSign25) and PASS1 exact instrumentation
+method on owner-authorized USB moto g85 5G, Android16/API36/arm64-v8a,
+AndroidOpenSSL1.0; final platform test0.932s. All18 cases had identical JVM/Android final
+outcomes:1 acceptance,17 refusals. One proposed-label mismatch is intentional:
+wrong-public-key ->UNTRUSTED_AUTHORITY before signature, not BAD_SIGNATURE.
+The supplied PC1 raw result is false on that case while fixed-anchor verification
+is true: its original signature/payload is valid for the trusted key. A substituted
+envelope-key check would explain this, but PC1 verifier source was not supplied;
+the difference does not establish crypto-provider disagreement.
+
+Both platforms also passed42 boundary checks and the identical42-event in-memory
+pending ->approved-once ->issued-once ->A ->rogue/stale/cross-group refusals ->B
+->offline-retains-B ->revoked-no-new-update trace. Exact request/device/group/
+profile/origin/nonce binding, expiry/denial/poll backoff/replays and distinct
+downloaded/published/visible/last-ready states are modeled, not connected to storage,
+display, DevelopmentPlaybackAuthority, TLS or a server. Lost-response/renewal and
+durable anti-rollback/time/rotation/recovery remain unresolved production decisions.
+
+Verify prefix+raw decoded payload bytes before parsing payload; never reserialize
+signed JSON. Strict duplicate/type/version checks and explicit Base64/DER trailing,
+RSA3072/exponent checks passed. Stock org.json differs: JVM rejects duplicate fields,
+Android silently keeps the last; both coerce string7 via getLong. Neither behavior
+is accepted by the test validator. All resource bounds are prototype test guards.
+
+Main APK remains `851321eada7d200a0bc50524d6c93658fdce8a4c70a458dd49a4f66e88ec131d`;
+only compatible test APK was updated to
+`28ef15025b5f6b70ed99ff80e950b4630fff4c7c5bf38179b246bbc870547de1`.
+Installed main APK and all63 private publication-store file hashes matched before/
+after. No Activity, network, settings change, working keys, UI/emulator/reboot suite,
+staging, commit/push/merge or phone/ADB shutdown. Source-input identities, initial
+cache-access/test-comparison failures, commands and concrete integration blockers
+are in the [single report](../logs/pc2-d13-prototype-20261102/report.md).
+Real pairing and full server ->Android delivery require separate D13 review/approval;
+the previous same-store corruption gap and stage4 status are unchanged.
+
+Reproduce with the existing toolchain/cache (no downloads):
+
+```powershell
+& ./android/tools/build.ps1 -BuildJdk <existing-jdk> -AndroidSdk <existing-sdk> -ReadOnlyDependencyCache <existing-cache> -Tasks ':app:testDebugUnitTest','--tests','org.kiosk.harness.d13.D13PrototypeTest',':app:assembleDebug',':app:assembleDebugAndroidTest','--offline'
+# Verify target and signer, update only compatible test APK; preserve main APK/data.
+adb -s <owner-verified-serial> install -r android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb -s <owner-verified-serial> shell am instrument -w -r -e class org.kiosk.harness.D13PrototypePlatformTest#testSyntheticInteropAndEnrollmentModel org.kiosk.harness.debug.test/org.kiosk.harness.HarnessTestRunner
+```
+
+## Physical smartphone offline pilot (2026-11-02)
+
+Owner-operated USB target: **moto g85 5G**, Android16/API36, arm64-v8a,
+WebView `com.google.android.webview`156.0.8078.47, 1080x2400 /400dpi.
+Branch `android/events-conformance-design`, HEAD
+`37f01b7f655573ec101bff99cb60b0efa16966bc` plus preserved pre-existing dirty
+test/input changes. Ordinary APK SHA256
+`851321eada7d200a0bc50524d6c93658fdce8a4c70a458dd49a4f66e88ec131d`;
+test APK `b4a6179cee9c6564f4a023e9274cfb2373bcfd6d31a36fb130df49dea6d6aa38`.
+Both absent packages installed successfully; installed ordinary APK hash matched.
+
+PASS8 explicit instrumentation executions (7 distinct methods), owner-confirmed
+finger touch Home/events/tags/Next/Previous/scroll and background/return plus
+lock/unlock. Three targeted content traversals covered both Activity orientations,
+four image shapes, short cards and long descriptions:14 event traversals/77 parts
+reconstructed using the explicitly labelled test-only reading-timer driver.
+One separate **real** Part1-to-Part2 interval measured19078.3ms versus19060ms
+expected, counter unchanged. Measured full-window viewports432x869 and912x404 CSS
+px; ordinary diagnostic-panel view432x675. These shapes are not TV hardware.
+
+The default private store was replaced through existing native capture drivers
+(`two-events` -> genericC -> `two-events`); pointer, visible, selected mode and both
+receipts are recorded separately. The tampered-candidate refusal/preservation
+check used the existing **separate disposable fixture store**, not that same
+default-store journey. This limitation remains explicit in the report.
+
+The owner enabled airplane mode and disabled Wi-Fi. ADB confirmed airplane1,
+`Wifi is disabled`, no default route and `Active default network: none` before
+both restart checks. Exact-package force-stop then explicit launch changed PID
+28621 ->29622 and session. The owner subsequently performed an ordinary reboot;
+changed boot_id and fresh PID21125/session were observed. Both fresh private-starts
+reached ready with the same publication, both receipts and zero APK asset reads;
+all retained revision hashes matched. Kiosk Next/Previous and real offline TV parts
+worked; after reboot an unaccelerated Part1 ->Part2 was externally observed.
+No reimport/asset repair or automatic boot launch was used. The owner restored
+their usual network state after testing; app/data remain installed.
+
+Full report, commands, hashes, restricted package logcat, viewed screenshots and
+host observers: [physical pilot evidence](../logs/pc2-physical-pilot-20261102/report.md).
+Only host observation code was adapted; one Wi-Fi-status parser assertion was
+corrected for a two-line Android response before any force-stop. Main/shared
+renderer/contract/Windows/server and `docs/TZ_PROGRESS.md` are unchanged.
+No new application defect was reproduced in this bounded pilot. Same-default-store
+corrupt replacement, Android TV/remote, production admission, pairing, power loss
+and broad hardware compatibility remain unverified; stage4 remains incomplete.
+No JVM/image-parity/emulator/stress suites, staging, commit, push or merge.
+
+## PC1 shared TV pagination validation (2026-11-01)
+
+This is test integration of PC1's locally prepared shared renderer, not an Android
+renderer implementation or a release of PC1's dirty source. Task SHA256:
+`e9573e6873d3f61d05235000cba68b6aabd0c289f60c1121a4b2fc59dd6e4601`.
+Six exact preparations, full packages/both views, independent confirmation pins
+and shared-source provenance are vendored in [tv-pagination](testdata/tv-pagination/).
+Older preparations/pins remain unchanged. New renderer witness:
+`b55c9bdc54af16ce69b6b6b6be15375adc5891dc70b84eb2292de00cd59d49a6`.
+This label is PC1-attested; the transferred five source files do not establish a
+renderer build/release commit. Shared JS/CSS bytes are unchanged from PC1 inputs.
+
+[Test implementation](app/src/androidTest/java/org/kiosk/harness/TvPaginationTest.java)
+uses existing capture/store/coordinator and an attached WebView. Results: **2 JVM,
+9 focused Android methods and 1 external-persistence seed method PASS**. All six
+cases ran kiosk/TV in measured 914x363 and 411x866 CSS viewports (phone emulator).
+Eighteen event traversals reconstructed 92 parts exactly: description-only 37/17
+parts, huge title/place fallback 8/5; fitting/empty cases have no reading timer.
+Counter stays on the event until its final part; next event, sole-long loop,
+repeated metadata and fixed image geometry are checked. Reconstruction concerns
+the renderer-selected short-description-or-full-description, not both fields.
+
+Full traversal uses an explicitly labelled **test-only reading-timer driver**
+installed after real ready. Layout, font metrics, DOM and screenshots remain real;
+this is not evidence of 92 real elapsed reading intervals. One separate test has
+no driver: expected 20250 ms, observed **20253.3 ms**, Part1 to Part2 with counter
+unchanged. Auxiliary detached shared-function probes check literal text nodes,
+Unicode/grapheme reconstruction and no markup execution; they are not admission
+or attached malicious-package tests.
+
+Native orientation/recreation and same-document native resize are distinguished.
+A deliberately unusable 30px native height stops the reading timer; restoring
+space resumes one timer at Part1. Native task backgrounding observes real
+`document.hidden`, pauses, then resumes the same document/part with one full-delay
+timer. The separately labelled JavaScript hidden-state simulation is not that
+native test. These timer/lifecycle observations are bounded, not exhaustive races.
+
+New-renderer private persistence was seeded once, providers disabled and capture
+closed. External ADB force-stop followed by explicit normal launch changed PID
+8381 to 8763; 118 private reads, zero view/package asset reads; stored hashes were
+unchanged. Real TV parts, kiosk Next 2/2 and both new-renderer receipts were checked.
+No reboot, image-parity or previous visual suites were repeated.
+
+Reproduce with existing compatible toolchain (versions below), supplying local
+JDK/SDK/cache paths as arguments rather than project dependencies:
+
+```powershell
+./android/tools/build.ps1 -BuildJdk <jdk> -AndroidSdk <sdk> -ReadOnlyDependencyCache <cache> -Tasks @(':app:testDebugUnitTest','--tests','org.kiosk.harness.binding.TvPaginationInputsTest',':app:assembleDebug',':app:assembleDebugAndroidTest','--offline')
+adb -s <owned-serial> install -r android/app/build/outputs/apk/debug/app-debug.apk
+adb -s <owned-serial> install -r android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb -s <owned-serial> shell am instrument -w -r -e class org.kiosk.harness.TvPaginationTest#testDescriptionContextPagination org.kiosk.harness.debug.test/org.kiosk.harness.HarnessTestRunner
+```
+
+Run only explicit new methods, not inherited class-wide suites. Exact nine-method
+loop and bounded external observer are preserved in the evidence scripts. New
+confirmations, probes, timer driver and 180 data assets are test-APK only; ordinary
+APK SHA256 remains `851321eada7d200a0bc50524d6c93658fdce8a4c70a458dd49a4f66e88ec131d`.
+No main source, INTERNET permission, core pin bypass or shared-code change.
+
+Evidence: `logs/pc2-tv-pagination-20261101-210747/report.md`, raw screenshots,
+JSONL reconstructions, commands/exit codes, source/APK/input identities and guarded
+cleanup. Representative raw screenshots were personally viewed, including final
+Part37/17, huge-field Part8 and fresh private TV/kiosk. Initial test compile and
+accessibility-observer failures are retained separately, with corrections described.
+Medium_Phone read-only emulator: Android17/API37 x86_64, WebView145.0.7632.218.
+Physical Android/TV, other viewport/font/color behavior, all five admission gates,
+production authorization and stage4 remain open. No shared-renderer defect was
+reproduced in this bounded matrix.
+
+## Complex content fitness and working-publication preservation (2026-11-01)
+
+Task base/HEAD: `37f01b7f655573ec101bff99cb60b0efa16966bc`, branch
+`android/events-conformance-design`. Earlier sections keep their historical bases.
+This slice adds **only test sources/inputs and documentation**. Main application,
+shared renderer/Events contract, Windows/server and ledger are unchanged.
+
+PC1 preparations are vendored under [content-fitness](testdata/content-fitness/):
+`empty`, `control`, `long-text-tags`, `image-shapes`, each with exact preparation,
+package/both views and provenance. Independent preparation pins extend test-only
+`LocalPreparation.Confirmation`; no new pin/parser goes into main. Input ZIP SHA
+`67f96725fcc0c493850052caa85dd349482187bbdf6a04892b622784d8e0ccd3`
+and all supplied preparation digests/inventories were checked before use.
+Windows/Pillow evidence remains PC1's evidence; Android WebView observations do
+not establish Pillow/Android decoder equivalence or close any admission gate.
+
+[ContentFitnessTest](app/src/androidTest/java/org/kiosk/harness/ContentFitnessTest.java)
+uses the existing capture/store/coordinator and attached PreparedWebView. Test-only
+native code hides the harness diagnostic/button panel to measure the renderer's
+usable app window; it does not change page HTML/CSS/JS. Activity orientation is
+requested temporarily and its recreation observed with a bounded monitor, not a
+system rotation setting. DOM metrics, read-only ranges/hit tests, postVisualState
+plus an actual draw, native touch/key input and real screenshots are separate
+observations. Native controllers, measurement JS and confirmations remain in test
+APK. No production view renderer, scroll policy or content limit was added.
+
+Measured phone viewports: landscape **914?363 CSS px** (WebView2400?954 native px),
+portrait **411?866 CSS px** (1080?2274 native px), density2.625. These are actual
+app-window shapes on Medium_Phone, not physical Android/TV acceptance. Initial
+first-card document heights (CSS px) demonstrate why readiness is not content fit:
+
+| Input | Landscape kiosk / TV | Portrait kiosk / TV |
+|---|---|---|
+| empty |392 /363|866 /866|
+| control |570 /430|866 /866|
+| long-text-tags |1250 /1767|2535 /2404|
+| image-shapes first card |570 /430|866 /866|
+
+All16 input?mode?shape combinations reached real ready with matching publication
+identity and mode receipt. Empty0/0 and disabled Previous/Next are correct; single
+cards1/1 do not rotate. Kiosk Home/Open events, Next through all four shape cards,
+61-tag horizontal access and actual last-tag selection were exercised with native
+input. Tag buttons62 include All events. Long words wrap without whole-document
+horizontal overflow; the Cyrillic suffix `Unicode ?????` was exposed by native
+scrolling, DOM-equal to source and personally viewed. Scope is this supplied
+Cyrillic vector, not every script/font/bidi/grapheme behavior.
+
+The chosen1600-character short description and400-character place have reachable
+ends: touch swipes in kiosk, D-pad Down on the phone emulator in TV. Control and
+shape-card text endpoints were also checked. Native scroll can reveal the full
+contained image rectangle above the footer/inside the viewport; aspect ratios
+4?4,1200?100,100?1200,800?600 use `object-fit: contain`, with expected letterboxing.
+One corner-hit false-negative on the portrait JPEG was diagnosed as existing CSS
+border-radius and rechecked at mid edges; this is geometry/occlusion observation,
+not pixel-exact image admission.81 real screenshots were reviewed through seven
+contact sheets plus selected full screenshots; raw PNGs remain unchanged.
+
+TV image-shapes observed three automatic transitions in **each** shape without
+input or timer acceleration in the rotation matrix. Original renderer duration
+algorithm gives8630,9190,9190ms for these first three cards. Landscape intervals
+8354,9204,9187ms; portrait8333,9334,9116ms. First measurement starts after initial
+visual/screenshot work; its negative offset is consistent with that delay, but the
+actual timer-installation instant was not independently timestamped. Later
+differences fit200ms polling. Full monotonic observations are retained, not treated as exact timer
+firing timestamps. No test invokes TV model movement.
+
+### Findings requiring PC1 review, not an Android-only renderer patch
+
+- **CF-01, full-description access:** `long-text-tags` contains a26265-character
+  full_description and1600-character short_description. Existing common renderer
+  chooses `short_description || full_description`; no separate full-description
+  control is present. Scrolling reaches the entire selected short text, but cannot
+  expose the suppressed full field. This is reproducible shared-renderer behavior,
+  not Android byte loss or merely viewport overflow. PC1 must classify against the
+  intended Windows/product behavior before any coordinated renderer change.
+- **CF-02, passive TV fitness:** long TV content exceeds the viewport and requires
+  manual D-pad scroll; one-card TV has no automatic transition/reveal. Thus ready
+  and image load do **not** prove complete unattended presentation of this content.
+  The selected text is reachable, so overflow alone is not called a defect. No
+  truncation, auto-scroll, font shrink or new product limit was silently added.
+- Initial landscape kiosk images/text can be below/behind the fixed footer.
+  Native access was verified separately; initial clipping is not equated with
+  lost content. Extreme image aspect ratios can remain visually narrow after
+  contain; real-poster legibility and physical hardware remain untested.
+
+### Failure preservation and results
+
+A ready control publication remained the same visible WebView, pointer and both
+mode receipts after altered HTML refusal, actual capture cancellation and injected
+`development.space_checked` / `copy_chunk` resource failures. Both stored views
+were re-preflighted afterward, confirming old private bytes remained usable; no
+real disk fill/OOM/EIO experiment was performed. A real renderer terminate after
+image-shapes publication produced failed/no visible view, while pointer and kiosk
+receipt stayed image-shapes and TV receipt stayed the previous control. There was
+no automatic pointer rollback/restart; explicit revalidated startup reached ready.
+
+PASS2/2 focused JVM methods (all four pinned packages/bindings, tamper/cancel);
+PASS12 Android method executions covering9 distinct targeted methods, including
+justified repeats for native-input/probe refinement and final private preflight.
+Initial fling-consumed tap and corner-probe observations are retained separately;
+no renderer fix masked them. The approval service once returned HTTP403 before a
+command executed; the same authorized request later passed after owner guidance.
+No approval bypass or network/system configuration change occurred.
+
+Reproduce from vendored files with the existing measured toolchain/cache:
+
+```powershell
+& android/tools/build.ps1 -BuildJdk $BuildJdk -AndroidSdk $AndroidSdk -ReadOnlyDependencyCache $Cache -Tasks ':app:testDebugUnitTest','--tests','org.kiosk.harness.binding.ContentFitnessInputsTest',':app:assembleDebug',':app:assembleDebugAndroidTest','--offline'
+$Methods = @('testEmptyMatrix','testControlMatrix','testLongTextTagsMatrix','testImageShapesMatrix','testRejectedCaptureAndResourceFaultsRetainWorkingPublication','testActualRendererFailureDoesNotRollbackPublishedPointer','testShortAndShapeAccessibilityFollowup','testImagesFullObjectAccessibility','testUnicodeTitleAndPortraitJpegEdgeProbe')
+foreach ($Method in $Methods) {
+  & $Adb -s $OwnedSerial shell am instrument -w -r -e class "org.kiosk.harness.ContentFitnessTest#$Method" org.kiosk.harness.debug.test/org.kiosk.harness.HarnessTestRunner
+}
+```
+
+Install the two built debug APKs only on a verified owned read-only target first.
+Select individual methods to avoid rerunning inherited generic suites. Waits are
+bounded (method host timeout220s, orientation monitor12s, visual5s, TV transition26s).
+These are test observation bounds, not product content quotas. Tests own isolated
+private roots and cleanup; source providers are disabled after capture as before.
+No dependency on ignored logs exists in build/JVM/instrumentation inputs.
+
+Evidence: [report](../logs/pc2-content-fitness-20261101-191458/report.md),
+[measurements](../logs/pc2-content-fitness-20261101-191458/measurement-summary.json),
+[PC1 findings](../logs/pc2-content-fitness-20261101-191458/findings.md), source/APK/input
+hashes and cleanup in the same ignored directory. Main APK remains byte-identical
+`851321eada7d200a0bc50524d6c93658fdce8a4c70a458dd49a4f66e88ec131d`;
+final test APK `afdc7dec47cb141d7dcbea9c9fe1cd6dbeb372adf049ed5d414668a1a7f7b675`.
+Target Android17/API37 x86_64, WebView145.0.7632.218. Guarded cleanup stopped only
+owned emulator processes and left an empty ADB inventory. Existing image-parity,
+visual and reboot suites were intentionally not repeated. All five broad admission
+gates, production admission, physical Android/TV and stage4 remain open.
+
 ## Full candidate: independent-copy integration review (2026-11-01)
 
 The accumulated **experimental Android development harness** has now been rebuilt

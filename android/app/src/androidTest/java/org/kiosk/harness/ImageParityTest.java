@@ -94,6 +94,38 @@ public final class ImageParityTest extends InstrumentationTestCase {
     private static WebResourceResponse response(String mime,byte[] bytes,int code){
         return new WebResourceResponse(mime,"UTF-8",code,code==200?"OK":"Forbidden",Map.of("Cache-Control","no-store"),new ByteArrayInputStream(bytes));
     }
+    /** Bounded physical observer of the existing candidate, not another parity matrix or admission entry. */
+    public void testPreparedCandidateNativeMeasurements() throws Exception {
+        JSONArray passes=new JSONArray();
+        JSONObject report=new JSONObject().put("scope","test_observer_not_authority_or_rss_limit")
+            .put("api",Build.VERSION.SDK_INT).put("abi",Build.SUPPORTED_ABIS[0]).put("passes",passes);
+        for(String name:List.of("control","image-shapes")) {
+            var input=PreparedTestInputs.capture(getInstrumentation().getTargetContext(),getInstrumentation().getContext(),name);
+            try(var captured=input.capture()) {
+                long start=SystemClock.elapsedRealtimeNanos();
+                org.kiosk.harness.storage.LocalImageProbe.decodeCaptured(captured,input.request());
+                long elapsed=SystemClock.elapsedRealtimeNanos()-start;
+                JSONArray images=new JSONArray();
+                for(String image:new TreeSet<>(input.request().windowsImages().keySet())) {
+                    byte[] bytes;
+                    try(InputStream in=captured.source(org.kiosk.harness.binding.CapturedCandidate.Part.PACKAGE).open(image)) {
+                        bytes=in.readNBytes(2*1024*1024+1);assertTrue(bytes.length<=2*1024*1024);
+                    }
+                    assertEquals(input.request().windowsImages().get(image).sha256(),hash(bytes));
+                    JSONObject bounds=decode(bytes,true),full=decode(bytes,false);
+                    assertEquals("decoded",full.getString("result"));
+                    images.put(new JSONObject().put("path",image).put("sha256",hash(bytes)).put("encoded_bytes",bytes.length)
+                        .put("bounds",bounds).put("full",full)
+                        .put("guard_estimate_bytes",input.request().images().estimatedLive(bounds.getInt("width"),bounds.getInt("height"),bytes.length))
+                        .put("encoded_plus_bitmap_allocation_bytes",Math.addExact((long)bytes.length,full.getLong("allocation_bytes"))));
+                }
+                passes.put(new JSONObject().put("input",name).put("native_image_checks_ns",elapsed).put("images",images));
+            }
+        }
+        try(var out=getInstrumentation().getTargetContext().openFileOutput("physical-native-image-observations.json",0)) {
+            out.write(report.toString(2).getBytes(StandardCharsets.UTF_8));
+        }
+    }
     public void testTwentyOneMeasurements() throws Exception {
         byte[] manifestBytes=asset("image-corpus/manifest.json");
         JSONObject manifest=new JSONObject(new String(manifestBytes,StandardCharsets.UTF_8));

@@ -30,9 +30,18 @@ public final class CapturedCandidate implements AutoCloseable {
     private final Set<InputStream> opened=new HashSet<>();
     private final PublicationBinding.Report report;
     private boolean closed;
+    private AutoCloseable ownership;
     private CapturedCandidate(Path owned,Map<Part,Map<String,DevelopmentWitness.Pin>> pins,PublicationBinding.Report report){
         this.owned=owned;this.pins=Map.copyOf(pins);this.report=report;
     }
+    static CapturedCandidate adopt(Path owned,Map<Part,Map<String,DevelopmentWitness.Pin>> pins,PreparedFacts facts,AutoCloseable ownership)throws Exception {
+        var p=CaptureFiles.source(owned.resolve("PACKAGE"),pins.get(Part.PACKAGE),()->{});
+        var k=CaptureFiles.source(owned.resolve("KIOSK"),pins.get(Part.KIOSK),()->{});
+        var t=CaptureFiles.source(owned.resolve("TV"),pins.get(Part.TV),()->{});
+        var report=PublicationBinding.inspect(p,k,t,facts.pkg,facts.renderer,facts.kiosk,facts.tv);
+        CapturedCandidate c=new CapturedCandidate(owned,pins,report);c.ownership=ownership;return c;
+    }
+    record PreparedFacts(DevelopmentWitness.Package pkg,DevelopmentWitness.Renderer renderer,DevelopmentWitness.Artifact kiosk,DevelopmentWitness.Artifact tv){}
     public static CapturedCandidate capture(Context context,LocalView.Source pkg,LocalView.Source kiosk,LocalView.Source tv,
             DevelopmentWitness.Package expected,DevelopmentWitness.Renderer renderer,DevelopmentWitness.Artifact kw,
             DevelopmentWitness.Artifact tw,Budget budget,Cancellation cancel)throws CaptureFailure{
@@ -141,9 +150,11 @@ public final class CapturedCandidate implements AutoCloseable {
         }catch(Exception e){if(raw!=null)try{raw.close();}catch(Exception ignored){}throw new CaptureFailure(CORRUPT_CAPTURE);}
     }
     @Override public synchronized void close()throws CaptureFailure{
+        if(closed)return;
         closed=true;boolean failed=false;
         for(InputStream stream:List.copyOf(opened))try{stream.close();}catch(Exception e){failed=true;}
         try{CaptureFiles.deleteOwned(owned);}catch(Exception e){failed=true;}
+        if(ownership!=null)try{ownership.close();}catch(Exception e){failed=true;}finally{ownership=null;}
         if(failed)throw new CaptureFailure(CLEANUP_FAILED);
     }
 }
