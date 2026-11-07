@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% macro tr(en, ru, de) -%}{{ ru if active_language == 'ru' else de if active_language == 'de' else en }}{%- endmacro %}
+{% block title %}{{ tr('Devices and pairing', 'Устройства и сопряжение', 'Geräte und Kopplung') }}{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_delivery.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_devices.css') }}">
+<section class="admin-panel delivery-panel">
+    <p><a href="{{ url_for('admin.admin_home') }}">{{ t('admin.home') }}</a> · <a href="{{ url_for('admin.delivery_home') }}">{{ tr('Events publications and accounting', 'Публикации Events и учёт', 'Events-Veröffentlichungen und Meldungen') }}</a></p>
+    <h1>{{ tr('Devices and pairing', 'Устройства и сопряжение', 'Geräte und Kopplung') }}</h1>
+    {% if error %}
+    <p class="delivery-error" role="alert">{{ tr('Operation refused. Review the current facts before retrying.', 'Операция отклонена. Перед повтором проверьте актуальные сведения.', 'Vorgang abgelehnt. Vor erneutem Versuch aktuelle Angaben prüfen.') }} <code>{{ error }}</code></p>
+    {% else %}
+    <dl class="delivery-identity">
+        <dt>{{ tr('Group', 'Группа', 'Gruppe') }}</dt><dd><code>{{ model.group_id }}</code></dd>
+        <dt>{{ tr('Server', 'Сервер', 'Server') }}</dt><dd><code>{{ model.server_id }}</code></dd>
+        <dt>{{ tr('Server origin', 'Адрес сервера', 'Serveradresse') }}</dt><dd><code>{{ model.origin }}</code></dd>
+    </dl>
+    <p>{{ tr('Compare these facts with the client and your trusted server address. Enter the code displayed by that client yourself. A code alone does not authenticate a server.', 'Сверьте эти сведения с клиентом и доверенным адресом сервера. Введите код, показанный именно этим клиентом. Один код не подтверждает подлинность сервера.', 'Angaben mit Client und vertrauenswürdiger Serveradresse vergleichen. Den vom Client angezeigten Code selbst eingeben. Ein Code allein bestätigt keinen Server.') }}</p>
+    <h2>{{ tr('Pairing requests', 'Запросы сопряжения', 'Kopplungsanfragen') }}</h2>
+    {% for item in model.requests %}
+    <article class="device-request">
+        <h3>{{ tr('Request', 'Запрос', 'Anfrage') }} <code>{{ item.request_id }}</code></h3>
+        <dl class="delivery-identity">
+            <dt>{{ tr('Device', 'Устройство', 'Gerät') }}</dt><dd><code>{{ item.binding.device_id }}</code></dd>
+            <dt>{{ tr('Requested group', 'Запрошенная группа', 'Angefragte Gruppe') }}</dt><dd><code>{{ item.binding.group_id }}</code></dd>
+            <dt>{{ tr('Requested origin', 'Запрошенный адрес', 'Angefragte Adresse') }}</dt><dd><code>{{ item.binding.origin }}</code></dd>
+            <dt>{{ tr('Fixed lab profile', 'Фиксированный профиль лаборатории', 'Festes Laborprofil') }}</dt><dd><code>{{ item.binding.profile }}</code></dd>
+            <dt>Nonce</dt><dd><code>{{ item.binding.nonce }}</code></dd>
+            <dt>Binding SHA256</dt><dd><code>{{ item.binding_sha256 }}</code></dd>
+            <dt>{{ tr('Expires', 'Истекает', 'Gültig bis') }}</dt><dd>{{ utc(item.expires) }}</dd>
+            <dt>{{ tr('Decision', 'Решение', 'Entscheidung') }}</dt><dd>{{ tr('Pending', 'Ожидает решения', 'Ausstehend') if item.state == 'pending' else tr('Approved (historical decision; see current access below)', 'Одобрен (история решения; текущий доступ ниже)', 'Genehmigt (historisch; aktueller Zugriff unten)') if item.state == 'approved' else tr('Denied', 'Отклонён', 'Abgelehnt') }}</dd>
+        </dl>
+        {% if item.state == 'pending' %}
+        <form class="admin-form device-decision" method="post" action="{{ url_for('admin.devices_review', request_id=item.request_id) }}" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="binding_sha256" value="{{ item.binding_sha256 }}">
+            <label>{{ tr('Code shown on this client', 'Код на этом клиенте', 'Auf diesem Client angezeigter Code') }}
+                <input name="user_code" required minlength="8" maxlength="8" pattern="[A-HJ-NP-Z2-9]{8}" autocomplete="off" spellcheck="false" autocapitalize="characters">
+            </label>
+            <p>{{ tr('At most 5 decision attempts per request/source and 20 per source in 10 minutes, shared with the existing admin JSON route. Server restart resets this in-memory limit.', 'Не более 5 попыток для запроса с одного адреса и 20 с адреса за 10 минут, вместе с прежним JSON-маршрутом админки. После перезапуска сервера этот лимит в памяти сбрасывается.', 'Höchstens 5 Versuche je Anfrage/Quelladresse und 20 je Quelladresse in 10 Minuten, gemeinsam mit dem bestehenden JSON-Adminpfad. Serverneustart setzt diesen Speicherzähler zurück.') }}</p>
+            <div class="device-buttons"><button name="decision" value="approve" type="submit">{{ tr('Approve this request', 'Одобрить этот запрос', 'Diese Anfrage genehmigen') }}</button>
+            <button name="decision" value="deny" type="submit">{{ tr('Deny this request', 'Отклонить этот запрос', 'Diese Anfrage ablehnen') }}</button></div>
+        </form>
+        {% endif %}
+    </article>
+    {% else %}<p>{{ tr('No unexpired pairing requests.', 'Неистёкших запросов сопряжения нет.', 'Keine gültigen Kopplungsanfragen.') }}</p>{% endfor %}
+    <h2>{{ tr('Registered devices', 'Зарегистрированные устройства', 'Registrierte Geräte') }}</h2>
+    <p>{{ tr('Access is separate from activation history. Silence does not confirm offline status. Ready does not prove physical screen power.', 'Доступ и история активации учитываются отдельно. Отсутствие сообщений не подтверждает офлайн. Ready не доказывает включение экрана.', 'Zugriff und Aktivierungshistorie sind getrennt. Keine Meldung bestätigt keinen Offlinezustand. Ready beweist keinen eingeschalteten Bildschirm.') }}</p>
+    {% for item in model.devices %}
+    <article class="device-request">
+        <h3><code>{{ item.device_id }}</code></h3>
+        <p>{{ tr('Fixed lab profile', 'Фиксированный профиль лаборатории', 'Festes Laborprofil') }}: <code>{{ item.profile }}</code></p>
+        <p>{{ tr('Credential expires', 'Допуск истекает', 'Berechtigung gültig bis') }}: {{ utc(item.expires) }} · <strong>{{ tr('Revoked', 'Отозван', 'Widerrufen') if item.revoked else tr('Expired', 'Истёк', 'Abgelaufen') if item.expired else tr('Access permitted', 'Доступ разрешён', 'Zugriff erlaubt') }}</strong></p>
+        <p><a href="{{ url_for('admin.delivery_home') }}">{{ tr('Publication targets and activation reports', 'Получатели публикаций и отчёты об активации', 'Veröffentlichungsziele und Aktivierungsmeldungen') }}</a></p>
+        {% if not item.revoked %}
+        <form class="admin-form device-revoke" method="post" action="{{ url_for('admin.devices_confirm_revoke', device_id=item.device_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="review_hash" value="{{ item.review_hash }}">
+            <p>{{ tr('Revoking prevents new requests. Previously accepted offline content and historical recipients/reports are retained.', 'Отзыв запрещает новые запросы. Принятое офлайн-содержимое, прежние получатели и отчёты сохраняются.', 'Widerruf verhindert neue Anfragen. Akzeptierte Offlineinhalte, ursprüngliche Empfänger und Meldungen bleiben erhalten.') }}</p>
+            <label class="device-confirm"><input type="checkbox" name="confirm_device_id" value="{{ item.device_id }}" required> {{ tr('I confirm revoking device', 'Подтверждаю отзыв устройства', 'Widerruf bestätigen für Gerät') }} <code>{{ item.device_id }}</code></label>
+            <button type="submit">{{ tr('Revoke confirmed device', 'Отозвать подтверждённое устройство', 'Bestätigtes Gerät widerrufen') }}</button>
+        </form>
+        {% endif %}
+    </article>
+    {% else %}<p>{{ tr('No registered devices.', 'Зарегистрированных устройств нет.', 'Keine registrierten Geräte.') }}</p>{% endfor %}
+    {% endif %}
+    <p><a href="{{ url_for('admin.devices_home') }}">{{ tr('Refresh devices and requests', 'Обновить устройства и запросы', 'Geräte und Anfragen aktualisieren') }}</a></p>
+</section>
+{% endblock %}

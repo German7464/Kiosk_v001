@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-11-07
+
+- Preserved the owner-authorized server/Windows and separately published Android source checkpoints for GitHub recovery. Added exact branch/tag/Android commit references and two-directory recovery commands, with explicit private-data, signing-key, dependency and local-evidence exclusions. No product change, repeated acceptance test or new stage acceptance.
+
+## 2026-11-06
+
+- Accepted bounded Windows advisory LAN discovery, two-host datagrams and ordinary pairing/actual-ready without changing frozen recipient counts. Verified source/build/evidence identities, recorded retained lab deltas and selected physical Android discovery next.
+
+- Accepted bounded Windows native manual-address setup, real approval/ready and fresh offline reopen; verified source/build/archive identities and updated the sole retained-lab inventory. Selected advisory LAN discovery before dependent Android integration.
+
+- Accepted ordinary Chrome device approval/publication/real-native-ready/revocation and separate denial; retained accepted display/files and immutable accounting. Recorded intentionally retained CA/server/test data with identity-guarded stop and validity limits; reused20 PASS. Selected Windows native manual-address setup next.
+
+- Accepted bounded Windows native Events delivery on the test VM: preserved A through interrupted B, resumed/reused verified bytes, reopened B offline in a fresh process and delivered real native-ready idempotently. Reviewed exact source/build/evidence and cleanup; retained stage5, trust/time, reboot and release limitations. Selected ordinary admin device approval/revocation next.
+
+## 2026-11-05
+
+- Accepted the bounded Events operator publication/accounting outcome after real Chrome login/publication and synthetic-ready accounting; reviewed exact trust removal/process cleanup and final evidence inventories. Reused existing source tests, retained partial R9.4/stage5 limits and selected the next Windows native-delivery task against the frozen contract.
+
+- Audited the main specification/workflow/current evidence; corrected stale root README/architecture pointers, historical status-map labels, conflicting context thresholds and operator-task requirement traceability. Kept approved requirements and all acceptance limits unchanged; recorded remaining editorial/module-document caveats.
+
+- Published the owner-authorized PC1 preservation checkpoint; reconciled stale stage/resume pointers and historical PC2 startup gates. Assigned coordinator/server/Android ownership and one bounded operator distribution outcome, preserving prior acceptance limitations. No product/runtime changes or repeated acceptance checks.
+
 ## 2026-11-04
 
 - Completed the remaining Windows stage4 resource-safety block: private-root preflight, owned disposable browser data, ongoing profile/free-space checks, process-tree ownership and preserved-publication recovery. Passed focused coordinator/switch and final native filesystem/WebView checks; recorded the bounded Events media/device profile. Owner authorized the separate local stage4 checkpoint; bounded existing-Events stage4 acceptance is recorded, with installed app/server/phone unchanged.
@@ -94,7 +116,7 @@
 
 - Verified the owner-supplied documentation integration: root AGENTS/README, approved reconciled specification, single progress ledger, local paths/headings, external linked-page availability and historical-content hashes. Added administration/public-API READMEs to the index and retargeted three module gate links to the current ledger section; replaced the transport README's retired handoff reference with historical lab context. Preserved six historical links to retired documents and existing owner edits/index. Evidence: `logs/documentation-integration-20261028/verification.json`. No product tests/builds, live operations, stage acceptance or new commit.
 
-## 2026-10-27 — documentation integration
+## 2026-10-27 вЂ” documentation integration
 
 - Integrated the owner-approved specification revision 1.2.1 and single current progress ledger with the existing architecture, HTTPS procedures, historical MVP scope and measurements. Updated root README and the documentation index; obsolete target plans are no longer active inputs.
 - Retained the complete original progress ledger and dated implementation audit, all previous changelog entries, measurement values and command examples. Moved useful baseline recovery procedures into DEVELOPMENT_RECOVERY.md and preserved the historical lab handoff in LAB_CONTEXT.md with a clear non-authoritative boundary.
@@ -177,7 +199,7 @@
 - Completed the selected physical CSR lifecycle checks: same-CA renewal/activation served a new leaf while preserving the physical client's authenticated session and content version; the CA restored from a distinct USB backup signed a third CSR whose return passed server validation. Explicit trust removal left zero matching roots and fresh Chrome rejected the service again. Server activation exited 0 with graceful proxy/backend/temp cleanup. No VPN, route, firewall or working-data changes.
 - Preserved the original encrypted signer CA and USB backup as test-labelled material; removed client session state, extra restored CA copy, transfer copies and owned incognito/console windows. Automatic review blocked deletion of the retired server fixture with only blocked by policy; no alternate deletion was attempted, so artifact cleanup is explicitly incomplete. Recorded exact evidence/retained paths and the TV tab's Version unavailable observation before explicit navigation. This follows the earlier partial checkpoint below; stage 2 remains incomplete.
 
-- Improved certificate signing prompts after physical operator checks: show the 16–1024-character limit, reject invalid length before confirmation, and mask input on Python 3.14+ while retaining hidden input on earlier Python. Rejected short or mismatched bootstrap passwords created no authority. No password characters are printed; masking reveals entered length.
+- Improved certificate signing prompts after physical operator checks: show the 16вЂ“1024-character limit, reject invalid length before confirmation, and mask input on Python 3.14+ while retaining hidden input on earlier Python. Rejected short or mismatched bootstrap passwords created no authority. No password characters are printed; masking reveals entered length.
 - Bound managed local readiness and served-certificate sockets to the selected local interface, retaining public-hostname TLS, instance and fingerprint checks. Reproduced default-source Windows 10013 and explicit-source success against the same Ethernet listener; the isolated two-PC HTTPS fixture then started without VPN, route or firewall changes. Added a real TLS regression with a denied default-source connection and incorrect-fingerprint rejection.
 - Verified the initial physical server CSR -> separate-PC signing -> public certificate return, encrypted CA backup to a distinct NTFS USB device and byte-identical local restoration. Actual Chrome rejected the unknown CA, then loaded kiosk/TV after temporary enrollment. Same-CA renewal, signing with restored CA, final trust removal and fixture cleanup remain pending at this checkpoint; stage 2 is incomplete. See CHAT_HANDOFF.md for the live fixture and next password prompt.
 - All 151 Python tests passed in 245.054 seconds, no skips; compilation, both JS checks and independent disposable Flask checks passed. The preceding 150-test checkpoint passed before the local-source socket correction. No working application data, credentials or certificates were replaced. Changes are source fixes and bounded test evidence, not production deployment acceptance.
@@ -236,7 +258,7 @@
 - Verified all 34 isolated Python tests, standalone kiosk JavaScript checks, compilation, and diff whitespace. Tested every administrative POST route for CSRF rejection without database mutation, rendered form tokens, multipart uploads, session/token behavior, concurrent checks, expiry, source rotation, and capacity limits. Updated the progress ledger and documented automated-first verification; Chrome is reserved for unresolved browser behavior. Working servers and data were not changed.
 
 
-- Removed automatic default-admin creation. Added transactional local `--setup-admin` and changed `--reset-admin-password` to hidden confirmed terminal input without printing credentials. Blocked existing admin/admin across login, protected actions, and fullscreen validation without replacing stored hashes at startup. Bound sessions to current credentials, invalidated earlier cookies and sessions after password replacement, and retained valid sessions across restart. Password changes require 12–128 characters and return to login. Schema, public API, content version, and working data are unchanged.
+- Removed automatic default-admin creation. Added transactional local `--setup-admin` and changed `--reset-admin-password` to hidden confirmed terminal input without printing credentials. Blocked existing admin/admin across login, protected actions, and fullscreen validation without replacing stored hashes at startup. Bound sessions to current credentials, invalidated earlier cookies and sessions after password replacement, and retained valid sessions across restart. Password changes require 12вЂ“128 characters and return to login. Schema, public API, content version, and working data are unchanged.
 - Verified 24 isolated tests, compilation, Flask routes, and diff whitespace checks; real Windows terminal setup/reset with hidden input also passed on a disposable installation. Windows-MCP with Chrome on isolated port 5002 confirmed setup-required messaging, successful login, and stale-session rejection/default-credential warning. General CSRF protection, throttling, LAN protection, hardware, EXE, endurance, and load checks remain pending. Updated TZ_PROGRESS.md and administration/run documentation.
 
 
@@ -320,7 +342,7 @@
 - Created initial project documentation.
 - Defined MVP scope, project context, Codex workflow, architecture plan, and development plan.
 
-## 2026-10-19 — Bound requests and image uploads
+## 2026-10-19 вЂ” Bound requests and image uploads
 
 - Enforced configurable request, file, pixel, form-field, and multipart limits; both Waitress launch paths apply the request-body cap.
 - Added translated limit/invalid-image errors and cleanup of failed upload derivatives, preserving prior content and version.
@@ -343,20 +365,20 @@
 - Recorded measured local results and explicit acceptance limitations in MVP_BASELINE.md; updated README, stage plan, and specification progress. Added statistics, error-reporting, deadline, diagnostics, and server-cleanup checks. All 50 Python tests, JavaScript checks, compileall, and git diff --check passed; full evidence is recorded in TZ_PROGRESS.md.
 
 
-## 2026-10-28 — A01 source recovery and offline manifest foundation
+## 2026-10-28 вЂ” A01 source recovery and offline manifest foundation
 
 - Repair kiosk Events initial-load retry, request deadlines and stale/overlapping update protection with focused JavaScript regressions.
 - Add initial internal offline-manifest integrity validation and Python tests; no offline client acceptance claimed.
-- Record owner specification revision 1.2.2 and selected sequential stages 3–6. Actual checks and pending gates: [progress ledger](TZ_PROGRESS.md#active-execution-checkpoint--2026-10-28-takes-precedence-over-earlier-pending-decisions).
+- Record owner specification revision 1.2.2 and selected sequential stages 3вЂ“6. Actual checks and pending gates: [progress ledger](TZ_PROGRESS.md#active-execution-checkpoint--2026-10-28-takes-precedence-over-earlier-pending-decisions).
 
 
-## 2026-10-28 — Bounded Events export and A01 regression evidence
+## 2026-10-28 вЂ” Bounded Events export and A01 regression evidence
 
 - Add transactional public Events export, independently verified media/resource inventory and safe new-directory preparation with local export/verify CLI.
 - Extend A01 regression for actual delayed old completion; add disposable Chrome acceptance fixture. Practical acceptance remains pending; see TZ_PROGRESS.md.
 
 
-## 2026-10-28 — Export diagnostics review
+## 2026-10-28 вЂ” Export diagnostics review
 
 - Normalize destination-inspection and staging-cleanup failures to safe CLI codes; add focused regressions.
 - Preserve prior package and document retained staging on cleanup refusal. Current evidence and GUI blocker remain in TZ_PROGRESS.md.

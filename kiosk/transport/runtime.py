@@ -86,6 +86,7 @@ class ManagedHttps:
         self.closed = False
         self.close_result = None
         self.phase = "preflight"
+        self.discovery = None
 
     def start(self):
         if self.temporary is not None or self.closed:
@@ -151,6 +152,8 @@ class ManagedHttps:
                     status, body = admin_request(self.admin_port, f"/id/{self.identity}", timeout=timeout)
                     if status == 200 and json.loads(body).get("@id") == self.identity and probe_https(self.profile, context, self.identity, timeout):
                         self.phase = "running"
+                        from kiosk.discovery import start_discovery
+                        self.discovery = start_discovery(self.app)
                         return self
                 except (OSError, ValueError, http.client.HTTPException):
                     pass
@@ -180,6 +183,8 @@ class ManagedHttps:
             return self.close_result
         result = {"proxy_forced": False, "backend_stopped": True, "temporary_removed": False}
         try:
+            if self.discovery is not None:
+                self.discovery.close()
             if self.process is not None:
                 if self.process.poll() is None:
                     stop_deadline = time.monotonic() + 10

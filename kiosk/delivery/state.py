@@ -44,6 +44,17 @@ class DeliveryState:
                   profile TEXT NOT NULL,generation INTEGER NOT NULL,
                   package_id TEXT NOT NULL,metadata_hash TEXT NOT NULL,
                   PRIMARY KEY(profile,generation));
+                CREATE TABLE IF NOT EXISTS assignment_cohorts (
+                  profile TEXT NOT NULL,generation INTEGER NOT NULL,
+                  revision TEXT NOT NULL,created INTEGER NOT NULL,
+                  PRIMARY KEY(profile,generation));
+                CREATE TABLE IF NOT EXISTS assignment_targets (
+                  profile TEXT NOT NULL,generation INTEGER NOT NULL,
+                  device_id TEXT NOT NULL,
+                  PRIMARY KEY(profile,generation,device_id));
+                CREATE TABLE IF NOT EXISTS operator_publications (
+                  operation_id TEXT PRIMARY KEY,profile TEXT NOT NULL,
+                  generation INTEGER NOT NULL);
             ''')
 
     @contextmanager
@@ -144,6 +155,9 @@ class DeliveryState:
         digest(body['binding_sha256'])
         if body['decision'] not in ('approve', 'deny'):
             raise DeliveryError('invalid_decision')
+        if (not isinstance(body['user_code'], str) or len(body['user_code']) != 8
+                or any(char not in 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' for char in body['user_code'])):
+            raise DeliveryError('invalid_user_code')
         now = int(self.clock())
         with self.connection() as db:
             row = db.execute('SELECT * FROM enrollments WHERE request_id=?', (request_id,)).fetchone()
@@ -151,10 +165,21 @@ class DeliveryState:
                 raise DeliveryError('enrollment_expired', 410)
             if not hmac.compare_digest(str(body['user_code']), row['user_code']) or sha(bytes(row['binding'])) != body['binding_sha256']:
                 raise DeliveryError('binding_refused', 403)
+            binding = decode(bytes(row['binding']))
+            config = self.configuration()
+            if (binding['group_id'] != config['group_id'] or binding['origin'] != config['origin']
+                    or binding['profile'] != PROFILE):
+                raise DeliveryError('binding_refused', 403)
             if row['state'] == 'approved':
                 if body['decision'] != 'approve':
                     raise DeliveryError('decision_conflict', 409)
+                device = db.execute('SELECT * FROM devices WHERE device_id=?', (row['device_id'],)).fetchone()
+                if (device is None or device['credential_id'] != row['credential_id']
+                        or device['revoked'] or device['expires'] <= now):
+                    raise DeliveryError('approval_no_longer_active', 409)
                 return {'version': 1, 'state': 'approved', 'credential_id': row['credential_id']}
+            if row['state'] == 'denied' and body['decision'] == 'deny':
+                return {'version': 1, 'state': 'denied'}
             if row['state'] != 'pending':
                 raise DeliveryError('decision_conflict', 409)
             if body['decision'] == 'deny':
@@ -189,9 +214,41 @@ class DeliveryState:
                 raise DeliveryError('invalid_credential', 401)
             return dict(row)
 
-    def revoke(self, device_id):
+    @staticmethod
+    def device_review_hash(row):
+        # Includes the private credential identity so a stale form cannot revoke a replacement.
+        return sha(encode({key: row[key] for key in ('device_id', 'profile', 'credential_id', 'expires')}))
+
+    def admin_devices(self):
+        """Bounded public view; no credential, verifier or human/device code leaves here."""
+        now = int(self.clock())
+        config = self.configuration()
+        with self.connection() as db:
+            requests = []
+            for row in db.execute('SELECT request_id,binding,expires,state FROM enrollments WHERE expires>? ORDER BY request_id LIMIT 128', (now,)):
+                binding = decode(bytes(row['binding']))
+                binding.pop('secret_verifier')
+                requests.append({'request_id': row['request_id'], 'binding': binding,
+                                 'binding_sha256': sha(bytes(row['binding'])), 'expires': row['expires'],
+                                 'state': row['state']})
+            devices = []
+            for row in db.execute('SELECT device_id,profile,credential_id,expires,revoked FROM devices ORDER BY device_id LIMIT 16'):
+                devices.append({'device_id': row['device_id'], 'profile': row['profile'], 'expires': row['expires'],
+                                'revoked': bool(row['revoked']), 'expired': row['expires'] <= now,
+                                'review_hash': self.device_review_hash(row)})
+        return {'requests': requests, 'devices': devices, 'group_id': config['group_id'],
+                'server_id': config['server_id'], 'origin': config['origin'], 'now': now}
+
+    def revoke(self, device_id, review_hash=None):
         text(device_id)
         with self.connection() as db:
+            if review_hash is not None:
+                digest(review_hash)
+                row = db.execute('SELECT * FROM devices WHERE device_id=?', (device_id,)).fetchone()
+                if row is None:
+                    raise DeliveryError('device_not_found', 404)
+                if not hmac.compare_digest(self.device_review_hash(row), review_hash):
+                    raise DeliveryError('device_changed', 409)
             if db.execute('UPDATE devices SET revoked=1 WHERE device_id=?', (device_id,)).rowcount != 1:
                 raise DeliveryError('device_not_found', 404)
         return {'version': 1, 'state': 'revoked'}
@@ -202,14 +259,30 @@ class DeliveryState:
         if profile != PROFILE:
             raise DeliveryError('unsupported_profile', 409)
         with self.connection() as db:
-            old = db.execute('SELECT * FROM assignments WHERE profile=?', (profile,)).fetchone()
-            if old and old['package_id'] == package_id and old['metadata_hash'] == metadata_hash:
-                return old['generation']
-            generation = old['generation'] + 1 if old else 1
-            db.execute('INSERT INTO assignments VALUES (?,?,?,?) ON CONFLICT(profile) DO UPDATE SET generation=excluded.generation,package_id=excluded.package_id,metadata_hash=excluded.metadata_hash',
-                       (profile, generation, package_id, metadata_hash))
-            db.execute('INSERT INTO assignment_history VALUES (?,?,?,?)', (profile, generation, package_id, metadata_hash))
-            return generation
+            payload = (self.root / 'publications' / package_id / 'delivery.json').read_bytes()
+            if sha(payload) != metadata_hash:
+                raise DeliveryError('publication_integrity', 503)
+            metadata = decode(payload)
+            if metadata['package_id'] != package_id or metadata['resource_profile'] != profile:
+                raise DeliveryError('publication_identity_conflict', 409)
+            return self._assign(db, profile, package_id, metadata_hash, metadata['revision'])
+
+    def _assign(self, db, profile, package_id, metadata_hash, revision):
+        """The caller holds the publication lease; targets and generation commit together."""
+        old = db.execute('SELECT * FROM assignments WHERE profile=?', (profile,)).fetchone()
+        if old and old['package_id'] == package_id and old['metadata_hash'] == metadata_hash:
+            # A retry must neither refreeze membership nor backfill unknown legacy history.
+            return old['generation']
+        generation = old['generation'] + 1 if old else 1
+        db.execute('INSERT INTO assignments VALUES (?,?,?,?) ON CONFLICT(profile) DO UPDATE SET generation=excluded.generation,package_id=excluded.package_id,metadata_hash=excluded.metadata_hash',
+                   (profile, generation, package_id, metadata_hash))
+        db.execute('INSERT INTO assignment_history VALUES (?,?,?,?)', (profile, generation, package_id, metadata_hash))
+        now = int(self.clock())
+        db.execute('INSERT INTO assignment_cohorts VALUES (?,?,?,?)', (profile, generation, revision, now))
+        db.execute('''INSERT INTO assignment_targets
+            SELECT ?,?,device_id FROM devices WHERE profile=? AND revoked=0 AND expires>?''',
+                   (profile, generation, profile, now))
+        return generation
 
     def assignment(self, device, renderer, resource_profile):
         with self.connection() as db:

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% macro tr(en, ru, de) -%}{{ ru if active_language == 'ru' else de if active_language == 'de' else en }}{%- endmacro %}
+{% macro member_state(value) -%}
+{% if value == 'eligible' %}{{ tr('Eligible now', 'Сейчас может получать', 'Aktuell berechtigt') }}
+{% elif value == 'revoked' %}{{ tr('Access revoked', 'Доступ отозван', 'Zugriff widerrufen') }}
+{% elif value == 'expired' %}{{ tr('Registration expired', 'Регистрация истекла', 'Registrierung abgelaufen') }}
+{% elif value == 'other_profile' %}{{ tr('Different profile', 'Другой профиль', 'Anderes Profil') }}
+{% else %}{{ tr('No longer registered', 'Больше не зарегистрировано', 'Nicht mehr registriert') }}{% endif %}
+{%- endmacro %}
+{% block title %}{{ tr('Events publications', 'Публикации Events', 'Events veröffentlichen') }}{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_delivery.css') }}">
+<section class="admin-panel delivery-panel">
+    <p><a href="{{ url_for('admin.admin_home') }}">{{ t('admin.home') }}</a></p>
+    <h1>{{ tr('Events publications', 'Публикации Events', 'Events veröffentlichen') }}</h1>
+    {% if error %}
+    <p class="delivery-error" role="alert">{{ tr('Publication unavailable. The previous assignment is retained.', 'Публикация недоступна. Прежнее назначение сохранено.', 'Veröffentlichung nicht verfügbar. Bisherige Zuweisung bleibt erhalten.') }} <code>{{ error }}</code></p>
+    <p><a href="{{ url_for('admin.delivery_home') }}">{{ tr('Return to publications', 'Вернуться к публикациям', 'Zurück zu Veröffentlichungen') }}</a></p>
+    {% else %}
+    <p>{{ tr('Publish the current active Events, settings and images as one verified snapshot. Repeating unchanged content keeps the same assignment and original recipients.', 'Опубликуйте текущие активные Events, настройки и изображения одним проверенным снимком. Повтор неизменённого содержимого сохраняет назначение и исходных получателей.', 'Aktive Events, Einstellungen und Bilder als geprüften Stand veröffentlichen. Unveränderte Inhalte behalten Zuweisung und ursprüngliche Empfänger.') }}</p>
+    <form class="admin-form" method="post" action="{{ url_for('admin.delivery_publish') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="operation_id" value="{{ publish_id }}">
+        <button type="submit">{{ tr('Publish current Events', 'Опубликовать текущие Events', 'Aktuelle Events veröffentlichen') }}</button>
+    </form>
+    <p>{{ tr('Saved on this server. Independent backup protection is not confirmed.', 'Сохраняется на этом сервере. Защита независимой резервной копией не подтверждена.', 'Speicherung auf diesem Server. Schutz durch unabhängige Sicherung nicht bestätigt.') }}</p>
+    <details class="delivery-profile"><summary>{{ tr('Supported Events profile and limits', 'Профиль Events и ограничения', 'Events-Profil und Grenzen') }}</summary>
+        <p><code>{{ profile }}</code>: {{ tr('single-frame PNG/JPEG only; existing Events renderer, kiosk/TV. This does not qualify Android TV or other hardware.', 'Только одно­кадровые PNG/JPEG; существующий Events renderer, kiosk/TV. Это не приёмка Android TV и другого оборудования.', 'Nur Einzelbild-PNG/JPEG; vorhandener Events-Renderer, Kiosk/TV. Keine Freigabe weiterer Hardware oder Android TV.') }}</p>
+        <p>{{ tr('Image limits', 'Ограничения изображений', 'Bildgrenzen') }}: {{ limits.max_pixels }} px; {{ limits.max_live_bytes // 1048576 }} MiB; {{ limits.per_image_ms }} / {{ limits.total_image_ms }} ms.
+        {{ tr('Cooperative checks, no universal RSS/decode deadline guarantee.', 'Кооперативные проверки, без общей гарантии RSS и времени декодирования.', 'Kooperative Prüfung, keine allgemeine RSS-/Dekodierzeitgarantie.') }}</p>
+        <p>{{ tr('Package / retained catalog', 'Пакет / сохранённые пакеты', 'Paket / Paketbestand') }}: {{ publication_bytes // 1048576 }} / {{ catalog_bytes // 1048576 }} MiB.</p>
+    </details>
+    {% set publication = model.selected %}
+    {% if publication %}
+    <section aria-labelledby="publication-heading">
+        <h2 id="publication-heading">{{ tr('Publication', 'Публикация', 'Veröffentlichung') }} #{{ publication.generation }} — {{ tr('current' if publication.current else 'historical', 'текущая' if publication.current else 'из истории', 'aktuell' if publication.current else 'historisch') }}</h2>
+        <dl class="delivery-identity">
+            <dt>{{ tr('Revision', 'Ревизия', 'Revision') }}</dt><dd>{{ publication.revision if publication.revision is not none else tr('Unknown', 'Неизвестна', 'Unbekannt') }}</dd>
+            <dt>Package SHA256</dt><dd><code>{{ publication.package_id }}</code></dd>
+            <dt>Metadata SHA256</dt><dd><code>{{ publication.metadata_hash }}</code></dd>
+            {% if publication.created %}<dt>{{ tr('Published', 'Опубликовано', 'Veröffentlicht') }}</dt><dd>{{ publication.created }}</dd>{% endif %}
+        </dl>
+        <p>{{ tr('Ready is the client’s activation report for this assignment, not proof that a physical screen is powered on. Downloaded, verified, offline and incompatible stages are unknown to this view.', 'Готовность — отчёт клиента об активации именно этого назначения, без подтверждения включённого экрана. Скачивание, проверка, офлайн и несовместимость здесь неизвестны.', 'Bereit ist die Aktivierungsmeldung des Clients für diese Zuweisung, kein Nachweis eines eingeschalteten Bildschirms. Download-, Prüf-, Offline- und Kompatibilitätsstatus sind hier unbekannt.') }}</p>
+        {% if publication.targets is none %}
+        <p class="delivery-warning">{{ tr('Original recipients unknown: this assignment predates recipient snapshots. Current membership is not a historical target set.', 'Исходные получатели неизвестны: назначение создано до сохранения списка. Текущий состав не подставляется вместо исторического.', 'Ursprüngliche Empfänger unbekannt: Zuweisung vor Einführung der Empfängerliste. Aktuelle Mitglieder ersetzen keine historischen Ziele.') }}</p>
+        {% else %}
+        <p class="delivery-counts" role="status">{{ tr('Original recipients', 'Исходные получатели', 'Ursprüngliche Empfänger') }}: <strong>{{ publication.targets|length }}</strong> · {{ tr('Ready confirmed', 'Готовность подтверждена', 'Bereit bestätigt') }}: <strong>{{ publication.ready }}</strong> · {{ tr('Outstanding', 'Ожидаются', 'Ausstehend') }}: <strong>{{ publication.outstanding }}</strong></p>
+        {% if publication.targets %}
+        <div class="delivery-table"><table><caption>{{ tr('Frozen original recipient set', 'Неизменяемый исходный набор получателей', 'Unveränderliche ursprüngliche Empfängerliste') }}</caption>
+            <thead><tr><th>{{ tr('Device', 'Устройство', 'Gerät') }}</th><th>{{ tr('Activation report', 'Отчёт об активации', 'Aktivierungsmeldung') }}</th><th>{{ tr('Current access', 'Текущий доступ', 'Aktueller Zugriff') }}</th></tr></thead>
+            <tbody>{% for target in publication.targets %}<tr><td><code>{{ target.device_id }}</code></td><td>{% if target.ready %}<strong>{{ tr('Ready confirmed', 'Готовность подтверждена', 'Bereit bestätigt') }}</strong> ({{ target.modes|join(', ') }})<br>{{ target.received }}{% else %}{{ tr('Outstanding — no ready report', 'Ожидается — отчёта о готовности нет', 'Ausstehend — keine Bereitmeldung') }}{% endif %}</td><td>{{ member_state(target.eligibility) }}</td></tr>{% endfor %}</tbody>
+        </table></div>
+        {% else %}<p>{{ tr('No original recipients. This does not mean any device displayed the publication.', 'Исходных получателей нет. Это не означает, что какое-либо устройство показало публикацию.', 'Keine ursprünglichen Empfänger. Daraus folgt keine Anzeige auf einem Gerät.') }}</p>{% endif %}
+        {% endif %}
+        {% if publication.other_reports %}
+        <h3>{{ tr('Other ready reports — outside original counts', 'Другие отчёты о готовности — вне исходного подсчёта', 'Weitere Bereitmeldungen — außerhalb der ursprünglichen Zählung') }}</h3>
+        <ul>{% for report in publication.other_reports %}<li><code>{{ report.device_id }}</code> · {{ report.modes|join(', ') }} · {{ report.received }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if publication.later_members %}
+        <h3>{{ tr('Current registrations outside the known original set', 'Текущие регистрации вне известного исходного набора', 'Aktuelle Registrierungen außerhalb der bekannten ursprünglichen Liste') }}</h3>
+        <ul>{% for member in publication.later_members %}<li><code>{{ member.device_id }}</code> — {{ member_state(member.eligibility) }}</li>{% endfor %}</ul>
+        {% endif %}
+    </section>
+    {% else %}<p>{{ tr('No publication assigned yet.', 'Публикаций пока нет.', 'Noch keine Veröffentlichung zugewiesen.') }}</p>{% endif %}
+    <nav aria-label="{{ tr('Publication history', 'История публикаций', 'Veröffentlichungsverlauf') }}">
+        <h2>{{ tr('Publication history', 'История публикаций', 'Veröffentlichungsverlauf') }}</h2>
+        <ul>{% for item in model.history %}<li><a href="{{ url_for('admin.delivery_view', generation=item.generation) }}">#{{ item.generation }} · {{ tr('Revision', 'Ревизия', 'Revision') }} {{ item.revision if item.revision is not none else '?' }} · <code>{{ item.package_id }}</code></a></li>{% endfor %}</ul>
+        {% if model.more %}<a href="{{ url_for('admin.delivery_home', before=model.history[-1].generation) }}">{{ tr('Earlier publications', 'Более ранние публикации', 'Ältere Veröffentlichungen') }}</a>{% endif %}
+        <p><a href="{{ url_for('admin.delivery_home') }}">{{ tr('Refresh current status', 'Обновить текущий статус', 'Aktuellen Status aktualisieren') }}</a></p>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}

@@ -12,3 +12,7 @@ def configure_delivery(app):
     app.extensions['device_delivery_transfers'] = ArtifactTransfers()
     app.register_blueprint(device_delivery)
     register_admin_routes(app)
+    from .operator import register_operator_routes
+    register_operator_routes(app)
+    from .device_admin import register_device_admin
+    register_device_admin(app)

@@ -20,24 +20,41 @@ and returns a report through the owner, including exact base/head, changed paths
 tests and pending hardware gates. A second status ledger is prohibited. A PASS
 statement alone does not establish acceptance.
 
-## PC2 startup gate
+## Current ownership and dispatch
 
-1. PC1 verifies preparation in its task branch.
-2. Owner separately authorizes publication and PR integration into v2.
-3. PC1 reads the actual merged v2 commit and records its full40-character hash.
-4. Replace the explicit pending base in [the Android task draft](ANDROID_TASK_DRAFT.md)
-   with that verified hash, then send the complete task to PC2.
+The coordinator on PC1 owns common documentation, the sole progress ledger,
+acceptance review and shared contracts. Codex Worker on PC1 owns server/Windows
+implementation, affected tests and module READMEs. PC2 owns android/, its tests
+and android/README.md. Assign exclusive files before work; do not edit another
+owner's files concurrently. Shared contract changes require coordinator review
+and explicit handoff before dependent implementation.
 
-Until all four conditions hold, do not start Android implementation. Preparation
-commit/base is not a substitute for the resulting v2 commit. Push, merge and
-GitHub settings are not authorized by this preparation task. Stage4 remains
-incomplete; other stage boundaries remain as recorded in the single ledger.
+The old preparation/merged-v2 startup gate was satisfied for the original task
+(PR #1; base recorded in ANDROID_TASK_DRAFT.md). It is historical, not a new
+merge requirement for every task. Current working branches and dirty trees must
+be inspected; never switch or pull over accumulated work. The v2 PR workflow
+above remains the integration policy when integration is separately authorized.
 
-For authorized remote task submission, verify PC2 identity, intended Codex window,
-project path and conversation purpose; do not interrupt an active task or replace
-an unrelated conversation. Use existing RustDesk/Windows-MCP only; do not change
-remote-access/security/accounts/permissions. If unavailable, give the owner the
-complete prompt and precise blocker. Confirm task acceptance/start once; no
-polling, waiting or automatic result collection. The owner returns the report.
-PC1 may continue independent selected Windows checks while shared inputs stay
-fixed. Review source/diffs and evidence before updating the ledger.
+The owner manually relays complete PC1/PC2 prompts. No automated dispatcher or
+remote UI submission is selected. Existing verified SSH may read PC2 reports,
+source and evidence without modifying its tree. Collect once after a result is
+reported; do not poll executors. Never disable host-key verification. Return a
+concrete command/path blocker through the owner if access fails.
+
+Reusable test setup follows [the owner-selected persistent lab policy](TEST_LAB_POLICY.md); record retained trust/runtime only in the current ledger.
+
+Current assignment: Android LAN discovery returned a reviewed partial result; authenticated continuation waits for the concrete owner selection in [the continuation proposal](ANDROID_LAN_CONTINUATION.md). Do not redispatch the original prompt. Bounded Windows discovery/manual setup, operator accounting, Windows native delivery and device administration are closed in the ledger. PC2 owns android/ and its README/tests; PC1 worker has no new source task. Coordinator owns frozen advisory contract and sole ledger.
+Initial PC1 checkpoint commit/push permission does not authorize subsequent Git
+writes, publication, merge, deployment or system/security changes.
+
+## Historical original PC2 startup gate (satisfied)
+
+The original preparation required PC1 verification, separate owner authorization
+for publication/PR integration into v2, readback of the resulting full merged
+hash and replacement of the pending Android task base before implementation.
+These conditions applied to the original preparation, not subsequent independent
+work. PR #1/base evidence is retained in ANDROID_TASK_DRAFT.md and the ledger.
+
+## Test VM connection reference
+
+Owner update2026-11-06: Windows test VM SSH is `ssh work@192.168.1.220` after a reported reboot/account change. This is distinct from PC2 (`ssh admin@192.168.1.117`). Verify actual identity/boot/runtime before use; never bypass host-key verification. Current observation and acceptance remain only in the sole ledger.

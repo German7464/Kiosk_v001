@@ -1,5 +1,117 @@
 # Offline display candidate
 
+## Advisory LAN search in Windows Connect
+
+The opt-in server and Windows UI follow the coordinator-owned
+[discovery contract](../../contracts/device-discovery-v1/README.md). Press Find server
+in LAN for one cancellable3-second search, with at most3 limited broadcasts to
+255.255.255.255:47751,256 received datagrams and32 distinct exact origins. A timeout
+offers manual address; it never proves that no server exists. Select a plain-text
+row and press Select address: only the unconfigured manual origin is filled.
+No URL/browser/bootstrap request, enrollment, credential, trust or content action
+is triggered. Independently confirmed public bootstrap and existing protected
+pairing remain mandatory. Saved connections disable search/selection and retain
+their authority/content. Search shares the existing single worker and native
+ownership lease, closes its ephemeral socket on cancellation, and stores no hints.
+The portable Connect build includes `kiosk/discovery.py`; the accepted shell is reused.
+Focused discovery checks: `python -m unittest tests.test_discovery`. LAN acceptance
+additionally requires actual two-host broadcast and the normal Windows/Chrome/native
+journey; loopback or mocked packets are not substitutes. No Android, installed
+discovery, automatic startup or release support is inferred.
+
+## Manual-address Windows connection window
+
+`connect_ui.py` is an additive Tkinter/ttk portable control window. Build with the existing
+`tools/build_windows_delivery.py --connect-ui --destination NEW_CANDIDATE
+--shell-candidate ACCEPTED_SHELL_DIRECTORY`; the builder verifies and copies the accepted
+shell without rebuilding it. Open `dist/KioskConnect/KioskConnect.exe` normally. Its adjacent
+candidate `shell/` contains the existing WebView host. Default native data is under the
+current user's LocalAppData/KioskConnect; test-only `--root` selects a separate dedicated root.
+This does not replace the installed Launcher/service or browser configuration.
+
+Enter the exact HTTPS origin and paste the independently delivered PUBLIC bootstrap, or
+enter its public file path and press Open public file. Files are read with a16KiB limit;
+no JSON editing, unknown-server bootstrap download or system trust installation is needed.
+Review group/server/key/expiry, enter the independently confirmed SHA256, and explicitly
+confirm these facts and independently checked UTC time before connecting. The real native
+pending code/device/request/nonce/profile are shown for comparison in the existing trusted
+admin page. Approval/denial stays in that normal browser UI; the window never receives admin
+credentials. No bearer, device_code or private-root path appears in its UI or public events.
+
+`connect.py` serializes inspection, enrollment, time confirmation and display in one worker
+and existing exclusive native ownership lease. Tk stays responsive. Cancellation prevents
+the next network operation/body read and waits asynchronously for current bounded transport
+or native startup/cleanup; it does not forcibly delete registration/content. A network read
+retains the existing15s socket timeout; native startup/exit retains coordinator deadlines.
+This is cooperative cancellation, not a hard wall-clock guarantee for OS/disk work.
+
+Choose TV/kiosk and Start with synchronization, or Open saved without network. The latter
+calls the accepted private-reopen/display path and makes no network requests. A fresh window
+restores the saved native connection and last successfully opened mode; no new enrollment
+is automatic. Live revoked/expired/time-uncertain admission stops while accepted content
+remains usable. Explicit time recovery uses the existing confirmation API; no clock authority,
+automatic renewal or key replacement is added. Another group/anchor cannot overwrite saved
+state; a separately selected new test root is needed for explicit re-enrollment in this scope.
+
+The window exposes manual-address and advisory-discovery Events: full Launcher roles, installer,
+unattended startup, profile/page editing and trust lifecycle remain separate requirements.
+`tests/test_windows_connect.py` covers the changed validation, UI/worker ownership/cancellation,
+lost-response retry, secret-free errors and saved/offline integration; it does not replace
+the existing renderer/transfer/VM acceptance evidence.
+
+## Native server delivery candidate
+
+`python -m kiosk.display.delivery_client --root NEW_PRIVATE_ROOT --shell EXISTING_SHELL enroll
+--bootstrap PUBLIC_JSON --bootstrap-sha256 INDEPENDENT_DIGEST --confirmed-utc CONFIRMED_UTC_SECONDS`
+confirms the independently supplied laboratory anchor and persists a random native secret
+with user-scoped Windows DPAPI before the first enrollment request. The command returns
+the pending human code; the existing authenticated administrative JSON route approves the
+exact request/code/binding. Repeating `enroll` recovers lost responses and the same credential.
+It never replaces an existing anchor or device identity silently.
+
+`run` opens accepted offline content before attempting synchronization, or obtains the first
+complete authorized package when the store is empty. It owns one private synchronization
+lease and uses the existing publication store, locally pinned renderer, native coordinator,
+switch/readiness and mode-specific receipts. `sync` admits without claiming a display;
+`flush` retries queued real-ready bodies. `sync --full-resync` discards only owned incomplete
+capture. `confirm-time --utc ...` confirms an independently checked plausible time after
+uncertain boot without replacing registration. `identity` reports renderer/runtime/binary
+facts. Commands share the required `--root`/`--shell` arguments; credentials never enter
+command-line arguments, WebView, URLs or diagnostic request headers/bodies.
+
+The native modules separate concerns: `delivery_authority.py` validates bootstrap, exact
+signed server/group/origin/SPKI and durable generation/digest/time/accepted associations;
+`native_crypto.py` uses Windows CNG RSA3072-SHA256 PKCS1 verification and DPAPI;
+`delivery_transport.py` uses strict explicit-CA TLS/name verification without redirects;
+`delivery_capture.py` verifies bounded complete inventories, durable prefixes, strong range
+validators, complete-byte hashes and local PNG/JPEG capability; `delivery_client.py` connects
+them to the existing display. A 416 resets only its owned file and returns to the owner for
+fresh authority/assignment validation before retry. Retained complete bytes are copied and
+rehash-verified, never hardlinked or overwritten. Current/fallback packages are not evicted.
+
+Accepted exact package/group/device/request associations are DPAPI protected. Ordinary
+offline opening and historical-ready retry do not grant new network authority. New admission
+requires current native time, an unexpired approved credential, live signed authority and an
+unchanged authenticated assignment after capture. Revocation/expiry block new admissions.
+Full unattended time recovery, rotation/group transfer, discovery and general device UI
+remain outside this one-publisher frozen-v1 candidate. Same-user/administrator compromise
+is outside the existing private-root/DPAPI boundary.
+
+The resource profile remains `events-phone-lab-v1` on the wire: Windows independently checks
+the stated capture/PNG/JPEG limits using its existing verifier and Pillow, then builds its
+own existing prepared view. This does not assert Android decoder, RSS or hard decode-time
+guarantees on Windows. Ready requires the exact live native PID/session/package/mode status
+and the coordinator receipt; it does not prove a physical screen is powered on. Private state
+is bounded to2MiB,1024 accepted associations and4096 session/receipt records. Capacity refuses
+additional work; it does not delete accepted offline content.
+
+`tools/build_windows_delivery.py --destination NEW_BUILD --shell-candidate VERIFIED_CANDIDATE`
+builds a separate portable PyInstaller client and reuses an unchanged hash-checked native
+shell. It performs no installation, service update, CA installation or key generation.
+Focused tests: `tests.test_windows_delivery`; physical evidence belongs in the returned
+Windows-delivery report. Source tests/builds alone do not establish VM delivery acceptance
+or close stage5. The sole ledger remains authoritative for reviewed acceptance.
+
 ## Boundary and platform decision
 
 Windows candidate: a thin x64 WinForms/.NET Framework host using the separately installed Evergreen WebView2 Runtime. The Flask/SQLite server, existing Launcher/service and Chrome path are unchanged. This is a bounded client-platform prototype, not a server-stack replacement or Android implementation. Edge browser acceptance remains excluded; WebView2 Runtime is a separate prerequisite.

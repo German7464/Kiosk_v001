@@ -24,3 +24,5 @@ commit when comparing clients. Generated files belong outside tracked sources.
 
 Requirements/status remain in [the specification](../docs/TZ_RECONCILED.md) and
 [the single ledger](../docs/TZ_PROGRESS.md). See [two-PC workflow](../docs/TWO_PC_WORKFLOW.md).
+
+[Advisory LAN discovery v1](device-discovery-v1/README.md) defines the next additive untrusted-hint mechanism; implementation and platform acceptance remain in the sole ledger.

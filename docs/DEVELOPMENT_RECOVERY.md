@@ -8,6 +8,66 @@ Before any command, inspect the actual branch, uncommitted/untracked changes, ta
 
 For installation-specific service data or certificate recovery, use the relevant current [Launcher](../kiosk/launcher/README.md) and [transport procedures](LAN_TRANSPORT.md), with the required authorization. A Git checkout does not restore secrets, media or current operational data. Preserve the sole usable copy, test restoration in isolation, and never activate cloned server identities concurrently.
 
+## Portable development checkpoint — 2026-11-07
+
+The owner authorized saving the accumulated source on both PCs to GitHub. This
+checkpoint preserves development work, not a release or completed stage. The two
+working branches are deliberately separate; neither `master` nor `v2` contains
+their combined current implementation. Existing reference tags are unchanged.
+
+| Source | Published checkpoint | Contents |
+| --- | --- | --- |
+| PC1 | Branch `work/windows-layout-checks`, tag `checkpoint-pc1-2026-11-07` | Current server, Windows delivery/connect/discovery, tests, common contracts, specification and sole progress ledger. |
+| PC2 | Branch `android/events-conformance-design`, commit `44519a51261b2aa57d28e5207fe0438934cc6dd9`, tag `checkpoint-2026-11-07` | Android source, Gradle Wrapper/declarations, fixtures and tests, Android README and its historical changelog additions. |
+
+On a new computer, create two separate clean working directories from the same
+repository. The first command requires Git and access to the repository. These
+commands do not install, enroll or start any application:
+
+```powershell
+git clone --branch work/windows-layout-checks https://github.com/German7464/Kiosk_v001.git Kiosk_v001
+git -C Kiosk_v001 switch -c resumed-pc1-20261107 checkpoint-pc1-2026-11-07
+git -C Kiosk_v001 worktree add -b resumed-android-20261107 ../Kiosk_v001_android 44519a51261b2aa57d28e5207fe0438934cc6dd9
+git -C Kiosk_v001 status --short --branch
+git -C Kiosk_v001_android status --short --branch
+```
+
+Use the PC1 directory for server/Windows/common documentation and the Android
+directory for Android Studio. Read `AGENTS.md`, the **top** of the PC1
+`docs/TZ_PROGRESS.md`, and the relevant module README before continuing. Android's
+older common documents are not a replacement for that ledger. Do not copy the
+whole older branch over PC1 or merge the branches solely to restore a checkout.
+Further coordinated integration remains a separate task. Resuming from this
+checkpoint is not a reason to repeat valid acceptance checks.
+
+For server development, follow the pinned Python/environment instructions in
+the [root README](../README.md#verified-dependency-installation). For Windows
+native/portable builds, follow the [display module instructions](../kiosk/display/README.md#build-dependency-and-integrity)
+and `tools/build_windows_delivery.py`; the WebView2 SDK archive, Windows build
+tools and runtime are external prerequisites, not files recovered by Git. For
+Android, open the second directory's `android` project and follow its README and
+`android/tools/build.ps1`: a compatible full JDK, Android SDK and dependencies
+are external prerequisites. Existing-device APK updates require the original
+private signing keystore supplied separately; do not generate a replacement or
+uninstall the retained application to work around a missing signer.
+
+GitHub contains source, build declarations, synthetic fixtures and documentation.
+It does **not** contain `.venv`, IDE/SDK caches, compiled EXE/APK candidates,
+ignored `logs/` evidence, real databases, uploaded media, Chrome profiles,
+device registrations, DPAPI/Android Keystore secrets, private signing keys or
+TLS/group private keys. A fresh clone is therefore sufficient to resume source
+development after installing dependencies; it does not recreate an operating
+laboratory or recover its accepted packages/data. Preserve those private/local
+materials separately. DPAPI and Android Keystore state is tied to its original
+user/device and is not made portable by copying a directory.
+
+Lab addresses in source fixtures and dated reports identify the original test
+environment. Public bootstrap/trust/certificate inputs have finite validity; a
+checkout neither renews them nor authorizes a new server identity. Verify dates
+and use the existing approval procedure before a new protected connection.
+No trust installation, key generation, lab change or stage acceptance is implied
+by this checkpoint. Stage 5 remains partial; stage 6 has not started.
+
 ## Restore the MVP Code
 
 Keep the version 2 working tree intact and open the MVP in a separate directory:

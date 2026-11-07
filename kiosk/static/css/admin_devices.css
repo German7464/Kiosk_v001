@@ -1,0 +1,7 @@
+.device-request { border: 1px solid var(--border-color, #bbb); border-radius: .5rem; padding: 1rem; margin: 1rem 0; }
+.device-request code { overflow-wrap: anywhere; }
+.device-request .admin-form { max-width: 100%; }
+.device-decision input[name="user_code"] { max-width: 16rem; font-family: monospace; letter-spacing: .15em; }
+.device-buttons { display: flex; flex-wrap: wrap; gap: .75rem; }
+.device-confirm { display: flex; align-items: baseline; flex-wrap: wrap; gap: .5rem; }
+.device-confirm input { width: auto; }

@@ -57,6 +57,14 @@ def device():
     return state().authenticate(secret)
 
 
+def decide(request_id, payload):
+    # Both ordinary forms and the existing JSON route share the same guess budget.
+    wait = current_app.extensions['device_decision_limiter'].reserve(request.remote_addr or 'unknown', request_id)
+    if wait:
+        raise DeliveryError('code_attempt_limit', 429)
+    return state().approve(request_id, payload)
+
+
 @device_delivery.before_request
 def throttle():
     limiter = current_app.extensions.get('device_delivery_limiter')
@@ -137,6 +145,7 @@ def receipt():
 def register_admin_routes(app):
     # The admin.* endpoint prefix makes the existing CSRF before_request apply.
     app.extensions['device_delivery_limiter'] = AuthenticationLimiter(account_limit=1200, source_limit=2400)
+    app.extensions['device_decision_limiter'] = AuthenticationLimiter(account_limit=5, source_limit=20, window=600)
 
     @app.get('/admin/devices/bootstrap', endpoint='admin.delivery_bootstrap')
     @admin_required
@@ -159,7 +168,7 @@ def register_admin_routes(app):
     @admin_required
     @guarded
     def decision(request_id):
-        return jsonify(state().approve(request_id, body()))
+        return jsonify(decide(request_id, body()))
 
     @app.post('/admin/devices/<device_id>/revoke', endpoint='admin.delivery_revoke')
     @admin_required

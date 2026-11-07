@@ -9,6 +9,10 @@
     <p class="admin-copy">{{ t("admin.signed_in_as") }} {{ username }}.</p>
     <div class="admin-actions">
         <a href="{{ url_for('admin.admin_events') }}">{{ t("admin.manage_events") }}</a>
+        {% if delivery_enabled %}
+        <a href="{{ url_for('admin.devices_home') }}">{% if active_language == 'ru' %}Устройства и сопряжение{% elif active_language == 'de' %}Geräte und Kopplung{% else %}Devices and pairing{% endif %}</a>
+        <a href="{{ url_for('admin.delivery_home') }}">{% if active_language == 'ru' %}Публикации Events{% elif active_language == 'de' %}Events veröffentlichen{% else %}Events publications{% endif %}</a>
+        {% endif %}
         <a href="{{ url_for('admin.admin_tags') }}">{{ t("admin.manage_tags") }}</a>
         <a href="{{ url_for('admin.admin_settings') }}">{{ t("admin.system_settings") }}</a>
         <a href="{{ url_for('preview') }}">{{ t("admin.preview") }}</a>

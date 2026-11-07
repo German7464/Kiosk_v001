@@ -6,7 +6,9 @@ Kiosk_v001 provides a modular Flask web application backed by SQLite. Public dis
 
 Source/MVP startup uses `run.py` for Flask development or `serve.py` for Waitress. The stage 3 Windows package adds a separate SCM service and a Tk/ttk Launcher. Managed HTTPS supervises Caddy in front of loopback Waitress. See the [Launcher](../kiosk/launcher/README.md) and [transport](../kiosk/transport/README.md) documentation for deployment details.
 
-The distributed architecture in [approved specification](TZ_RECONCILED.md) remains the target. Persistent client snapshots, groups, replication, versioned module contracts with selective process isolation, and signed updates are future stage work; current acceptance is recorded in [TZ Progress](TZ_PROGRESS.md).
+The distributed architecture in [the approved specification](TZ_RECONCILED.md) remains the target. Existing Events package preparation/store and the shared local renderer are implemented in `publication/`; the bounded Windows WebView2 shell/coordinator is in `display/`. Opt-in `delivery/` adds isolated enrollment, assignment/artifact transport, ready receipts and the operator publication UI. Its presence does not enable delivery in default installed startup. Android implementation lives in PC2's separate checkout; PC1's preparation-only Android README is not a current implementation inventory.
+
+Persistent offline Events and bounded server/Android delivery have evidence in [the sole ledger](TZ_PROGRESS.md), with exact platform/build limitations. Full discovery, device/profile administration and trust lifecycle remain incomplete. Page/draft authoring and Events module extraction belong to stage 6; replication, signed updates and complete independent recovery remain later-stage targets. Package organization is not evidence of process isolation or release readiness.
 
 ## Evidence boundary
 
@@ -25,6 +27,9 @@ kiosk/
   features/
   launcher/
   transport/
+  publication/
+  display/
+  delivery/
   templates/
   static/
   translations/
@@ -45,6 +50,9 @@ launcher_service.py
 - `features` contains the admin and public API blueprints. Each major feature module has one `README.md`.
 - `launcher` contains installed storage, Windows installation/service control, runtime supervision and the desktop interface.
 - `transport` contains managed HTTPS configuration, runtime and Windows helpers.
+- `publication` contains Events export/verification, local persistent package storage and the shared client-owned renderer.
+- `display` contains Windows native hosting, local view/cache coordination and runtime resource guards.
+- `delivery` contains opt-in server-side device authorization, revision transport, receipt persistence and operator accounting; its SQLite database is separate from working Events storage.
 - `templates` contains HTML templates only.
 - `static` contains CSS, JavaScript, uploaded public assets, and interface assets.
 - `database.py` contains database connection and initialization helpers.

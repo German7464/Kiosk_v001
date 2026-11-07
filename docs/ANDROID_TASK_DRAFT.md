@@ -1,6 +1,6 @@
 # Android task record — current resume via the progress ledger
 
-Current execution state and exact next action are in [the sole progress ledger](TZ_PROGRESS.md). Completed prompts below are retained for provenance,not redispatch. PC1 reviewed both the original server/phone journey and the returned resumable-transfer archive; both bounded tasks are CLOSED with their exact build/device limitations recorded only in the ledger. Overall stages4–5 remain incomplete. No pending Android dispatch is established by this task history. The independent preservation report was subsequently read/reviewed;its excluded signer limitation and the authorized replacement are recorded in the sole ledger.
+Current execution state and exact next action are in [the sole progress ledger](TZ_PROGRESS.md). Completed prompts below are retained for provenance,not redispatch. PC1 reviewed both the original server/phone journey and the returned resumable-transfer archive; both bounded tasks are CLOSED with their exact build/device limitations recorded only in the ledger. Stage4 is accepted within its recorded Events profile; stage5 remains partial. Current new assignment is [Android LAN discovery](PC2_LAN_DISCOVERY_TASK.md); completed task history does not redispatch earlier checks. The independent preservation report was subsequently read/reviewed;its excluded signer limitation and the authorized replacement are recorded in the sole ledger.
 
 Owner authorized publication, PR integration and remote dispatch on 2026-10-31.
 PR #1 merged: https://github.com/German7464/Kiosk_v001/pull/1

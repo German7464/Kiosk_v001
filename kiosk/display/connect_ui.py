@@ -1,0 +1,300 @@
+"""Portable Tk control window for the existing native Windows Events client."""
+import argparse
+from datetime import datetime, timezone
+import json
+import os
+from pathlib import Path
+import queue
+import sys
+import tkinter as tk
+from tkinter import ttk
+import webbrowser
+
+from .connect import Connection, confirmed_time, public_input
+
+
+MESSAGES = {
+    'saved': 'Состояние загружено. Для первого подключения введите адрес и публичные данные.',
+    'pending': 'Ожидается решение администратора. Сверьте устройство и введите код в админке.',
+    'approved': 'Подключение одобрено. Запустите Events с синхронизацией.',
+    'cancelled': 'Операция остановлена. Сохранённые данные не удалены.',
+    'denied': 'Администратор отказал. Данные сохранены; автоматического нового запроса нет.',
+    'expired': 'Срок входных данных или доступа истёк. Новое подключение/приём остановлены.',
+    'access_refused': 'Доступ отозван или недействителен. Принятое содержимое остаётся доступно.',
+    'time_required': 'Для нового приёма подтвердите независимо проверенное время UTC.',
+    'time_confirmed': 'Время явно подтверждено. Регистрация сохранена.',
+    'network_unavailable': 'Сервер недоступен. Принятые Events можно открыть без сети.',
+    'server_refused': 'Сервер отказал в операции. Сохранённые данные не удалены.',
+    'operation_refused': 'Операция не выполнена: проверьте данные доверия и состояние доступа.',
+    'no_content': 'Принятого содержимого пока нет. Нужна публикация и связь с сервером.',
+    'synchronizing': 'Получение и проверка публикации. Готовность ещё не подтверждена.',
+    'ready': 'Events открыты: нативное окно подтвердило готовность.',
+    'connected': 'Events открыты; синхронизация и отправка подтверждений работают.',
+    'display_closed': 'Нативный показ остановлен. Принятое содержимое сохранено.',
+}
+
+
+class Window:
+    def __init__(self, root, connection, *, events=None):
+        self.root, self.connection, self.events = root, connection, events
+        self.closing, self.saved, self.raw = False, False, None
+        self.facts = {}
+        self.hints = []
+        root.title('Kiosk — подключение Windows')
+        root.geometry(f'900x{min(850, root.winfo_screenheight() - 100)}')
+        root.minsize(780, 550)
+        root.protocol('WM_DELETE_WINDOW', self.close)
+        self.address = tk.StringVar()
+        self.digest = tk.StringVar()
+        self.file_name = tk.StringVar()
+        self.confirmed = tk.BooleanVar()
+        self.clock_checked = tk.BooleanVar()
+        self.clock = tk.StringVar(value=datetime.now(timezone.utc).isoformat(timespec='seconds'))
+        self.mode = tk.StringVar(value='tv')
+        self.status = tk.StringVar(value='Введите адрес и публичные данные от доверенного администратора.')
+        self.code = tk.StringVar(value='—')
+        self.details = tk.StringVar(value='Публичные данные ещё не проверены.')
+        canvas = tk.Canvas(root, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(root, orient='vertical', command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side='right', fill='y')
+        canvas.pack(side='left', fill='both', expand=True)
+        box = ttk.Frame(canvas, padding=16)
+        content = canvas.create_window((0, 0), window=box, anchor='nw')
+        box.bind('<Configure>', lambda event: canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.bind('<Configure>', lambda event: canvas.itemconfigure(content, width=event.width))
+        root.bind('<MouseWheel>', lambda event: canvas.yview_scroll(-int(event.delta / 120), 'units'))
+        ttk.Label(box, text='Подключение к серверу Events', font=('Segoe UI', 16)).pack(anchor='w')
+        row = ttk.Frame(box); row.pack(fill='x', pady=5)
+        self.search_button = ttk.Button(row, text='Найти сервер в LAN', command=self.search)
+        self.search_button.pack(side='left')
+        self.select_button = ttk.Button(row, text='Выбрать адрес', command=self.select)
+        self.select_button.pack(side='left', padx=8)
+        ttk.Label(box, text='Результаты не проверены: выбор заполняет только адрес.', wraplength=825).pack(anchor='w')
+        self.results = tk.Listbox(box, height=3, exportselection=False)
+        self.results.pack(fill='x')
+        ttk.Label(box, text='HTTPS-адрес сервера с портом').pack(anchor='w', pady=(10, 0))
+        self.address_entry = ttk.Entry(box, textvariable=self.address)
+        self.address_entry.pack(fill='x')
+        ttk.Label(box, text='Публичный bootstrap из уже доверенного канала: файл или вставка').pack(anchor='w', pady=(8, 0))
+        self.public = tk.Text(box, height=3, wrap='word')
+        self.public.pack(fill='x')
+        ttk.Label(box, text='Или путь к полученному публичному файлу bootstrap').pack(anchor='w')
+        self.file_entry = ttk.Entry(box, textvariable=self.file_name)
+        self.file_entry.pack(fill='x')
+        row = ttk.Frame(box); row.pack(fill='x', pady=5)
+        self.load_button = ttk.Button(row, text='Открыть публичный файл', command=self.load)
+        self.load_button.pack(side='left')
+        self.review_button = ttk.Button(row, text='Проверить данные', command=self.review)
+        self.review_button.pack(side='left', padx=8)
+        ttk.Label(box, textvariable=self.details, wraplength=825, justify='left').pack(anchor='w', pady=5)
+        ttk.Label(box, text='SHA256 из независимого доверенного источника').pack(anchor='w')
+        self.digest_entry = ttk.Entry(box, textvariable=self.digest); self.digest_entry.pack(fill='x')
+        self.confirm_box = ttk.Checkbutton(box, text='Сверены адрес, группа, сервер, ключ и независимый SHA256', variable=self.confirmed)
+        self.confirm_box.pack(anchor='w')
+        ttk.Label(box, text='Независимо проверенное время UTC (например 2026-11-06T00:00:00Z)').pack(anchor='w', pady=(6, 0))
+        self.clock_entry = ttk.Entry(box, textvariable=self.clock); self.clock_entry.pack(fill='x')
+        self.clock_box = ttk.Checkbutton(box, text='Время проверено независимо; разрешаю явное подтверждение', variable=self.clock_checked)
+        self.clock_box.pack(anchor='w')
+        row = ttk.Frame(box); row.pack(fill='x', pady=6)
+        self.enroll_button = ttk.Button(row, text='Подключить / продолжить', command=self.enroll)
+        self.enroll_button.pack(side='left')
+        self.time_button = ttk.Button(row, text='Подтвердить время', command=self.time)
+        self.time_button.pack(side='left', padx=6)
+        self.admin_button = ttk.Button(row, text='Открыть админку', command=self.admin)
+        self.admin_button.pack(side='left')
+        ttk.Label(box, text='Код сопряжения (действует не более 10 минут)').pack(anchor='w')
+        ttk.Label(box, textvariable=self.code, font=('Consolas', 22, 'bold')).pack(anchor='w')
+        row = ttk.Frame(box); row.pack(fill='x', pady=8)
+        self.mode_box = ttk.Combobox(row, textvariable=self.mode, values=('tv', 'kiosk'), width=9, state='readonly')
+        self.mode_box.pack(side='left')
+        self.run_button = ttk.Button(row, text='Запустить с синхронизацией', command=lambda: self.run(True))
+        self.run_button.pack(side='left', padx=7)
+        self.offline_button = ttk.Button(row, text='Открыть сохранённое без сети', command=lambda: self.run(False))
+        self.offline_button.pack(side='left')
+        self.cancel_button = ttk.Button(row, text='Остановить / назад', command=self.cancel)
+        self.cancel_button.pack(side='left', padx=7)
+        ttk.Label(box, textvariable=self.status, wraplength=825, justify='left', font=('Segoe UI', 10)).pack(anchor='w', pady=7)
+        ttk.Label(box, text='Поиск LAN — только подсказка. Доверие и сопряжение проверяются отдельно.', wraplength=825).pack(anchor='w')
+        self.editables = [self.address_entry, self.public, self.file_entry, self.load_button, self.review_button,
+                          self.digest_entry, self.confirm_box, self.clock_entry, self.clock_box,
+                          self.enroll_button, self.time_button, self.run_button, self.offline_button,
+                          self.search_button, self.select_button, self.results]
+        connection.start('inspect')
+        root.after(100, self.tick)
+
+    def search(self):
+        if self.saved or self.connection.busy:
+            return
+        self.hints = []
+        self.results.delete(0, 'end')
+        if self.connection.start('discover'):
+            self.status.set('Поиск до 3 секунд. Можно остановить; ручной адрес доступен после поиска.')
+
+    def select(self):
+        if self.saved or self.connection.busy:
+            return
+        selected = self.results.curselection()
+        if not selected or selected[0] >= len(self.hints):
+            self.status.set('Выберите строку или введите адрес вручную.')
+            return
+        self.address.set(self.hints[selected[0]]['origin'])
+        self.confirmed.set(False)
+        self.raw = None
+        self.details.set('Адрес выбран из непроверенной подсказки. Сверьте независимые публичные данные.')
+        self.status.set('Заполнен только адрес. Подключение не начато; нужны независимые данные доверия.')
+
+    def load(self):
+        name = self.file_name.get().strip()
+        if name:
+            try:
+                with open(name, 'rb') as stream:
+                    raw = stream.read(16385)
+                if len(raw) > 16384:
+                    raise ValueError()
+                self.public.delete('1.0', 'end'); self.public.insert('1.0', raw.decode('utf-8'))
+                self.review()
+            except (OSError, ValueError):
+                self.status.set('Не удалось прочитать публичный файл (предел 16 КиБ).')
+        else:
+            self.status.set('Укажите путь к публичному файлу или вставьте его содержимое выше.')
+
+    def review(self):
+        try:
+            raw = self.public.get('1.0', 'end-1c').encode('utf-8')
+            value = public_input(raw, self.address.get().strip())
+            self.raw = raw
+            self.confirmed.set(False)
+            expiry = datetime.fromtimestamp(value['expires_at'], timezone.utc).isoformat()
+            self.details.set(f"Адрес: {value['origin']}\nГруппа: {value['group_id']}\nСервер: {value['server_id']}\nКлюч: {value['group_key_id']}\nBootstrap действует до {expiry}")
+            self.status.set('Сверьте эти данные и SHA256 через независимый доверенный канал.')
+            return True
+        except Exception:
+            self.raw = None
+            self.confirmed.set(False)
+            self.status.set('Проверьте точный HTTPS-адрес, формат и срок bootstrap. Адрес должен совпадать.')
+            return False
+
+    def enroll(self):
+        try:
+            if self.saved:
+                self.connection.start('enroll')
+                return
+            raw = self.public.get('1.0', 'end-1c').encode('utf-8')
+            public_input(raw, self.address.get().strip(), confirmation=self.digest.get().strip(), confirmed=self.confirmed.get())
+            utc = confirmed_time(self.clock.get(), self.clock_checked.get())
+            self.connection.start('enroll', raw=raw, address=self.address.get().strip(),
+                                  digest=self.digest.get().strip(), confirmed=self.confirmed.get(), utc=utc)
+        except Exception:
+            self.status.set('Подключение не начато: нужны совпадающий адрес, действующий bootstrap, независимый SHA256 и подтверждённое UTC-время.')
+
+    def time(self):
+        try:
+            self.connection.start('time', utc=confirmed_time(self.clock.get(), self.clock_checked.get()))
+        except Exception:
+            self.status.set(MESSAGES['time_required'])
+
+    def admin(self):
+        # Only a previously verified/saved origin may be opened; never trust an arbitrary entry.
+        address = self.facts.get('origin')
+        if address:
+            webbrowser.open(address + '/admin/devices')
+
+    def run(self, online):
+        self.connection.start('display', mode=self.mode.get(), online=online)
+
+    def cancel(self):
+        self.connection.cancel()
+        self.status.set('Остановка текущей операции; ожидание завершения ограниченного запроса…')
+
+    def close(self):
+        self.closing = True
+        self.cancel()
+
+    def tick(self):
+        try:
+            while True:
+                value = self.connection.events.get_nowait()
+                if self.events:
+                    with self.events.open('a', encoding='utf-8') as out:
+                        out.write(json.dumps(value, ensure_ascii=False) + '\n')
+                state = value['state']
+                if state == 'discovered':
+                    self.hints = value['hints']
+                    self.results.configure(state='normal')
+                    self.results.delete(0, 'end')
+                    for hint in self.hints:
+                        self.results.insert('end', f"{hint['label']} | {hint['origin']}")
+                    self.status.set('Выберите сервер и отдельно проверьте доверие.' if self.hints else
+                                    'Ответов нет. Это не доказывает отсутствие сервера; введите адрес вручную.')
+                elif state == 'discovery_cancelled':
+                    self.hints = []
+                    self.results.configure(state='normal')
+                    self.results.delete(0, 'end')
+                    self.status.set('Поиск остановлен. Можно ввести адрес вручную.')
+                elif state == 'discovery_failed':
+                    self.status.set('Поиск недоступен. Введите HTTPS-адрес вручную; данные сохранены.')
+                if 'saved' in value:
+                    self.facts = value
+                    self.saved = value['saved']
+                    if self.saved:
+                        self.hints = []
+                        self.results.configure(state='normal')
+                        self.results.delete(0, 'end')
+                        self.mode.set(value['mode'])
+                        self.address.set(value['origin'])
+                        self.details.set(f"Группа: {value['group']}\nСервер: {value['server']}\nУстройство: {value['device']}\nЗапрос: {value['request']}\nNonce: {value['nonce']}\nПрофиль: {value['profile']}\nСохранённые Events: {'есть' if value['content'] else 'пока нет'}; доступ: {'отозван' if value['revoked'] else 'одобрен' if value['approved'] else 'ожидает одобрения'}")
+                if state == 'pending':
+                    self.code.set(value['code'])
+                elif state in ('approved', 'denied', 'expired', 'access_refused'):
+                    self.code.set('—')
+                if state in MESSAGES:
+                    text = MESSAGES[state]
+                    if state == 'saved' and value.get('saved'):
+                        text = 'Сохранённое подключение загружено. Для принятого содержимого сеть не нужна.'
+                    if value.get('http'):
+                        text += f" HTTP {value['http']}."
+                    if value.get('retained'):
+                        text += ' Уже открытое содержимое сохранено.'
+                    self.status.set(text)
+        except queue.Empty:
+            pass
+        busy = self.connection.busy
+        for widget in self.editables:
+            widget.configure(state='disabled' if busy else 'normal')
+        self.mode_box.configure(state='disabled' if busy else 'readonly')
+        self.time_button.configure(state='normal' if self.saved and not busy else 'disabled')
+        self.cancel_button.configure(state='normal' if busy else 'disabled')
+        if self.saved:
+            for widget in (self.address_entry, self.public, self.file_entry, self.load_button, self.review_button,
+                           self.digest_entry, self.confirm_box, self.search_button, self.select_button, self.results):
+                widget.configure(state='disabled')
+        if self.closing and not busy:
+            self.root.destroy()
+            return
+        self.root.after(100, self.tick)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--root', type=Path, default=Path(os.environ.get('LOCALAPPDATA', Path.home())) / 'KioskConnect')
+    parser.add_argument('--shell', type=Path)
+    parser.add_argument('--audit', type=Path)
+    parser.add_argument('--events', type=Path, help='Fixed public UI states only; never native private state')
+    args = parser.parse_args()
+    executable = Path(sys.executable if getattr(sys, 'frozen', False) else __file__).resolve()
+    shell = args.shell or executable.parents[2] / 'shell' / 'KioskOfflineDisplay.exe'
+
+    def audit(value):
+        if args.audit:
+            with args.audit.open('a', encoding='utf-8') as stream:
+                stream.write(json.dumps(value) + '\n')
+
+    root = tk.Tk()
+    Window(root, Connection(args.root, shell, audit=audit), events=args.events)
+    root.mainloop()
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

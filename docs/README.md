@@ -1,12 +1,14 @@
 # Kiosk documentation index
 
-Primary requirements: **owner-approved TZ_RECONCILED.md revision 1.2.2 (owner decisions through 2026-10-28)**. One current status/check ledger: **[TZ_PROGRESS.md](TZ_PROGRESS.md)**, including stage acceptance and the current owner-selected execution boundary. Specification approval alone does not grant acceptance or select an implementation stage.
+Primary requirements: **owner-approved TZ_RECONCILED.md revision 1.2.2 (owner decisions through 2026-10-28)**. One current status/check ledger: **[TZ_PROGRESS.md](TZ_PROGRESS.md)**, including stage acceptance and the current owner-selected execution boundary. [Resume at the current coordinator checkpoint](TZ_PROGRESS.md#resume-here--coordinator-checkpoint-2026-11-05). Specification approval alone does not grant acceptance or select an implementation stage.
 
 ## Resuming development
 
 Start with root AGENTS,Git branch/status,and the current handoff/evidence summary at the top of [TZ_PROGRESS.md](TZ_PROGRESS.md). Read only the selected requirements/dependencies after that. The ledger contains next action,PC1/PC2 branch cautions,known acceptance limits and preserved evidence;this index is not another status queue. Historical dispatches in Android task draft and dated plans must not restart completed tests. Root AGENTS defines when prior evidence may be reused and when a rerun is justified.
 
 ## Current working documents
+
+Reusable laboratory setup: [persistent test policy](TEST_LAB_POLICY.md), with retained state recorded only in the progress ledger.
 
 Two-PC entry points: [coordination workflow](TWO_PC_WORKFLOW.md),
 [shared Events contract and examples](../contracts/README.md),
@@ -37,6 +39,7 @@ Client implementation modules: [publication export/store/renderer](../kiosk/publ
 | [Implementation audit](PROJECT_AUDIT.md) | Unchanged technical snapshot dated 2026-10-26; not a current device check |
 | [Specification technical audit](TZ_TECHNICAL_AUDIT.md) | Reconciliation rationale and findings, read with its current integration clarification |
 | [Lab context](LAB_CONTEXT.md) | Preserved handoff history; no live-state, instruction or permission authority |
+| [Core documentation audit](DOCUMENTATION_AUDIT.md) | Dated product/workflow consistency review; not requirements, status authority or a new task |
 | [Integration report](TZ_PROGRESS_UPDATE_REPORT.md) | Changed files, preservation/links verification and limits |
 | [Owner transfer guide](DOCUMENTATION_GUIDE.md) | Exact package layout, replacement/removal map and first Codex task |
 
