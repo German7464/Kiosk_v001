@@ -25,3 +25,14 @@ Owner authorized separate source checkpoint commits and normal pushes on Nov12 a
 - Older Internet-connected Windows10 VM: `ssh work@192.168.1.220`; older admin/KioskTestAdmin endpoints are historical.
 - Preserve strict host-key verification; verify actual host/account/checkout/boot/runtime before relying on a connection. If the restricted execution account lacks known_hosts, use the authorized ordinary-user environment, never disable checking or erase a mismatch.
 - Access failures are precise blockers, not reasons to rerun product tests. A VM reboot alone is not acceptance evidence. Apply [lab policy](TEST_LAB_POLICY.md); old processes/listeners/trust observations are not perpetual health.
+
+
+## Integration plan after the current blocks
+
+Preserved checkpoints: PC1 source00dd77538a2a9de525b303f3fc130569c487761f; PC2 Android73772b2abc39fe89ef17b50a875b06c2b5c9290d, normal pushes verified Nov12. Git is source recovery, not a private runtime/data backup. Current task executors do not inherit permission to commit/push further changes.
+
+After both coherent outcomes, record their exact source/artifact identities and obtain concrete integration authorization. Use current PC1 server/Windows and coordinator common docs as the basis, bring in reviewed android/ source/build/test/vendor material from PC2, and reconcile root build/dependency references explicitly. Do not wholesale merge PC2 historical common docs or replace PC1 server code. Prepare conflicts without discarding either side; run combined applicable checks once on the actual integrated candidate. No master/v2 deployment or branch switch is implied.
+
+## Fast feedback and stopping rules
+
+One product outcome per prompt; executors fix findings and continue within that scope. During development run fast affected checks. Run the full applicable task acceptance once on the final candidate; repeat only failed/affected checks after corrections. Check/build never deploy implicitly. Explicit deploy/journey modes identify target, package and data root. Reuse unchanged valid artifacts/evidence with dirty-source and dependency identities, not HEAD alone. Prefer existing tools and retained healthy labs. Record one concise final report; do not turn each finding into a new dispatch.

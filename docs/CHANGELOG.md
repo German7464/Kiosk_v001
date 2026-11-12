@@ -3,6 +3,7 @@
 ## 2026-11-12 — installed Windows reliability and workflow consolidation
 
 - Reviewed installed Windows service/client migration, four reliability/security corrections and actual installed admin logout; acceptance remains bounded, stage5 PARTIAL.
+- Preserved separate Windows and Android source checkpoints and verified normal pushes to their existing GitHub branches; no merge or runtime backup claim.
 - Consolidated current ledger and archived superseded dispatches without discarding evidence. Selected bounded manual offline Windows updates and independent Android tooling; no updater implementation accepted yet.
 
 ## 2026-11-08 — bounded smartphone-pairing Windows/browser acceptance
