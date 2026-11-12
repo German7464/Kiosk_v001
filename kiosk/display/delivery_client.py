@@ -15,7 +15,30 @@ from .coordinator import _check_storage, _view_identity, _read_json, display_ses
 from .session import install_for_display
 from .delivery_authority import PrivateState, bootstrap, positive
 from .delivery_capture import Capture, validate_metadata
-from .delivery_transport import Transport, TransportError
+from .delivery_transport import MAX_RETRY_SECONDS, Transport, TransportError, retry_delay
+
+
+# The server enforces a minimum poll interval and answers earlier polls with 429
+# slow_down. A one-second client margin keeps ordinary jitter from colliding with
+# the server timestamp, and any remaining 429 is retried after its Retry-After.
+POLL_SECONDS = 5
+POLL_MARGIN_SECONDS = 1
+# Persisted server-imposed prohibition; distinct from the ordinary local poll
+# schedule so a throttle is not confused with "the next ordinary poll is due".
+RETRY_DEADLINE_KEY = 'retry_not_before'
+RETRYABLE_STATUSES = (429, 503)
+
+
+def retry_wait(error):
+    return max(1, retry_delay(getattr(error, 'retry_after', POLL_SECONDS), POLL_SECONDS))
+
+
+def retry_deadline(value):
+    """Read a persisted deadline defensively; a malformed value never delays forever."""
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return 0
 
 
 class Client:
@@ -48,6 +71,21 @@ class Client:
 
     def enroll(self, bootstrap_path=None, confirmation=None, confirmed_utc=None):
         value = self.native.data
+        # Both persisted deadlines are checked BEFORE any request, using only local
+        # state, so a restart or an impatient click cannot reach the endpoints early.
+        # A server-imposed retry prohibition (429/503) is distinct from the ordinary
+        # poll schedule, but neither may send the pending enrollment again.
+        now = int(time.time())
+        prohibition = retry_deadline(value.get(RETRY_DEADLINE_KEY))
+        schedule = retry_deadline(value.get('next_poll'))
+        deferred = value.get('pending') or {}
+        if value.get('binding') and max(prohibition, schedule) > now:
+            if prohibition > now:
+                return {'result': 'rate_limited', 'user_code': deferred.get('user_code', ''),
+                        'device_id': value['binding'].get('device_id', ''),
+                        'retry_after': prohibition - now}
+            return {'result': 'pending', 'user_code': deferred.get('user_code', ''),
+                    'device_id': value['binding'].get('device_id', ''), 'wait': schedule - now}
         if not value:
             raw = Path(bootstrap_path).read_bytes() if bootstrap_path else b''
             if len(raw) > 16384 or digest(confirmation) != sha(raw):
@@ -65,6 +103,10 @@ class Client:
         try:
             credential = transport.json('/api/v2/client/status')
         except TransportError as error:
+            # A bounded server rate limit is retryable: keep the persisted request
+            # and report the wait instead of ending the enrollment workflow.
+            if error.status in RETRYABLE_STATUSES:
+                return self._defer(value, retry_wait(error))
             if error.status != 401 or value.get('credential'):
                 if error.status == 401:
                     value['revoked'] = True
@@ -75,29 +117,53 @@ class Client:
             return {'result': 'approved', 'device_id': value['binding']['device_id']}
         pending = value.get('pending')
         if pending is None:
-            pending = transport.json('/api/v2/device/authorize', body=value['binding'], authenticated=False)
+            try:
+                pending = transport.json('/api/v2/device/authorize', body=value['binding'], authenticated=False)
+            except TransportError as error:
+                if error.status in RETRYABLE_STATUSES:
+                    return self._defer(value, retry_wait(error))
+                raise
             fields(pending, 'version request_id device_code user_code expires_in interval')
             if (type(pending['version']) is not int or pending['version'] != 1 or
                     pending['request_id'] != value['binding']['request_id'] or
-                    pending['expires_in'] != 600 or pending['interval'] != 5 or
+                    pending['expires_in'] != 600 or pending['interval'] != POLL_SECONDS or
                     not isinstance(pending['user_code'], str) or len(pending['user_code']) != 8):
                 raise PackageError('enrollment_response_refused')
             digest(pending['device_code'])
             value['pending'] = pending
             self.native.save()
-        if time.time() < value.get('next_poll', 0):
-            return {'result': 'pending', 'user_code': pending['user_code'], 'device_id': value['binding']['device_id']}
-        value['next_poll'] = int(time.time()) + 5
+        remaining = int(value.get('next_poll', 0)) - int(time.time())
+        if remaining > 0:
+            return {'result': 'pending', 'user_code': pending['user_code'],
+                    'device_id': value['binding']['device_id'], 'wait': remaining}
+        value['next_poll'] = int(time.time()) + pending['interval'] + POLL_MARGIN_SECONDS
         self.native.save()
-        response = transport.json('/api/v2/device/token', body={'device_code': pending['device_code']},
-                                  authenticated=False, allowed=(200, 202))
+        try:
+            response = transport.json('/api/v2/device/token', body={'device_code': pending['device_code']},
+                                      authenticated=False, allowed=(200, 202))
+        except TransportError as error:
+            if error.status in RETRYABLE_STATUSES:
+                return self._defer(value, retry_wait(error), pending['user_code'])
+            raise
         if response.get('state') == 'pending':
             fields(response, 'version state interval')
-            if type(response['version']) is not int or response['version'] != 1 or response['interval'] != 5:
+            if type(response['version']) is not int or response['version'] != 1 or response['interval'] != POLL_SECONDS:
                 raise PackageError('enrollment_response_refused')
-            return {'result': 'pending', 'user_code': pending['user_code'], 'device_id': value['binding']['device_id']}
+            return {'result': 'pending', 'user_code': pending['user_code'],
+                    'device_id': value['binding']['device_id'], 'wait': POLL_SECONDS + POLL_MARGIN_SECONDS}
         self._credential(response)
         return {'result': 'approved', 'device_id': value['binding']['device_id']}
+
+    def _defer(self, value, wait, user_code=''):
+        """Persist the server wait for 429/503; the same request identity is kept."""
+        wait = max(1, min(MAX_RETRY_SECONDS, int(wait)))
+        moment = int(time.time())
+        value[RETRY_DEADLINE_KEY] = moment + wait
+        # The ordinary poll schedule stays separate but must not fire earlier.
+        value['next_poll'] = moment + wait + POLL_MARGIN_SECONDS
+        self.native.save()
+        return {'result': 'rate_limited', 'user_code': user_code,
+                'device_id': value['binding']['device_id'], 'retry_after': wait}
 
     def _credential(self, credential):
         fields(credential, 'version state device_id profile credential_id expires_at scopes')
@@ -113,6 +179,8 @@ class Client:
             raise PackageError('credential_replacement_requires_enrollment')
         self.native.data['credential'] = credential
         self.native.data.pop('revoked', None)
+        self.native.data.pop(RETRY_DEADLINE_KEY, None)
+        self.native.data.pop('next_poll', None)
         self.native.save()
 
     def _online_authority(self):

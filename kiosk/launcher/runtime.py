@@ -47,9 +47,12 @@ class LocalRuntime:
         self.dispatcher = ThreadedTaskDispatcher()
         self.dispatcher.set_thread_count(4)
         try:
+            # Explicit socket bounds: an inactive channel is reaped well before the
+            # 120 s/30 s defaults, so one stalled client cannot hold a slot for minutes.
             self.server = create_server(identified, host="127.0.0.1", port=self.profile["port"], threads=4,
                                         map=self.channels, _dispatcher=self.dispatcher,
-                                        max_request_body_size=app.config["MAX_CONTENT_LENGTH"])
+                                        max_request_body_size=app.config["MAX_CONTENT_LENGTH"],
+                                        channel_timeout=60, cleanup_interval=5)
         except BaseException:
             self.close()
             raise

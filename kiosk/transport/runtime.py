@@ -128,6 +128,7 @@ class ManagedHttps:
             self.phase = "backend"
             self.server = create_server(identified, host="127.0.0.1", port=backend_port, threads=4, map={},
                                         max_request_body_size=self.app.config["MAX_CONTENT_LENGTH"],
+                                        channel_timeout=60, cleanup_interval=5,
                                         trusted_proxy="127.0.0.1", trusted_proxy_count=1,
                                         trusted_proxy_headers={"x-forwarded-for", "x-forwarded-proto", "x-forwarded-host"},
                                         clear_untrusted_proxy_headers=True)

@@ -34,13 +34,14 @@ def build(sdk_archive, destination):
         source = source.replace(placeholder, digest)
     temporary = destination / 'OfflineDisplay.cs'
     temporary.write_text(source, encoding='utf-8')
-    command = [str(compiler), '/nologo', '/target:exe', '/platform:x64',
+    command = [str(compiler), '/nologo', '/target:exe', '/platform:x64', '/codepage:65001',
                '/out:' + str(destination / 'KioskOfflineDisplay.exe'),
                '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', '/r:System.Web.Extensions.dll',
                '/r:' + str(destination / 'Microsoft.Web.WebView2.Core.dll'),
                '/r:' + str(destination / 'Microsoft.Web.WebView2.WinForms.dll'), str(temporary),
                str(ROOT / 'kiosk/display/windows/PreparedView.cs'),
                str(ROOT / 'kiosk/display/windows/DisplayWindow.cs'),
+               str(ROOT / 'kiosk/display/windows/AdminWindow.cs'),
                str(ROOT / 'kiosk/display/windows/RuntimeStorage.cs')]
     subprocess.run(command, check=True, timeout=60)
     temporary.unlink()

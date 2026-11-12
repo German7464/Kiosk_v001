@@ -2,7 +2,7 @@
 
 This file preserves the supplied historical chat handoff for its unique test-lab paths, tooling, custody and cleanup information. It is **not a live handoff, health check, active authorization or next-task queue**. References to owner permission, running processes, accounts, addresses, credentials, remote access and next actions below describe their original checkpoint only. Verify current state and current task authorization before any operation; do not replay a past action from this text.
 
-Current work is governed by root [AGENTS](../AGENTS.md), the [approved specification](TZ_RECONCILED.md), and the current section of the [single progress ledger](TZ_PROGRESS.md). Only that ledger receives new handoffs. See [development recovery](DEVELOPMENT_RECOVERY.md) and the [documentation index](README.md). Old document names/links in the preserved block are provenance, not required files; the block is excluded from current navigation validation.
+Current work is governed by root [AGENTS](../../AGENTS.md), the [approved specification](../TZ_RECONCILED.md), and the current section of the [single progress ledger](../TZ_PROGRESS.md). Only that ledger receives new handoffs. See [development recovery](../DEVELOPMENT_RECOVERY.md) and the [documentation index](../README.md). Old document names/links in the preserved block are provenance, not required files; the block is excluded from current navigation validation.
 
 <!-- BEGIN HISTORICAL LAB HANDOFF: unchanged source bytes -->
 # Chat handoff — 2026-10-26
@@ -91,7 +91,7 @@ Evidence is ignored `logs/launcher-import-physical-20261025`: creation/helper, r
 
 ## Latest: documentation reconciled and configuration failures checked
 
-Audited TZ/stage allocation/current evidence and corrected stale current wording in V2_PLAN/Launcher README. The authoritative remaining-work list is now [Current stage 3 acceptance checklist](TZ_PROGRESS.md#current-stage-3-acceptance-checklist). Stage 3 remains incomplete; stage 4 remains unstarted. Do not repeat completed stage 2 endurance or reopen historical pending checks already superseded by physical evidence. Packaged MVP import and aggregate-storage policy were explicitly retained as outstanding, not silently accepted from source tests/resource warnings.
+Audited TZ/stage allocation/current evidence and corrected stale current wording in V2_PLAN/Launcher README. The authoritative remaining-work list is now [Current stage 3 acceptance checklist](TZ_PROGRESS_2026-11-07.md#current-stage-3-acceptance-checklist). Stage 3 remains incomplete; stage 4 remains unstarted. Do not repeat completed stage 2 endurance or reopen historical pending checks already superseded by physical evidence. Packaged MVP import and aggregate-storage policy were explicitly retained as outstanding, not silently accepted from source tests/resource warnings.
 
 Unchanged `632139d` package on `DIALOG-MEDIA2`: actual SCM refused malformed JSON, device schema 99 and a synthetic certificate-transaction marker with stopped/1066, runtime failed/JSONDecodeError, ValueError and RuntimeError respectively; no HTTP/HTTPS listeners or installed proxy. Service preserved injected files and unrelated tested hashes. Original bytes were restored after every case; synthetic marker alone was removed after ownership/content verification. Real pre-existing journal would have aborted the helper before mutation. This is guard evidence, not interrupted real certificate activation/power-loss recovery. Active/previous/retained device config, HTTPS config, database and session-key hashes preserved; original UUID and identity-checked HTTP 200 returned each time.
 
@@ -227,9 +227,9 @@ The preceding fullscreen increment's full Python run executed 119 tests in 86.01
 
 ## Scope and current state
 
-The selected stage 2 disposable two-PC Windows/Chrome HTTPS LAN increment is **completed and Verified** within the evidence in [TZ Progress](TZ_PROGRESS.md#physical-two-pc-https-verification---2026-10-23). Stage 2 as a whole, section 18 and overall system acceptance remain incomplete. No stage 3 Launcher, packaging, replication or failover was started.
+The selected stage 2 disposable two-PC Windows/Chrome HTTPS LAN increment is **completed and Verified** within the evidence in [TZ Progress](TZ_PROGRESS_2026-11-07.md#physical-two-pc-https-verification---2026-10-23). Stage 2 as a whole, section 18 and overall system acceptance remain incomplete. No stage 3 Launcher, packaging, replication or failover was started.
 
-Read [../AGENTS.md](../AGENTS.md), [TZ.md](TZ.md), [TZ_PROGRESS.md](TZ_PROGRESS.md), [V2_PLAN.md](V2_PLAN.md), [MVP_SCOPE.md](MVP_SCOPE.md), [LAN_TRANSPORT.md](LAN_TRANSPORT.md) and the relevant [transport README](../kiosk/transport/README.md) before further implementation. Communicate in Russian; documentation/code remain English. The owner considers TZ.md and TZ_PROGRESS.md the main specification/progress sources. Keep exploration targeted and changes minimal.
+Read [../AGENTS.md](../../AGENTS.md), `TZ.md` (historical document, superseded), [TZ_PROGRESS.md](../TZ_PROGRESS.md), `V2_PLAN.md` (historical document, superseded), [MVP_SCOPE.md](../MVP_SCOPE.md), [LAN_TRANSPORT.md](../LAN_TRANSPORT.md) and the relevant [transport README](../../kiosk/transport/README.md) before further implementation. Communicate in Russian; documentation/code remain English. The owner considers TZ.md and TZ_PROGRESS.md the main specification/progress sources. Keep exploration targeted and changes minimal.
 
 ## Completed physical run
 

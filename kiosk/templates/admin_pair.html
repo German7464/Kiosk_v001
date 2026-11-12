@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% macro tr(en, ru, de) -%}{{ ru if active_language == 'ru' else de if active_language == 'de' else en }}{%- endmacro %}
+{% block title %}{{ tr('Pair a device', 'Сопряжение устройства', 'Gerät koppeln') }}{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_delivery.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_pair.css') }}">
+<section class="admin-panel pair-panel" id="pair-panel">
+    <h1>{{ tr('Pair a device', 'Сопряжение устройства', 'Gerät koppeln') }}</h1>
+    <p class="pair-intro">{{ tr('Sign in to the trusted server, then review the exact device, group, server and profile before you explicitly approve or deny. Scanning, opening the link, signing in or looking up a code never approves anything on its own.', 'Войдите на доверенный сервер, затем сверьте точные устройство, группу, сервер и профиль и явно одобрите или отклоните. Сканирование, переход по ссылке, вход или поиск кода сами ничего не одобряют.', 'Am vertrauenswürdigen Server anmelden, dann Gerät, Gruppe, Server und Profil prüfen und erst danach ausdrücklich genehmigen oder ablehnen. Scannen, Öffnen, Anmelden oder Nachschlagen genehmigt nie von selbst.') }}</p>
+
+    <div id="pair-entry">
+        <form id="pair-form" class="admin-form" autocomplete="off" novalidate>
+            <label for="pair-code">{{ tr('8-character code shown on the device', '8-значный код, показанный на устройстве', '8-stelliger Code auf dem Gerät') }}</label>
+            <div class="pair-code-row">
+                <input id="pair-code" name="code" required minlength="8" maxlength="8" pattern="[A-HJ-NP-Z2-9]{8}"
+                       autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" enterkeyhint="go"
+                       aria-describedby="pair-hint">
+                <button type="submit">{{ tr('Review', 'Проверить', 'Prüfen') }}</button>
+            </div>
+            <p id="pair-hint" class="pair-hint">{{ tr('Letters and digits only; no 0, 1, I or O. The code is valid for at most 10 minutes.', 'Только буквы и цифры; без 0, 1, I и O. Код действует не более 10 минут.', 'Nur Buchstaben und Ziffern; ohne 0, 1, I und O. Der Code gilt höchstens 10 Minuten.') }}</p>
+        </form>
+    </div>
+
+    <div id="pair-status" class="pair-status" role="status" aria-live="polite" hidden></div>
+
+    <div id="pair-review" hidden>
+        <h2>{{ tr('Review this pairing', 'Проверка сопряжения', 'Kopplung prüfen') }}</h2>
+        <p class="pair-intro">{{ tr('Compare these facts with the device and your trusted server address before confirming. The code alone does not authenticate a server.', 'Перед подтверждением сверьте эти сведения с устройством и доверенным адресом сервера. Один код не подтверждает подлинность сервера.', 'Angaben vor der Bestätigung mit Gerät und vertrauenswürdiger Serveradresse vergleichen. Ein Code allein bestätigt keinen Server.') }}</p>
+        <div id="pair-review-already" class="pair-status error" role="alert" hidden></div>
+        <dl class="delivery-identity pair-facts">
+            <dt>{{ tr('Device', 'Устройство', 'Gerät') }}</dt><dd><code id="pair-review-device"></code></dd>
+            <dt>{{ tr('Group', 'Группа', 'Gruppe') }}</dt><dd><code id="pair-review-group"></code></dd>
+            <dt>{{ tr('Server', 'Сервер', 'Server') }}</dt><dd><code id="pair-review-server"></code></dd>
+            <dt>{{ tr('Server origin', 'Адрес сервера', 'Serveradresse') }}</dt><dd><code id="pair-review-origin"></code></dd>
+            <dt>{{ tr('Profile', 'Профиль', 'Profil') }}</dt><dd><code id="pair-review-profile"></code></dd>
+            <dt>{{ tr('Code', 'Код', 'Code') }}</dt><dd><code id="pair-review-code"></code></dd>
+            <dt>{{ tr('State', 'Состояние', 'Status') }}</dt><dd><span id="pair-review-state"></span></dd>
+            <dt>{{ tr('Expires', 'Истекает', 'Gültig bis') }}</dt><dd><span id="pair-review-expires"></span></dd>
+        </dl>
+        <div id="pair-decisions" class="device-buttons pair-buttons">
+            <button id="pair-approve" class="pair-approve" type="button">{{ tr('Approve this device', 'Одобрить это устройство', 'Dieses Gerät genehmigen') }}</button>
+            <button id="pair-deny" class="pair-deny" type="button">{{ tr('Deny this request', 'Отклонить этот запрос', 'Diese Anfrage ablehnen') }}</button>
+        </div>
+    </div>
+    <div class="pair-cancel-row">
+        <button id="pair-cancel" class="pair-secondary" type="button" hidden>{{ tr('Cancel and start over', 'Отменить и начать заново', 'Abbrechen und neu beginnen') }}</button>
+    </div>
+</section>
+{% set pair_messages = {
+    'checking': tr('Checking the code…', 'Проверка кода…', 'Code wird geprüft…'),
+    'sending': tr('Sending the decision…', 'Отправка решения…', 'Entscheidung wird gesendet…'),
+    'default': tr('Pairing could not be completed. Review the current facts and retry.', 'Не удалось завершить сопряжение. Сверьте текущие данные и повторите.', 'Kopplung konnte nicht abgeschlossen werden. Prüfen Sie die aktuellen Angaben und versuchen Sie es erneut.'),
+    'invalid_user_code': tr('The code is not a valid 8-character pairing code.', 'Код не является допустимым 8-значным кодом сопряжения.', 'Der Code ist kein gültiger 8-stelliger Kopplungscode.'),
+    'unknown_code': tr('No pending pairing request uses that code.', 'Нет ожидающего запроса сопряжения с таким кодом.', 'Keine ausstehende Kopplungsanfrage verwendet diesen Code.'),
+    'enrollment_expired': tr('That code has expired. Ask the device for a new one.', 'Срок кода истёк. Запросите на устройстве новый код.', 'Der Code ist abgelaufen. Fordern Sie am Gerät einen neuen Code an.'),
+    'code_lookup_limit': tr('Too many attempts. Wait a moment and try again.', 'Слишком много попыток. Подождите и повторите.', 'Zu viele Versuche. Warten Sie kurz und versuchen Sie es erneut.'),
+    'code_attempt_limit': tr('Too many attempts. Wait a moment and try again.', 'Слишком много попыток. Подождите и повторите.', 'Zu viele Versuche. Warten Sie kurz und versuchen Sie es erneut.'),
+    'request_limit': tr('Too many attempts. Wait a moment and try again.', 'Слишком много попыток. Подождите и повторите.', 'Zu viele Versuche. Warten Sie kurz und versuchen Sie es erneut.'),
+    'binding_refused': tr('The code does not match this request. Check it and retry.', 'Код не соответствует этому запросу. Проверьте его и повторите.', 'Der Code passt nicht zu dieser Anfrage. Prüfen und erneut versuchen.'),
+    'decision_conflict': tr('This request was already decided. Review the code again.', 'По этому запросу уже принято решение. Проверьте код заново.', 'Diese Anfrage wurde bereits entschieden. Prüfen Sie den Code erneut.'),
+    'approval_no_longer_active': tr('This approval is no longer active. Review the code again.', 'Это одобрение больше не действует. Проверьте код заново.', 'Diese Genehmigung ist nicht mehr aktiv. Prüfen Sie den Code erneut.'),
+    'https_required': tr('This page must be opened over the trusted HTTPS address.', 'Эту страницу нужно открыть по доверенному HTTPS-адресу.', 'Diese Seite muss über die vertrauenswürdige HTTPS-Adresse geöffnet werden.'),
+    'invalid_credential': tr('Sign in to review this pairing.', 'Войдите, чтобы проверить сопряжение.', 'Melden Sie sich an, um die Kopplung zu prüfen.'),
+    'json_required': tr('The server rejected the request format.', 'Сервер отклонил формат запроса.', 'Der Server hat das Anforderungsformat abgelehnt.'),
+    'invalid_json': tr('The server could not read the request. Sign in again and retry.', 'Сервер не смог прочитать запрос. Войдите снова и повторите.', 'Der Server konnte die Anfrage nicht lesen. Erneut anmelden und wiederholen.'),
+    'csrf_expired': tr('The page expired. Sign in again and retry.', 'Срок страницы истёк. Войдите снова и повторите.', 'Die Seite ist abgelaufen. Erneut anmelden und wiederholen.'),
+    'network_error': tr('The server could not be reached. Check the connection and press Review again.', 'Сервер недоступен. Проверьте соединение и нажмите «Проверить» ещё раз.', 'Der Server ist nicht erreichbar. Verbindung prüfen und erneut auf „Prüfen“ tippen.'),
+    'invalid_response': tr('The server sent an unexpected response. Sign in again and retry.', 'Сервер вернул неожиданный ответ. Войдите снова и повторите.', 'Der Server hat unerwartet geantwortet. Erneut anmelden und wiederholen.'),
+    'cancelled': tr('Pairing review cancelled. No decision was sent.', 'Проверка сопряжения отменена. Решение не отправлено.', 'Kopplungsprüfung abgebrochen. Es wurde keine Entscheidung gesendet.'),
+    'approved': tr('Device approved. The client polling will now complete enrollment.', 'Устройство одобрено. Опрос клиента теперь завершит регистрацию.', 'Gerät genehmigt. Die Client-Abfrage schließt die Registrierung jetzt ab.'),
+    'denied': tr('Request denied. The client polling will now receive the denial.', 'Запрос отклонён. Опрос клиента теперь получит отказ.', 'Anfrage abgelehnt. Die Client-Abfrage erhält jetzt die Ablehnung.'),
+    'already_decided': tr('This request was already decided. No new decision can be sent.', 'По этому запросу уже принято решение. Новое решение отправить нельзя.', 'Diese Anfrage wurde bereits entschieden. Es kann keine neue Entscheidung gesendet werden.'),
+    'state_pending': tr('Pending', 'Ожидает', 'Ausstehend'),
+    'state_approved': tr('Approved', 'Одобрено', 'Genehmigt'),
+    'state_denied': tr('Denied', 'Отклонено', 'Abgelehnt')
+} %}
+<script type="application/json" id="pair-messages">{{ pair_messages|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/admin_pair.js') }}"></script>{% endblock %}

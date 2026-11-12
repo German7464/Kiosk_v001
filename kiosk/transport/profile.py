@@ -95,6 +95,16 @@ def proxy_configuration(profile, backend_port, admin_port, maximum_body, identit
             "http": {"grace_period": 8000000000, "servers": {"protected": {
                 "listen": [f"{profile.listen_host}:{profile.port}"],
                 "protocols": ["h1", "h2"], "automatic_https": {"disable": True},
+                # Bounded inbound sockets (durations are nanoseconds). Caddy leaves
+                # the total request-body read unbounded by default, so a client that
+                # keeps trickling a byte can hold an upstream connection forever and
+                # exhaust the backend's connection table. read_timeout caps the whole
+                # upload; read_idle_timeout aborts a stalled one quickly. 120 s still
+                # admits a 16 MiB upload over a normal LAN (~1.1 Mbit/s sustained).
+                "read_header_timeout": 10_000_000_000,
+                "read_timeout": 120_000_000_000,
+                "read_idle_timeout": 20_000_000_000,
+                "idle_timeout": 60_000_000_000,
                 "tls_connection_policies": [{"certificate_selection": {"any_tag": ["server"]}, "protocol_min": "tls1.2", "protocol_max": "tls1.3"}],
                 "routes": [
                     {"match": [{"not": [{"header": {"Host": [profile.authority]}}]}], "handle": [{"handler": "static_response", "status_code": 400}]},

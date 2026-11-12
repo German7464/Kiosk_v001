@@ -6,7 +6,7 @@ Current execution resumes only from [the active ledger](TZ_PROGRESS.md) and [cur
 
 ## Authority and execution boundary
 
-Owner approved sequential implementation of stages 3–6 on 2026-10-29. Stages 7–10 remain planning only and require separate selection. D13 approval and concrete authorization for privileged/live/risky operations remain mandatory. Earlier milestone names M0–M3 organize work; they are not additional specification stages. Approval of this roadmap does not authorize deployment or every future stage.
+Owner approved sequential implementation of stages 3–6 on 2026-10-29. Stages7–10 remain planning only except the owner-selected Nov12 manual offline Windows updater/build slice; see current ledger. Other outcomes require separate selection. D13 approval and concrete authorization for privileged/live/risky operations remain mandatory. Earlier milestone names M0–M3 organize work; they are not additional specification stages. Approval of this roadmap does not authorize deployment or every future stage.
 
 Preserve Flask/SQLite, Python/Waitress/PyInstaller, Events/Tags/images/routes/translations, existing installations and Git index. Keep separate-admin-PC CA custody and server-local private keys. Chrome remains the tested Windows path until a replacement is accepted. Edge is excluded from mandatory acceptance and must not be described as tested or supported.
 

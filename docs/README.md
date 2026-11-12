@@ -1,50 +1,31 @@
-# Kiosk documentation index
+# Kiosk documentation
 
-Primary requirements: **owner-approved TZ_RECONCILED.md revision 1.2.2 (owner decisions through 2026-10-28)**. One current status/check ledger: **[TZ_PROGRESS.md](TZ_PROGRESS.md)**, including stage acceptance and the current owner-selected execution boundary. [Resume at the current coordinator checkpoint](TZ_PROGRESS.md#resume-here--coordinator-checkpoint-2026-11-05). Specification approval alone does not grant acceptance or select an implementation stage.
+Start with [AGENTS](../AGENTS.md), branch/status and [the current checkpoint](TZ_PROGRESS.md#current-checkpoint). Read only requirements and module documentation relevant to the task.
 
-## Resuming development
+## Current documents
 
-Start with root AGENTS,Git branch/status,and the current handoff/evidence summary at the top of [TZ_PROGRESS.md](TZ_PROGRESS.md). Read only the selected requirements/dependencies after that. The ledger contains next action,PC1/PC2 branch cautions,known acceptance limits and preserved evidence;this index is not another status queue. Historical dispatches in Android task draft and dated plans must not restart completed tests. Root AGENTS defines when prior evidence may be reused and when a rerun is justified.
-
-## Current working documents
-
-Reusable laboratory setup: [persistent test policy](TEST_LAB_POLICY.md), with retained state recorded only in the progress ledger.
-
-Two-PC entry points: [coordination workflow](TWO_PC_WORKFLOW.md),
-[shared Events contract and examples](../contracts/README.md),
-[Android workspace](../android/README.md), [Android execution plan and dispatch history](ANDROID_TASK_DRAFT.md).
-
-[Server-only delivery / D13 design draft](SERVER_DELIVERY_DESIGN.md) records broader proposed trust decisions. The selected isolated integration uses the concrete [device-delivery-v1 contract](../contracts/device-delivery-v1/README.md) and [server module](../kiosk/delivery/README.md); neither document substitutes for acceptance evidence in the sole ledger.
-
-Client implementation modules: [publication export/store/renderer](../kiosk/publication/README.md) and [native display candidate](../kiosk/display/README.md). These describe implemented interfaces and limits; current acceptance/evidence remains in the progress ledger.
-
-| Document | Role / when to read |
+| Document | Purpose |
 | --- | --- |
-| [Root AGENTS](../AGENTS.md) | Workflow, scope, permissions and test/report rules |
-| [Root README](../README.md) | Existing startup, dependencies, packaging and operator entry points |
-| [Approved specification](TZ_RECONCILED.md) | Target requirements, 32 decisions, stage allocation and unresolved technical gates |
-| [Progress ledger](TZ_PROGRESS.md) | Current factual status, target traceability, stage-3 checks and preserved acceptance history |
-| [Execution roadmap](EXECUTION_PLAN.md) | Approved checkpoint sequence, dependencies and tests; not a progress ledger or permission to start future stages |
-| [Architecture](ARCHITECTURE.md) | Implemented baseline and code organization; not proof of the future architecture |
-| [LAN transport](LAN_TRANSPORT.md) | Existing source/Windows HTTPS, CA/CSR custody, renewal and dated fixtures |
-| [Development recovery](DEVELOPMENT_RECOVERY.md) | MVP inspection, isolated restoration precautions and verification commands |
-| [Changelog](CHANGELOG.md) | Append-only history of meaningful changes; not another live stage queue |
+| [Specification](TZ_RECONCILED.md) | Sole approved product requirements; approval is not stage acceptance. |
+| [Current ledger](TZ_PROGRESS.md) | Factual stage status, accepted evidence, retained laboratory inventory and one next action. |
+| [Two-PC workflow](TWO_PC_WORKFLOW.md) | Ownership, manual dispatch, Git boundaries and SSH references. |
+| [Recovery](DEVELOPMENT_RECOVERY.md) | Separate source checkpoints, environments and private-backup limitations. |
+| [Lab policy](TEST_LAB_POLICY.md) | Exact retained trust/runtime scope; no automatic renewal. |
+| [VM GUI harness](WINDOWS_GUI_HARNESS.md) | Required GUI testing method for the lab VMs: offline install, AI instructions, security rules and known limits. |
+| [Android continuation proposal](ANDROID_LAN_CONTINUATION.md) | Historical selected8443 scope; completed results and current validity are in the ledger. |
+| [Returned Android task](PC2_LAN_DISCOVERY_TASK.md) | Partial result scope; not a prompt to redispatch. |
+| [Architecture](ARCHITECTURE.md) | Implemented baseline, module boundaries and reviewed reuse candidates (not mandatory dependencies). |
+| [Execution roadmap](EXECUTION_PLAN.md) | Dependencies/exit criteria; not another queue or permission. |
+| [LAN transport](LAN_TRANSPORT.md) | HTTPS/CA custody, source commands and dated platform evidence. |
+| [Server delivery design](SERVER_DELIVERY_DESIGN.md) | Broader proposed D13 decisions, distinct from selected contracts. |
+| [Changelog](CHANGELOG.md) | Change history, not current status. |
 
-## Supporting evidence and historical boundaries
+## Working interfaces
 
-| Document | Role / limit |
-| --- | --- |
-| [MVP scope](MVP_SCOPE.md) | Historical compatibility boundary; its exclusions do not cancel v2 requirements |
-| [MVP measurements](MVP_BASELINE.md) | Retained workload/results; not UI, Android, 100-device or 72-hour acceptance |
-| [Implementation audit](PROJECT_AUDIT.md) | Unchanged technical snapshot dated 2026-10-26; not a current device check |
-| [Specification technical audit](TZ_TECHNICAL_AUDIT.md) | Reconciliation rationale and findings, read with its current integration clarification |
-| [Lab context](LAB_CONTEXT.md) | Preserved handoff history; no live-state, instruction or permission authority |
-| [Core documentation audit](DOCUMENTATION_AUDIT.md) | Dated product/workflow consistency review; not requirements, status authority or a new task |
-| [Integration report](TZ_PROGRESS_UPDATE_REPORT.md) | Changed files, preservation/links verification and limits |
-| [Owner transfer guide](DOCUMENTATION_GUIDE.md) | Exact package layout, replacement/removal map and first Codex task |
+[Root README](../README.md): startup/dependencies/package use. [Contracts](../contracts/README.md): selected interoperable formats. Module documentation: [Android](../android/README.md), [publication](../kiosk/publication/README.md), [display](../kiosk/display/README.md), [delivery](../kiosk/delivery/README.md), [Launcher](../kiosk/launcher/README.md), [transport](../kiosk/transport/README.md), [admin](../kiosk/features/admin/README.md), [API](../kiosk/features/api/README.md).
 
-For each task, start with AGENTS, current progress and only the relevant requirement/dependency paragraphs. Consult supporting documents when needed, not by rereading every historical document. In a discrepancy, use the owner's current scope and approved specification for requirements; retain observed failures/evidence in the ledger rather than rewriting them as successes. Architecture/audits/old notes cannot silently amend requirements.
+## Supporting references and archive
 
-Feature READMEs remain beside the existing code; this bundle does not replace them: [Launcher](../kiosk/launcher/README.md), [transport](../kiosk/transport/README.md), [administration](../kiosk/features/admin/README.md), and [public API](../kiosk/features/api/README.md). Current stage-gate links point to the current control section of the ledger. Local paths, linked headings and navigation reachability were checked on 2026-10-28; runtime commands and full source/behavioral consistency were not revalidated.
+[MVP scope](MVP_SCOPE.md), [measurements](MVP_BASELINE.md), [Windows layout check](WINDOWS_LAYOUT_CHECK.md) and [offline restart check](OFFLINE_RESTART_CHECK.md) retain their dated limits; none proves full release readiness.
 
-Historical source-document names in dated audits and preserved history are provenance only. Missing superseded specifications/plans are not required reading. Do not follow obsolete next-task or permission wording from historical blocks.
+[Archive index](archive/README.md) holds superseded prompts, audits, transfer instructions and the former long ledger. It preserves evidence and decisions without putting historical next steps in the active reading path. Missing historical filenames remain provenance, not documents to recreate. Archive content grants no permission and must not be dispatched as current work.

@@ -146,6 +146,10 @@ def register_admin_routes(app):
     # The admin.* endpoint prefix makes the existing CSRF before_request apply.
     app.extensions['device_delivery_limiter'] = AuthenticationLimiter(account_limit=1200, source_limit=2400)
     app.extensions['device_decision_limiter'] = AuthenticationLimiter(account_limit=5, source_limit=20, window=600)
+    # Bounded pre-lookup budget so unknown-code guessing cannot bypass the
+    # request-specific decision limit. Codes are 8 chars from a 32-char alphabet
+    # and expire in 10 minutes; this source budget makes enumeration infeasible.
+    app.extensions['pair_lookup_limiter'] = AuthenticationLimiter(account_limit=10, source_limit=30, window=600)
 
     @app.get('/admin/devices/bootstrap', endpoint='admin.delivery_bootstrap')
     @admin_required
@@ -163,6 +167,22 @@ def register_admin_routes(app):
             # The admin compares device/group/profile/origin, not the verifier.
             del row['binding']['secret_verifier']
         return jsonify(version=1, requests=rows)
+
+    @app.post('/admin/devices/pair/lookup', endpoint='admin.devices_pair_lookup')
+    @admin_required
+    @guarded
+    def pair_lookup():
+        payload = body()
+        fields(payload, 'code')
+        code = payload['code']
+        if (not isinstance(code, str) or len(code) != 8
+                or any(char not in 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' for char in code)):
+            raise DeliveryError('invalid_user_code', 400)
+        wait = current_app.extensions['pair_lookup_limiter'].reserve(
+            request.remote_addr or 'unknown', 'pair-lookup')
+        if wait:
+            raise DeliveryError('code_lookup_limit', 429)
+        return jsonify(version=1, review=state().pair_review(code))
 
     @app.post('/admin/devices/<request_id>/decision', endpoint='admin.delivery_decision')
     @admin_required

@@ -177,6 +177,65 @@ class DeviceAdminTests(unittest.TestCase):
         self.assertNotIn(b'<script>alert(1)</script>', page.data)
         self.assertIn(b'&lt;script&gt;', page.data)
 
+    def seed_devices(self, count):
+        with self.state.connection() as db:
+            for index in range(count):
+                db.execute('INSERT INTO devices VALUES (?,?,?,?,?,0)', (
+                    'device-%03d' % index, PROFILE, secrets.token_hex(16), secrets.token_hex(32),
+                    self.now + 7 * 86400))
+
+    def test_hundred_device_view_pages_and_last_device_guarded_revoke(self):
+        self.seed_devices(100)
+        first = self.client.get('/admin/devices', base_url=self.origin)
+        self.assertEqual(first.status_code, 200)
+        self.assertIn(b'Page 1 / 4', first.data)
+        self.assertIn(b'device-000', first.data)
+        self.assertNotIn(b'device-099', first.data)
+        last = self.client.get('/admin/devices?page=4', base_url=self.origin)
+        self.assertEqual(last.status_code, 200)
+        self.assertIn(b'Page 4 / 4', last.data)
+        self.assertIn(b'device-099', last.data)
+        model = self.state.admin_devices(4)
+        self.assertEqual((model['device_total'], model['device_pages'], model['device_page']),
+                         (100, 4, 4))
+        self.assertEqual((model['device_first'], model['device_last']), (76, 100))
+        seen = set()
+        for page in range(1, self.state.admin_devices()['device_pages'] + 1):
+            seen.update(item['device_id'] for item in self.state.admin_devices(page)['devices'])
+        self.assertEqual(len(seen), 100)
+        held = next(item for item in model['devices'] if item['device_id'] == 'device-099')
+        response = self.client.post('/admin/devices/device-099/confirm-revoke', base_url=self.origin,
+                                    data={'csrf_token': 'a' * 64, 'confirm_device_id': 'device-099',
+                                          'review_hash': held['review_hash']})
+        self.assertEqual(response.status_code, 303)
+        self.assertIn(b'Revoked', self.client.get('/admin/devices?page=4', base_url=self.origin).data)
+        self.assertTrue(self.state.admin_devices(4)['devices'][-1]['revoked'])
+
+    def test_device_page_navigation_rejects_malformed_and_clamps_unknown_pages(self):
+        self.seed_devices(100)
+        for value in ('', 'abc', '0', '-1', '1.5', '%20', '1e3', '9' * 30):
+            response = self.client.get('/admin/devices?page=' + value, base_url=self.origin)
+            self.assertEqual(response.status_code, 400, value)
+            self.assertIn(b'invalid_page', response.data)
+        # Overlong digits must be refused before int(): 5000 digits exceed Python's
+        # conversion limit and previously surfaced as 503 device_admin_unavailable.
+        for value in ('7' * 5000, '0' * 5000 + '1'):
+            response = self.client.get('/admin/devices?page=' + value, base_url=self.origin)
+            self.assertEqual(response.status_code, 400, len(value))
+            self.assertIn(b'invalid_page', response.data)
+        # A 19-digit value is still accepted and clamped normally.
+        self.assertEqual(self.client.get('/admin/devices?page=' + '0' * 18 + '1',
+                                         base_url=self.origin).status_code, 200)
+        for value in ('1', '4'):
+            self.assertEqual(self.client.get('/admin/devices?page=' + value,
+                                             base_url=self.origin).status_code, 200)
+        clamped = self.client.get('/admin/devices?page=999', base_url=self.origin)
+        self.assertEqual(clamped.status_code, 200)
+        self.assertIn(b'Page 4 / 4', clamped.data)
+        self.assertIn(b'device-099', clamped.data)
+        self.assertEqual(self.state.admin_devices(0)['device_page'], 1)
+        self.assertEqual(self.state.admin_devices(999)['device_page'], 4)
+
     def test_revoke_preserves_publication_targets_history_bytes_and_ready(self):
         binding, pending, form, secret = self.pending()
         self.review(binding, form)

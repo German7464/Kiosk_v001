@@ -19,7 +19,11 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     sources = [*sorted((root/'kiosk/display').glob('delivery_*.py')), root/'kiosk/display/native_crypto.py', Path(__file__)]
     if args.connect_ui:
-        sources += [root/'kiosk/display/connect.py', root/'kiosk/display/connect_ui.py', root/'kiosk/discovery.py']
+        # Discovery is a top-level module (kiosk/discovery.py), not kiosk/display/discovery.py.
+        sources += [root/'kiosk/display/connect.py', root/'kiosk/display/connect_ui.py',
+                    root/'kiosk/display/admin.py',
+                    root/'kiosk/discovery.py', root/'kiosk/display/qr_pairing.py',
+                    root/'kiosk/display/qrcodegen.py', root/'kiosk/display/qrcodegen.LICENSE.txt']
     before = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}
     source = output / 'client_entry.py'
     module = 'connect_ui' if args.connect_ui else 'delivery_client'
@@ -30,11 +34,16 @@ def main():
                '--specpath', str(output)]
     if args.connect_ui:
         command.append('--windowed')
+        # Pillow's Tk bridge is imported lazily in the pairing window; keep it bundled.
+        command += ['--hidden-import', 'PIL.ImageTk']
     for relative in ['kiosk/publication/renderer.py', 'kiosk/publication/renderer_assets', 'kiosk/translations']:
         path = root / relative
         if not path.exists():
             raise RuntimeError('Required renderer input missing: ' + relative)
         command += ['--add-data', str(path) + ';' + (relative if path.is_dir() else str(Path(relative).parent))]
+    if args.connect_ui:
+        # Package the vendored MIT notice beside the QR module it covers.
+        command += ['--add-data', str(root/'kiosk/display/qrcodegen.LICENSE.txt') + ';kiosk/display']
     command.append(str(source))
     with (output/'build.log').open('wb') as log:
         result = subprocess.run(command, cwd=root, stdout=log, stderr=subprocess.STDOUT, timeout=300)

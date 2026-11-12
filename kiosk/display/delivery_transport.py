@@ -9,9 +9,27 @@ from .delivery_authority import origin
 from .native_crypto import certificate_spki
 
 
+# The server may legitimately ask for a wait longer than one poll interval
+# (for example the 600 s device-decision budget). Only an implausible or
+# malformed value is bounded, so a valid Retry-After is never truncated.
+MAX_RETRY_SECONDS = 3600
+DEFAULT_RETRY_SECONDS = 5
+
+
+def retry_delay(value, default=DEFAULT_RETRY_SECONDS):
+    """Parse Retry-After safely: non-numeric, non-positive or huge values are bounded."""
+    try:
+        seconds = int(str(value).strip())
+    except (TypeError, ValueError, AttributeError):
+        return default
+    if seconds <= 0:
+        return default
+    return min(MAX_RETRY_SECONDS, seconds)
+
+
 class TransportError(PackageError):
-    def __init__(self, code, status=0, retry_after=5):
-        self.status, self.retry_after = status, min(60, max(5, retry_after))
+    def __init__(self, code, status=0, retry_after=DEFAULT_RETRY_SECONDS):
+        self.status, self.retry_after = status, retry_delay(retry_after)
         super().__init__(code)
 
 
@@ -69,8 +87,8 @@ class Transport:
     def json(self, path, *, body=None, authenticated=True, allowed=(200,)):
         with self.response(path, body=body, authenticated=authenticated) as response:
             if response.status not in allowed:
-                delay = response.getheader('Retry-After', '5')
-                raise TransportError('native_http_refused', response.status, int(delay) if delay.isdecimal() else 5)
+                raise TransportError('native_http_refused', response.status,
+                                     response.getheader('Retry-After', DEFAULT_RETRY_SECONDS))
             if response.getheader('Content-Type', '').split(';')[0] != 'application/json':
                 raise TransportError('json_content_type_refused', response.status)
             value = decode(response.read(2 * 1024 * 1024 + 1))

@@ -150,7 +150,7 @@ def read_password():
 
 def firewall(args, session, action):
     helper = Path(__file__).with_name('lan_firewall.ps1')
-    result = subprocess.run([str(args.pwsh), '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(helper),
+    result = subprocess.run([str(args.pwsh), '-NoProfile', '-NonInteractive', '-File', str(helper),
         '-Action', action, '-ServerAddress', args.server_ip, '-ClientAddress', args.client_ip,
         '-Port', str(args.port), '-Session', session], capture_output=True, timeout=180,
         creationflags=subprocess.CREATE_NO_WINDOW)

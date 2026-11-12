@@ -10,7 +10,7 @@ from kiosk.delivery.protocol import decode, sha
 from kiosk.publication.exporter import PackageError
 from kiosk.publication.store import PublicationStore, _atomic_write
 from .delivery_authority import bootstrap, origin
-from .delivery_client import Client
+from .delivery_client import MAX_RETRY_SECONDS, Client
 from .delivery_transport import TransportError
 
 
@@ -205,10 +205,20 @@ class Connection:
             result = client.enroll(path, options.get('digest'), options.get('utc'))
             if self.stop.is_set():
                 raise Cancelled()
-            self.emit(result['result'], code=result.get('user_code', ''), **self._facts(client))
+            self.emit(result['result'], code=result.get('user_code', ''),
+                      wait=int(result.get('retry_after', result.get('wait', 0)) or 0), **self._facts(client))
             if result['result'] == 'approved':
                 return
-            if self.stop.wait(5):
+            delay = 5
+            if result['result'] == 'rate_limited':
+                # Bounded wait from the server; a legitimate pending request resumes
+                # here without a restart, a new identity or a second approval. The
+                # wait is interruptible through self.stop, so a longer server delay
+                # never freezes the window or makes the UI unresponsive to cancel.
+                delay = min(MAX_RETRY_SECONDS, max(1, int(result.get('retry_after', 5))))
+            elif result.get('wait'):
+                delay = min(30, max(1, int(result['wait'])))
+            if self.stop.wait(delay):
                 raise Cancelled()
 
     def _display(self, client, mode, online):

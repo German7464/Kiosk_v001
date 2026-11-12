@@ -1,6 +1,6 @@
 # Events delivery: interrupted and incremental capture
 
-Additive transfer profile, 2026-11-04. The [frozen laboratory protocol](README.md) still governs trust, enrollment, assignments, admission and actual-ready receipts. This profile changes artifact transport only; it introduces no authority, credential, renderer, store or time source. PC1 and bounded Android support have reviewed evidence in the sole ledger; the completed coordinated task is retained in [the task record](../../docs/ANDROID_TASK_DRAFT.md). Factual acceptance remains in the sole ledger.
+Additive transfer profile, 2026-11-04. The [frozen laboratory protocol](README.md) still governs trust, enrollment, assignments, admission and actual-ready receipts. This profile changes artifact transport only; it introduces no authority, credential, renderer, store or time source. PC1 and bounded Android support have reviewed evidence in the sole ledger; the completed coordinated task is retained in [the task record](../../docs/archive/ANDROID_TASK_DRAFT.md). Factual acceptance remains in the sole ledger.
 
 ## HTTP behavior
 

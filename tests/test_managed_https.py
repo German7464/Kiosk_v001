@@ -104,6 +104,11 @@ class ManagedHttpsTests(unittest.TestCase):
         server = configuration["apps"]["http"]["servers"]["protected"]
         self.assertEqual(server["listen"], ["0.0.0.0:8443"])
         self.assertTrue(server["automatic_https"]["disable"])
+        # Inbound sockets are bounded; Caddy's total body read is unbounded by default.
+        self.assertEqual(server["read_header_timeout"], 10_000_000_000)
+        self.assertEqual(server["read_timeout"], 120_000_000_000)
+        self.assertEqual(server["read_idle_timeout"], 20_000_000_000)
+        self.assertEqual(server["idle_timeout"], 60_000_000_000)
         handlers = server["routes"][-1]["handle"]
         self.assertEqual(handlers[0]["max_size"], 12345)
         self.assertIn("X-Forwarded-*", handlers[1]["request"]["delete"])

@@ -15,6 +15,8 @@ from kiosk.transport.profile import unique_object
 
 
 DIRECTORIES = ("data", "config", "secrets", "logs", "temp", "updates", "status")
+DELIVERY_MARKER = "delivery-enabled.json"
+DELIVERY_MARKER_BODY = {"schema_version": 1}
 
 
 def safe_local_path(path):
@@ -50,12 +52,35 @@ class Storage:
     def profile(self):
         return self.directory("config") / "device.json"
 
+    def delivery_root(self):
+        """Opt-in native delivery root; absent marker keeps installed startup unchanged."""
+        marker = self.directory("config") / DELIVERY_MARKER
+        if not marker.is_file():
+            return None
+        if marker.stat().st_size > 4096 or json.loads(marker.read_bytes(), object_pairs_hook=unique_object) != DELIVERY_MARKER_BODY:
+            raise ValueError("The delivery enablement marker is invalid.")
+        return self.directory("data") / "delivery"
+
+    def enable_delivery(self):
+        """Explicit local enablement; creates no publisher identity by itself."""
+        root = self.directory("data") / "delivery"
+        self.directory("config").mkdir(parents=True, exist_ok=True)
+        root.mkdir(parents=True, exist_ok=True)
+        marker = self.directory("config") / DELIVERY_MARKER
+        if not marker.exists():
+            atomic_json(marker, DELIVERY_MARKER_BODY)
+        return root
+
     def app_config(self):
         data = self.directory("data")
-        return {"BASE_DIR": self.root, "INSTANCE_DIR": data,
-                "DATABASE_PATH": data / "kiosk.sqlite", "PRIVATE_UPLOAD_DIR": data / "uploads",
-                "PUBLIC_UPLOAD_DIR": data / "public/uploads", "STATIC_DIR": data / "public",
-                "SECRETS_DIR": self.directory("secrets")}
+        configuration = {"BASE_DIR": self.root, "INSTANCE_DIR": data,
+                         "DATABASE_PATH": data / "kiosk.sqlite", "PRIVATE_UPLOAD_DIR": data / "uploads",
+                         "PUBLIC_UPLOAD_DIR": data / "public/uploads", "STATIC_DIR": data / "public",
+                         "SECRETS_DIR": self.directory("secrets")}
+        delivery = self.delivery_root()
+        if delivery is not None:
+            configuration["DEVICE_DELIVERY_ROOT"] = delivery
+        return configuration
 
 
 def atomic_json(path, data):

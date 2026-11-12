@@ -8,10 +8,12 @@ import secrets
 import shutil
 import sqlite3
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
 from kiosk.app import create_app
+from kiosk.core.admin_sessions import new_session_id
 from kiosk.core.credentials import save_admin_password, session_credential_token
 from kiosk.database import get_database
 from kiosk.delivery.operator import distribution, publish_current_events
@@ -44,7 +46,8 @@ def admin_client(app):
         user = get_database().execute("SELECT * FROM users WHERE username='admin'").fetchone()
         user_id, token = user['id'], session_credential_token(user)
     with client.session_transaction(base_url='https://localhost') as session:
-        session.update(admin_user_id=user_id, admin_username='admin', credential_token=token, csrf_token='a' * 64)
+        session.update(admin_user_id=user_id, admin_username='admin', credential_token=token,
+                       csrf_token='a' * 64, session_id=new_session_id(), session_issued=int(time.time()))
     return client
 
 

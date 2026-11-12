@@ -2,13 +2,14 @@
 
 ## Purpose
 
-Stage 3 work in progress. Provide separate installed storage, explicit MVP import, local device setup, a Windows service host and a desktop controller. Source, package and selected second-PC checks have passed; this is not an accepted unattended release. Stage 2 is retained at `v2-stage2-baseline` (`9bbbc4e`). Current remaining gates are listed in [TZ Progress](../../docs/TZ_PROGRESS.md#current-stage-3-closure-gates). Dated checkpoints below describe their own evidence, not the current aggregate status.
+Stage 3 work in progress. Provide separate installed storage, explicit MVP import, local device setup, a Windows service host and a desktop controller. Source, package and selected second-PC checks have passed; this is not an accepted unattended release. Stage 2 is retained at `v2-stage2-baseline` (`9bbbc4e`). Current remaining gates are listed in [TZ Progress](../../docs/archive/TZ_PROGRESS_2026-11-07.md#current-stage-3-closure-gates). Dated checkpoints below describe their own evidence, not the current aggregate status.
 
 Disk availability probes in Launcher, diagnostic export and service logging query the installation volume root. A limited user may read public status while Windows denies `GetDiskFreeSpaceExW` on the protected installation directory. A failed disk probe leaves the readable service status visible and reports disk availability separately; private directory permissions are not relaxed. This was reproduced with the limited Work token in the dedicated VM and covered by status-preservation and resource-probe regression checks.
 
 ## Related Files
 
 - `storage.py`: versioned device configuration, fixed storage categories, atomic writes and explicit MVP import.
+- `migration.py`: bounded import of a stopped legacy runtime tree (Events DB/uploads, delivery root, session key, TLS generation) into the installed layout, with byte-level verification and a retained source.
 - `windows.py`, `installation.py`, `service.py`: Windows identity, permissions, installation and service control.
 - `runtime.py`: loopback/HTTPS ownership, bounded restart attempts, shutdown and rolling startup logs.
 - `client.py`, `display.py`, `gui.py`: instance readiness, diagnostic allowlist, dedicated browser profile and desktop interface.
@@ -49,6 +50,21 @@ Content and passwords remain managed through the existing authenticated admin pa
 ## Storage and Security
 
 Installed paths are derived from Windows known environment locations, never from the current working directory. `%ProgramFiles%/Kiosk` is reserved for binaries; `%ProgramData%/Kiosk` separates `data`, `config`, `secrets`, `logs`, `temp`, `updates` and `status`. `%LOCALAPPDATA%/Kiosk` holds per-user browser/maintenance settings. Development/MVP startup retains its existing paths unless explicit installed overrides are supplied.
+
+Native device delivery stays opt-in in the installed layout: `Storage.app_config()` supplies `data/delivery` as `DEVICE_DELIVERY_ROOT` only when `config/delivery-enabled.json` exists with `{"schema_version": 1}`. The supported migration and HTTPS commands create that marker/file explicitly; a plain local installation still creates no delivery database and activates no publisher.
+
+## Supported packaged installation, migration and HTTPS
+
+Run these from the installed `%ProgramFiles%\Kiosk` directory in an elevated terminal; each is a plain executable invocation with no PowerShell script or execution-policy change. Order matters because every step verifies the previous state.
+
+- `KioskMaintenance.exe install` — copies the verified package (manifest-checked) into `%ProgramFiles%\Kiosk`. It refuses a different existing installation, a running service or an interrupted staging directory.
+- `KioskMaintenance.exe setup-admin` — interactive only; creates the administrator account without accepting a password on the command line.
+- `KioskMaintenance.exe import-runtime --source STOPPED_RUNTIME_ROOT --ca CA_PEM --ca-sha256 CA_SHA256 --source-stopped` — imports the exact runtime tree described in `migration.py`: `instance/kiosk.sqlite` (only legacy `instance/uploads/` original-image prefixes are rewritten to `data/uploads/`), `instance/uploads`, `public/uploads`, `delivery/` (public configuration, SQLite state and published artifacts), `instance/session.key` and the TLS chain/key. It requires a new destination, retains the source, verifies database integrity, public image references, the delivery database and real key/certificate binding, then activates the staged tree atomically and writes `status/migration.json`. The CA fingerprint must match, and no key or certificate is generated or reissued.
+- `KioskMaintenance.exe configure --name ... --language ru|en|de --mode kiosk|tv --orientation landscape|portrait --port 5000 [--no-autostart]` — non-interactive equivalent of the Launcher configuration page: writes the schema-1 device profile, keeps an existing device UUID, applies storage ACLs and registers the `KioskService` virtual-account service with automatic or demand start.
+- `KioskMaintenance.exe import-https --generation SECRETS_GENERATION --fingerprint CA_SHA256 --origin https://host:port --listener IPv4` — activates an already signed public generation without the CSR flow. It requires the generation inside `secrets`, checks the CA fingerprint and key/certificate binding, then starts the real managed HTTPS runtime and proves chain, hostname and expiry with the product's own probe before the profile becomes active. Use `provision-https` for the normal request/sign/renew path.
+- `sc.exe start KioskService` / `sc.exe stop KioskService` / `sc.exe query KioskService` — service lifecycle. The service owns the HTTPS proxy and the loopback application; the user-session Launcher opens the display separately.
+
+Rollback is deliberate: keep the previous `%ProgramData%\Kiosk` copy and the source runtime tree; the migration never deletes either. `KioskMaintenance.exe uninstall --confirm-uninstall [--delete-data --device-id UUID]` is the supported removal path and refuses mismatched data deletion.
 
 The service uses the virtual account `NT SERVICE\KioskService`. Registration omits the password argument: virtual accounts require a null password, and passing an empty password produced Windows error 1057 in physical testing. Configuration and secrets are restricted to the operator, administrators, SYSTEM and the service identity. Ordinary users may read sanitized status, not private keys or the database. The service reads configuration/secrets, modifies data/log/temp/status directories and receives write access to its HTTPS ownership lock. Actual HTTP/HTTPS service execution under this identity/session 0, private-key access and graceful SCM stop passed on the second PC. A bounded diagnostic replacement under that same registered service identity passed 43 installed-path access probes (23 allowed, 20 denied specifically with Windows error 5); original command, application readiness, input hashes and ACLs were restored/preserved. This is not a distinct non-operator check. The separate 2026-10-26 VM checkpoint verified a real ordinary-account token: database/key/config/log reads and status/binary write handles denied with error 5; sanitized status/binary read handles granted. The corrected 2026-10-26 candidate package subsequently passed bounded separate-user GUI/CLI, Chrome display/admin opening, diagnostic export and own-startup/maintenance checks at actual VM sign-in; see TZ_PROGRESS.md for package/version limits.
 

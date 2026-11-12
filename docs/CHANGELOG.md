@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-11-12 — installed Windows reliability and workflow consolidation
+
+- Reviewed installed Windows service/client migration, four reliability/security corrections and actual installed admin logout; acceptance remains bounded, stage5 PARTIAL.
+- Consolidated current ledger and archived superseded dispatches without discarding evidence. Selected bounded manual offline Windows updates and independent Android tooling; no updater implementation accepted yet.
+
+## 2026-11-08 — bounded smartphone-pairing Windows/browser acceptance
+
+- Added local QR/manual-code entry, authenticated responsive admin review and explicit approval/denial through existing guarded enrollment. Packaged Windows client and disposable HTTPS Chrome journeys reviewed; physical smartphone/Android and disconnected-LAN qualification remain pending. Stage5 remains PARTIAL; no deployment or Git publication.
+
+
+## 2026-11-07 — documentation and disposable-cache cleanup
+
+- Reviewed reusable upstream solutions against the current stack/specification; recorded a prioritized, non-binding component shortlist and rejected protocol/stack substitutions in ARCHITECTURE. No dependency installation or product acceptance change.
+
+- Shortened root instructions and current ledger; archived completed dispatches/audits/history with repaired navigation. Corrected stale resume links, branch guidance, Android workspace description, native-resume status and the specification revision footer; requirements/acceptance unchanged.
+- Fully reviewed and editorially shortened the specification by8.4%, preserving section identities, decisions, publication rules and acceptance gates. Removed clean disposable recovery checkouts and additional project caches after preservation checks.
+- Kept unique evidence, laboratory state, private data, environments and accepted binaries. See the current ledger and ignored cleanup evidence for actual two-PC checks and disposable removals. No commit/push or product implementation is selected by cleanup.
+
+
 ## 2026-11-07
 
 - Preserved the owner-authorized server/Windows and separately published Android source checkpoints for GitHub recovery. Added exact branch/tag/Android commit references and two-directory recovery commands, with explicit private-data, signing-key, dependency and local-evidence exclusions. No product change, repeated acceptance test or new stage acceptance.
@@ -369,7 +388,7 @@
 
 - Repair kiosk Events initial-load retry, request deadlines and stale/overlapping update protection with focused JavaScript regressions.
 - Add initial internal offline-manifest integrity validation and Python tests; no offline client acceptance claimed.
-- Record owner specification revision 1.2.2 and selected sequential stages 3вЂ“6. Actual checks and pending gates: [progress ledger](TZ_PROGRESS.md#active-execution-checkpoint--2026-10-28-takes-precedence-over-earlier-pending-decisions).
+- Record owner specification revision 1.2.2 and selected sequential stages 3вЂ“6. Actual checks and pending gates: [progress ledger](archive/TZ_PROGRESS_2026-11-07.md#active-execution-checkpoint--2026-10-28-takes-precedence-over-earlier-pending-decisions).
 
 
 ## 2026-10-28 вЂ” Bounded Events export and A01 regression evidence

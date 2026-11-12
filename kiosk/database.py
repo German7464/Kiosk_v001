@@ -78,8 +78,21 @@ def initialize_database(app):
                 version INTEGER NOT NULL,
                 created_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS revoked_admin_sessions (
+                session_sha256 TEXT PRIMARY KEY,
+                issued INTEGER NOT NULL DEFAULT 0,
+                expires INTEGER NOT NULL
+            );
             """
         )
+        # Existing installations created the table without the sign-in time; add
+        # it in place so their current revocations keep working.
+        columns = {row[1] for row in database.execute("PRAGMA table_info(revoked_admin_sessions)")}
+        if "issued" not in columns:
+            database.execute(
+                "ALTER TABLE revoked_admin_sessions ADD COLUMN issued INTEGER NOT NULL DEFAULT 0"
+            )
         seed_settings(database)
         database.commit()
 

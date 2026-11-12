@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -11,6 +12,24 @@ from kiosk.launcher.storage import Storage, atomic_json, common_root, import_mvp
 def main():
     parser = argparse.ArgumentParser(allow_abbrev=False)
     commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("install")
+    configure = commands.add_parser("configure")
+    configure.add_argument("--name", default="Kiosk")
+    configure.add_argument("--language", choices=("ru", "en", "de"), default="ru")
+    configure.add_argument("--mode", choices=("kiosk", "tv"), default="kiosk")
+    configure.add_argument("--orientation", choices=("landscape", "portrait"), default="landscape")
+    configure.add_argument("--port", type=int, default=5000)
+    configure.add_argument("--no-autostart", action="store_true")
+    runtime = commands.add_parser("import-runtime")
+    runtime.add_argument("--source", required=True)
+    runtime.add_argument("--ca", required=True)
+    runtime.add_argument("--ca-sha256", required=True)
+    runtime.add_argument("--source-stopped", action="store_true", required=True)
+    https = commands.add_parser("import-https")
+    https.add_argument("--generation", required=True)
+    https.add_argument("--fingerprint", required=True)
+    https.add_argument("--origin", required=True)
+    https.add_argument("--listener", required=True)
     importer = commands.add_parser("import-mvp")
     importer.add_argument("--source", required=True)
     importer.add_argument("--source-stopped", action="store_true", required=True)
@@ -28,10 +47,41 @@ def main():
     commands.add_parser("setup-admin")
     commands.add_parser("reset-admin-password")
     args = parser.parse_args()
+    if args.command == "install":
+        from kiosk.launcher.installation import install
+
+        install()
+        print("Executable package installed. Configure the device next.")
+        return 0
     require_administrator()
     if getattr(sys, "frozen", False):
         os.environ["PATH"] = str(Path(sys.executable).parent / "runtime/powershell") + os.pathsep + os.environ.get("PATH", "")
     storage = Storage(common_root())
+    if args.command == "configure":
+        from kiosk.launcher.installation import configure_device
+
+        profile = configure_device(storage, name=args.name, language=args.language, mode=args.mode,
+                                   orientation=args.orientation, port=args.port,
+                                   autostart=not args.no_autostart)
+        print(json.dumps({"result": "configured", "device_id": profile["device_id"],
+                          "transport": profile["transport"], "port": profile["port"],
+                          "server_autostart": profile["server_autostart"]}))
+        return 0
+    if args.command == "import-runtime":
+        from kiosk.launcher.migration import import_runtime
+
+        record = import_runtime(storage, args.source, args.ca, args.ca_sha256,
+                                source_stopped=args.source_stopped)
+        print(json.dumps({"result": "imported", "group_id": record["group_id"],
+                          "server_id": record["server_id"], "origin": record["origin"],
+                          "generation": record["generation"]}))
+        return 0
+    if args.command == "import-https":
+        from kiosk.launcher.provisioning import import_https
+
+        result = import_https(storage, args.generation, args.fingerprint, args.origin, args.listener)
+        print(json.dumps(result))
+        return 0
     if args.command == "import-mvp":
         import_mvp(args.source, storage, source_stopped=args.source_stopped)
     elif args.command == "provision-https":

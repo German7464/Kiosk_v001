@@ -4,7 +4,7 @@ Accepted2026-11-06 in the sole ledger; do not redispatch without a concrete inva
 
 ## Goal and authority
 
-Complete one user outcome: Windows native Connect searches LAN, lists actual server hints, explicitly selects one and completes the already accepted independently verified bootstrap/manual-code/admin-approval/Events/real-ready journey. Empty search offers manual address; saved/offline content remains usable. Approved R5.1/R5.2/R18/R22 stage5 only. Read root AGENTS, current ledger checkpoint, those specification paragraphs, coordinator-owned [discovery contract](../contracts/device-discovery-v1/README.md), existing delivery contract and affected display/server READMEs. Stage5 remains partial; Android acceptance follows, no stage6–10 work.
+Complete one user outcome: Windows native Connect searches LAN, lists actual server hints, explicitly selects one and completes the already accepted independently verified bootstrap/manual-code/admin-approval/Events/real-ready journey. Empty search offers manual address; saved/offline content remains usable. Approved R5.1/R5.2/R18/R22 stage5 only. Read root AGENTS, current ledger checkpoint, those specification paragraphs, coordinator-owned [discovery contract](../../contracts/device-discovery-v1/README.md), existing delivery contract and affected display/server READMEs. Stage5 remains partial; Android acceptance follows, no stage6–10 work.
 
 ## Ownership and boundaries
 

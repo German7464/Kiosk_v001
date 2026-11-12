@@ -17,7 +17,7 @@ if ($ServerAddress -eq $ClientAddress) { throw 'Distinct addresses required' }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = [Security.Principal.WindowsPrincipal]::new($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    $arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $PSCommandPath + '"'),
+    $arguments = @('-NoProfile', '-NonInteractive', '-File', ('"' + $PSCommandPath + '"'),
         '-Action', $Action, '-ServerAddress', $ServerAddress, '-ClientAddress', $ClientAddress,
         '-Port', [string]$Port, '-Session', $Session)
     $process = Start-Process -FilePath (Get-Process -Id $PID).Path -Verb RunAs -WindowStyle Hidden -Wait -PassThru -ArgumentList $arguments

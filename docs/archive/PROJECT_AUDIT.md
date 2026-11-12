@@ -45,7 +45,7 @@ No working credentials, runtime content, installed service, trust store, firewal
 - **Ledger only:** a historical statement was read but its complete original evidence was not independently revalidated here.
 - **Planned / absent:** required behavior has no corresponding implementation in the audited product paths.
 
-The current checklist in [TZ_PROGRESS](TZ_PROGRESS.md) supersedes old pending wording. [TZ](TZ.md) describes the target product. [V2_PLAN](V2_PLAN.md) records stage allocation and owner decisions. Historical checkpoints retain their original scope and date. Code is the reference for current behavior; a code finding does not itself change approved requirements.
+The current checklist in [TZ_PROGRESS](../TZ_PROGRESS.md) supersedes old pending wording. `TZ` (historical document, superseded) describes the target product. `V2_PLAN` (historical document, superseded) records stage allocation and owner decisions. Historical checkpoints retain their original scope and date. Code is the reference for current behavior; a code finding does not itself change approved requirements.
 
 ## 3. What exists, why it exists, and how it works
 
@@ -59,7 +59,7 @@ There are two maintained startup paths, rather than one interchangeable installa
 | `serve.py` / original MVP EXE | Waitress and legacy browser/client opening; CLI HTTP default is `0.0.0.0:5000`; optional explicit managed HTTPS profile | Preserve MVP operation and source tooling. Plain LAN HTTP exposes credentials/session traffic to the network |
 | Installed stage 3 package | Native Tk/ttk Launcher plus a separate Windows SCM service; loopback HTTP by default or explicitly provisioned HTTPS | Machine installation, protected storage, pre-sign-in server, per-user display startup; still a development package |
 
-Sources: [application factory](../kiosk/app.py), line 12; [configuration](../kiosk/config.py), line 21; [source CLI](../serve.py), line 8; [server helpers](../kiosk/server.py), line 322; [installed supervisor](../kiosk/launcher/runtime.py), line 101.
+Sources: [application factory](../../kiosk/app.py), line 12; [configuration](../../kiosk/config.py), line 21; [source CLI](../../serve.py), line 8; [server helpers](../../kiosk/server.py), line 322; [installed supervisor](../../kiosk/launcher/runtime.py), line 101.
 
 The web application is a Flask monolith organized into packages. Its admin and API blueprints share SQLite and common helpers. HTML/Jinja, CSS, JavaScript, and translation JSON files are separated. The installed HTTPS path additionally runs Caddy as an owned process. This is useful code organization and transport supervision, but Events is not a separate isolated module with a versioned core API.
 
@@ -77,7 +77,7 @@ The web application is a Flask monolith organized into packages. Its admin and A
 
 `/preview` does not embed a simulated target display or implement publication preview. Its current template is a navigation page. Actual card preview exists inside administration. This corrects the overly broad impression produced by calling every preview surface a complete preview mode.
 
-Sources: [public routes](../kiosk/app.py), line 88; [preview template](../kiosk/templates/preview.html), line 6; [admin routes](../kiosk/features/admin/routes.py), line 188; [admin preview JavaScript](../kiosk/static/js/admin_event_preview.js); [Launcher UI](../kiosk/launcher/gui.py), line 41.
+Sources: [public routes](../../kiosk/app.py), line 88; [preview template](../../kiosk/templates/preview.html), line 6; [admin routes](../../kiosk/features/admin/routes.py), line 188; [admin preview JavaScript](../../kiosk/static/js/admin_event_preview.js); [Launcher UI](../../kiosk/launcher/gui.py), line 41.
 
 Interface language choices are `ru`, `en`, and `de`, with JSON translation lookup and fallback. Event text remains the text entered by the editor. There is no automatic event translation, independent event record per language, or translation-file editor in administration. Launcher UI text is predominantly Russian literals, rather than the web translation mechanism.
 
@@ -94,7 +94,7 @@ The application creates six business tables; SQLite also creates its internal `s
 | `settings` | Global display/application settings, including the current content counter |
 | `content_versions` | Counter/timestamp history; no revision payload or operation author |
 
-Source: [database initialization](../kiosk/database.py), line 23. Connections enable foreign keys. Existing tables are initialized with `CREATE TABLE IF NOT EXISTS`; this is not a general versioned schema migration framework. There are no group/device membership, publication, receipt, replication, role, media-manifest, trash, or backup tables.
+Source: [database initialization](../../kiosk/database.py), line 23. Connections enable foreign keys. Existing tables are initialized with `CREATE TABLE IF NOT EXISTS`; this is not a general versioned schema migration framework. There are no group/device membership, publication, receipt, replication, role, media-manifest, trash, or backup tables.
 
 An ordinary edit works as follows:
 
@@ -112,7 +112,7 @@ There is no optimistic edit token in event forms/updates; two editors can submit
 
 Pillow verifies/decode-checks uploaded images, corrects EXIF orientation, preserves aspect ratio, and generates JPEG derivatives within 1400x900, 1920x1080, and 420x260 bounds. JPEG quality is 82. Icons are PNG within 256x256. Files receive random names. Originals are outside the public static serving directory; optimized derivatives are public. The API includes the original's relative reference, but this is not an original-download endpoint.
 
-Defaults: 20 MiB total request, 16 MiB individual image, 25,000,000 pixels, 100 multipart parts, and 256 KiB form-memory/text bound. These are per-request/image safeguards, not a total content capacity guarantee. Sources: [image pipeline](../kiosk/core/images.py), line 10; [request configuration](../kiosk/config.py), line 32; [request enforcement](../kiosk/core/request_security.py), line 73.
+Defaults: 20 MiB total request, 16 MiB individual image, 25,000,000 pixels, 100 multipart parts, and 256 KiB form-memory/text bound. These are per-request/image safeguards, not a total content capacity guarantee. Sources: [image pipeline](../../kiosk/core/images.py), line 10; [request configuration](../../kiosk/config.py), line 32; [request enforcement](../../kiosk/core/request_security.py), line 73.
 
 Audit-reproduced lifecycle: upload created four image files; replacing the event image created four more; deleting the event left all eight. The old public derivative still returned HTTP 200. Database event deletion is immediate; no trash or record restoration exists. Failed image processing cleans up the current upload's partial outputs, but successful replacement/deletion has no media garbage collector. Image files are created before the database commit, so file and SQL persistence are not one atomic transaction; storage/commit-failure consistency requires separate design and testing.
 
@@ -127,7 +127,7 @@ Files are retained without a defined product retention/reference lifecycle. This
 | TV | Version polling every 10 seconds; random delay up to 10 seconds; refresh waits for safe slide transition | Request/body deadline 10 seconds, shape/status validation, duplicate-load guards and initial-load retry; no persistent complete snapshot |
 | Preview hub | Version badge polling every 5 seconds with up to 10-second delay | Updates the badge, not a publication preview; weaker retry/deadline behavior |
 
-Sources: [kiosk polling](../kiosk/static/js/kiosk_events.js), line 243; [home polling](../kiosk/static/js/kiosk_home.js), line 215; [TV request handling](../kiosk/static/js/tv.js), line 213; [preview polling](../kiosk/static/js/preview.js), line 18. Timing values also come from their HTML data attributes.
+Sources: [kiosk polling](../../kiosk/static/js/kiosk_events.js), line 243; [home polling](../../kiosk/static/js/kiosk_home.js), line 215; [TV request handling](../../kiosk/static/js/tv.js), line 213; [preview polling](../../kiosk/static/js/preview.js), line 18. Timing values also come from their HTML data attributes.
 
 The focused audit probe executed the actual extracted kiosk initial-load/poll functions in Node. After the initial load rejected, two successful later version polls left `currentContentVersion` null, scheduled zero refreshes, and did not retry events/tags. The condition requires a non-null baseline. A page reload or navigation that reinitializes the script can recover; automatic recovery of that still-open failed page is not implemented. The analogous non-null condition is present in home/preview code; only the events scenario was dynamically reproduced here.
 
@@ -139,7 +139,7 @@ New databases do not create a default administrator. Local setup creates `admin`
 
 Unsafe admin requests, including login/fullscreen validation, require CSRF. Cookies are HttpOnly and SameSite=Lax; the HTTPS path also sets Secure. HTML is marked no-store. Login/current-password/fullscreen checks share a thread-safe, in-memory limiter: 10 per source/username and 40 per source in 60 seconds, with bounded counter capacity. Limits count successes too, reset when the process restarts, and are shared by clients behind one NAT address. They are not a distributed or persistent abuse-prevention service.
 
-Sources: [installation session key](../kiosk/core/security.py), line 17; [credential setup](../kiosk/core/credentials.py), line 39; [session authorization](../kiosk/features/admin/routes.py), line 19; [limiter](../kiosk/core/request_security.py), line 18.
+Sources: [installation session key](../../kiosk/core/security.py), line 17; [credential setup](../../kiosk/core/credentials.py), line 39; [session authorization](../../kiosk/features/admin/routes.py), line 19; [limiter](../../kiosk/core/request_security.py), line 18.
 
 Any authenticated database user follows the same admin-authorized routes. There is no implemented Administrator/User product-role split or account-management UI. Windows administrator versus Windows ordinary user is a separate boundary: an ordinary Windows user can open the web admin login, but still needs product credentials to edit content. Granting Windows administrator privileges is not the planned web-role model.
 
@@ -164,7 +164,7 @@ Device profile schema 1 contains a stable UUID, name, language, display mode, ex
 
 The UI polls state/resources and validates freshness plus the live instance header before opening the local server's URL. Service startup and per-user display startup are independent. Maintenance suppresses automatic display opening for that user; closing Launcher does not stop the service. There is no client-only wizard for entering an arbitrary remote server URL or joining a group. Remote screens currently use the server's browser URL directly.
 
-Sources: [storage/profile](../kiosk/launcher/storage.py), line 38; [Windows ACLs](../kiosk/launcher/windows.py), line 43; [service registration](../kiosk/launcher/installation.py), line 87; [readiness](../kiosk/launcher/client.py), line 42; [browser selection](../kiosk/launcher/display.py), line 8.
+Sources: [storage/profile](../../kiosk/launcher/storage.py), line 38; [Windows ACLs](../../kiosk/launcher/windows.py), line 43; [service registration](../../kiosk/launcher/installation.py), line 87; [readiness](../../kiosk/launcher/client.py), line 42; [browser selection](../../kiosk/launcher/display.py), line 8.
 
 Initial runtime startup failure stops. After a successful start, the live supervisor can retry failed owned runtimes with delays of 5, 15, and 60 seconds; the budget does not reset after a successful retry. Unsafe cleanup stops retries. Windows SCM whole-process automatic recovery is not configured. A dead supervisor/service requires explicit service restart; a stale JSON status alone is not proof of health.
 
@@ -172,7 +172,7 @@ Installation verifies a file-hash manifest and preserves an identical existing p
 
 MVP import requires a stopped source, explicit confirmation, a fresh disjoint destination, an intact database/session key and valid media references. It uses SQLite backup with a write reservation, copies/checks files, converts the original-image storage prefix, and preserves source data. It is one supported layout-transfer operation, not arbitrary historical-version migration.
 
-Sources: [supervision](../kiosk/launcher/runtime.py), line 101; [install/remove](../kiosk/launcher/installation.py), line 108; [import](../kiosk/launcher/storage.py), line 171; [local maintenance](../launcher_maintenance.py), line 11.
+Sources: [supervision](../../kiosk/launcher/runtime.py), line 101; [install/remove](../../kiosk/launcher/installation.py), line 108; [import](../../kiosk/launcher/storage.py), line 171; [local maintenance](../../launcher_maintenance.py), line 11.
 
 ### 3.8 HTTPS and certificate operations
 
@@ -189,7 +189,7 @@ The operator workflow is intentionally explicit:
 
 Renewal retains the CA while using a fresh server key. Guarded activation has profile locks, readiness checks, transaction records and rollback/recovery mechanisms. Source tests and selected installed scenarios exercise these paths, but do not establish every interruption/power-loss case. CA recovery files are not an automated product backup system. A lost CA never silently creates an equivalent replacement.
 
-Sources: [HTTPS profile](../kiosk/transport/profile.py), line 43; [proxy configuration](../kiosk/transport/profile.py), line 83; [managed runtime](../kiosk/transport/runtime.py), line 90; [CSR/sign/receive](../tools/certificates.py), line 115; [activation](../tools/certificate_activation.py), line 47; [installed provisioning](../kiosk/launcher/provisioning.py), line 15.
+Sources: [HTTPS profile](../../kiosk/transport/profile.py), line 43; [proxy configuration](../../kiosk/transport/profile.py), line 83; [managed runtime](../../kiosk/transport/runtime.py), line 90; [CSR/sign/receive](../../tools/certificates.py), line 115; [activation](../../tools/certificate_activation.py), line 47; [installed provisioning](../../kiosk/launcher/provisioning.py), line 15.
 
 The installed local HTTP mode only listens on loopback. The compatibility `serve.py` HTTP default listens on all interfaces; these defaults must not be conflated. Product startup does not automatically install root trust, change firewall rules or bypass browser warnings. Broader platform enrollment, revocation and unattended operator experience are not completed acceptance claims.
 
@@ -201,7 +201,7 @@ Diagnostic export intentionally includes only allowlisted status and README, exc
 
 The build checks required PyInstaller bootloaders, the pinned Caddy hash, and a Microsoft-signed PowerShell 7.6.6/.NET 10 runtime, then produces a package file-hash manifest. That manifest checks consistency, not publisher authenticity: no trusted signature on the product manifest is verified. Source pins and bundled-runtime checks do not produce byte-identical builds or a signed product updater.
 
-Sources: [diagnostics](../kiosk/launcher/diagnostics.py), line 11; [rotation](../kiosk/launcher/runtime.py), line 91; [export](../kiosk/launcher/client.py), line 91; [build tooling](../tools/build_launcher.py), line 21; [EXE definition](../KioskLauncher.spec), line 15.
+Sources: [diagnostics](../../kiosk/launcher/diagnostics.py), line 11; [rotation](../../kiosk/launcher/runtime.py), line 91; [export](../../kiosk/launcher/client.py), line 91; [build tooling](../../tools/build_launcher.py), line 21; [EXE definition](../../KioskLauncher.spec), line 15.
 
 `tools/check_*`, LAN wizards, temporary browser trust helpers, simulated display-endurance controls, and service-access fixtures are verification tools. Their fixture-only endpoints are not product APIs. Independent audit checks confirmed ordinary Flask returns 404 for `/_lan-test/control` and `/_display-test/state`. VM SSH/SFTP, RustDesk, extra lab accounts and isolated Paramiko tooling are laboratory infrastructure, not Kiosk dependencies or user-facing management features.
 
@@ -220,13 +220,13 @@ Sources: [diagnostics](../kiosk/launcher/diagnostics.py), line 11; [rotation](..
 | GET `/admin/fullscreen/csrf` | Current-session CSRF token; no authentication grant; no-store |
 | Static uploads | Public optimized assets under `/static/uploads/...`; private originals are outside this served tree |
 
-Sources: [API routes](../kiosk/features/api/routes.py), line 24; [admin feature route inventory](../kiosk/features/admin/README.md); independently enumerated route map in the local audit evidence.
+Sources: [API routes](../../kiosk/features/api/routes.py), line 24; [admin feature route inventory](../../kiosk/features/admin/README.md); independently enumerated route map in the local audit evidence.
 
 All content APIs are public reads. There is no public network service-control API, device enrollment, publication acknowledgment, revision synchronization, backup, module-management, user-role-management, or updater API. Per-event tag lookup currently causes an additional query per returned event; this is a scalability consideration, not a demonstrated capacity failure.
 
 ## 5. Requirement-by-requirement position
 
-Statuses summarize inspected scope and do not amend [TZ_PROGRESS](TZ_PROGRESS.md). A partial row may include both working code and major missing requirements.
+Statuses summarize inspected scope and do not amend [TZ_PROGRESS](../TZ_PROGRESS.md). A partial row may include both working code and major missing requirements.
 
 | TZ section | Position in audited project | Evidence and remaining boundary |
 | --- | --- | --- |

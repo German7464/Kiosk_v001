@@ -152,6 +152,64 @@ public static class OfflineDisplay {
                 Console.WriteLine("view_integrity_and_origin_policy_pass");
                 return 0;
             }
+            // Packaged policy check for the in-app administration profile/origin.
+            if (args.Length == 4 && args[0] == "--check-admin-policy") {
+                if (AdminWindow.ParseOrigin(args[1]) == null) {
+                    Console.WriteLine("admin_policy_refused"); return AdminWindow.ExitPolicy;
+                }
+                try { AdminWindow.ValidateProfiles(args[2], args[3]); }
+                catch (InvalidDataException) { Console.WriteLine("admin_policy_refused"); return AdminWindow.ExitPolicy; }
+                Console.WriteLine("admin_policy_pass");
+                return 0;
+            }
+            // In-app administration: existing server-rendered pages in an isolated
+            // WebView2 profile. The origin comes only from the connection UI's
+            // verified saved anchor; no credential or URL is supplied here.
+            if (args.Length >= 2 && args[0] == "--admin") {
+                string originValue = null, profileValue = null, displayValue = null;
+                int diagnosticPort = 0;
+                string diagnosticHostMap = null;
+                int index = 1;
+                while (index < args.Length) {
+                    if (index + 1 >= args.Length) return AdminWindow.ExitPolicy;
+                    string name = args[index], value = args[index + 1];
+                    if (name == "--origin" && originValue == null) originValue = value;
+                    else if (name == "--profile" && profileValue == null) profileValue = value;
+                    else if (name == "--display-profile" && displayValue == null) displayValue = value;
+                    else if (name == "--diagnostic-port" && diagnosticPort == 0) {
+                        if (!int.TryParse(value, out diagnosticPort) || diagnosticPort < 1024 || diagnosticPort > 65535)
+                            return AdminWindow.ExitPolicy;
+                    } else if (name == "--diagnostic-host-map" && diagnosticHostMap == null) {
+                        string[] pair = value.Split('=');
+                        System.Net.IPAddress address;
+                        if (pair.Length != 2 || pair[0].Length == 0 || pair[0].Length > 253 ||
+                            !System.Text.RegularExpressions.Regex.IsMatch(pair[0], "\\A[A-Za-z0-9.-]+\\z") ||
+                            !System.Net.IPAddress.TryParse(pair[1], out address))
+                            return AdminWindow.ExitPolicy;
+                        diagnosticHostMap = pair[0] + " " + pair[1];
+                    } else return AdminWindow.ExitPolicy;
+                    index += 2;
+                }
+                if (diagnosticHostMap != null && diagnosticPort == 0) return AdminWindow.ExitPolicy;
+                if (originValue == null || profileValue == null || displayValue == null) return AdminWindow.ExitPolicy;
+                var verifiedOrigin = AdminWindow.ParseOrigin(originValue);
+                if (verifiedOrigin == null) return AdminWindow.ExitPolicy;
+                string adminProfile;
+                try { adminProfile = AdminWindow.ValidateProfiles(profileValue, displayValue); }
+                catch (InvalidDataException) { Console.Error.WriteLine("admin_storage_refused"); return AdminWindow.ExitStorage; }
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                AdminWindow admin;
+                try { admin = new AdminWindow(verifiedOrigin, adminProfile, displayValue, diagnosticPort, diagnosticHostMap); }
+                catch (InvalidDataException error) {
+                    Console.Error.WriteLine(error.Message);
+                    return error.Message == "admin_already_open" ? AdminWindow.ExitBusy : AdminWindow.ExitStorage;
+                }
+                catch (IOException) { Console.Error.WriteLine("admin_already_open"); return AdminWindow.ExitBusy; }
+                Application.Run(admin);
+                admin.FinishCleanup();
+                return admin.StartupFailed ? 1 : 0;
+            }
             if (args.Length < 4 || args[0] != "--view" || args[2] != "--profile") return 2;
             bool diagnostics = false;
             string session = "", cacheRoot = "";

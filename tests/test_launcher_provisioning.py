@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from kiosk.app import create_app
 from kiosk.core.credentials import save_admin_password
-from kiosk.launcher.provisioning import provision_https
+from kiosk.launcher.provisioning import import_https, pem_sha256, provision_https
 from kiosk.launcher.storage import DIRECTORIES, Storage, new_profile, read_profile, save_profile
 from kiosk.transport.profile import load_profile
 from kiosk.transport.runtime import ManagedHttps, probe_https
@@ -90,6 +90,24 @@ class LauncherProvisioningTests(unittest.TestCase):
         self.assertEqual(app.test_client().get("/api/version").json, version)
         self.assertEqual((self.storage.directory("secrets") / "session.key").read_bytes(), key)
         self.assertEqual(list(self.storage.directory("temp").iterdir()), [])
+
+    def test_imported_public_generation_is_verified_and_activated(self):
+        app = create_app(self.storage.app_config())
+        save_admin_password(app, "temporary-installed-admin-password", setup=True)
+        generation = self.storage.directory("secrets") / "imported-generation"
+        generation.mkdir()
+        for name in ("server.pem", "server.key", "authority.pem"):
+            (generation / name).write_bytes((self.states[0] / name).read_bytes())
+        expected = pem_sha256(generation / "server.pem")
+        with self.assertRaises(ValueError):
+            import_https(self.storage, generation, "0" * 64, f"https://127.0.0.1:{self.port}", "127.0.0.1")
+        self.assertFalse((self.storage.directory("config") / "https.json").exists())
+        result = import_https(self.storage, generation, self.fingerprint,
+                              f"https://127.0.0.1:{self.port}", "127.0.0.1")
+        self.assertEqual(result["certificate_sha256"], expected)
+        self.assertEqual(read_profile(self.storage.profile)["transport"], "https")
+        profile = load_profile(self.storage.directory("config") / "https.json")
+        self.assertEqual(profile.certificate_file, generation / "server.pem")
 
     def test_invalid_return_and_busy_service_do_not_change_device(self):
         original = self.storage.profile.read_bytes()

@@ -332,7 +332,8 @@ def run_waitress(host=None, port=None):
     host = app.config["SERVER_HOST"]
     port = app.config["SERVER_PORT"]
     print(startup_message(app), flush=True)
-    serve(app, host=host, port=port, max_request_body_size=app.config["MAX_CONTENT_LENGTH"])
+    serve(app, host=host, port=port, max_request_body_size=app.config["MAX_CONTENT_LENGTH"],
+          channel_timeout=60, cleanup_interval=5)
 
 
 def run_waitress_with_launcher(host=None, port=None, path="/kiosk", auto_launch=True):

@@ -12,6 +12,8 @@ ENROLLMENT_SECONDS = 600
 CREDENTIAL_SECONDS = 7 * 86400
 POLL_SECONDS = 5
 MAX_PENDING = 128
+MAX_DEVICES = 100
+ADMIN_DEVICE_PAGE_SIZE = 25
 MAX_RECEIPTS_PER_DEVICE = 4096
 
 
@@ -149,6 +151,36 @@ class DeliveryState:
                      'user_code': row['user_code'], 'expires_at': row['expires'], 'state': row['state']}
                     for row in db.execute('SELECT * FROM enrollments WHERE expires>? ORDER BY request_id', (int(self.clock()),))]
 
+    def pair_review(self, user_code):
+        """Return one enrollment's comparison facts for the trusted pairing page.
+
+        Reached only by an authenticated administrator who already holds the
+        code (QR or manual entry). Returns only the device/group/server/profile/
+        origin facts plus the request id and binding hash needed to drive the
+        existing guarded decision. The user_code itself, device_code, verifier,
+        credential_id and secret_verifier never leave this boundary. Unknown and
+        expired codes are distinguished only for the administrator's UX, and the
+        caller rate-limits lookups.
+        """
+        if (not isinstance(user_code, str) or len(user_code) != 8
+                or any(char not in 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' for char in user_code)):
+            raise DeliveryError('invalid_user_code', 400)
+        now = int(self.clock())
+        with self.connection() as db:
+            row = db.execute('SELECT * FROM enrollments WHERE user_code=?', (user_code,)).fetchone()
+            if row is None:
+                raise DeliveryError('unknown_code', 404)
+            if row['expires'] <= now:
+                raise DeliveryError('enrollment_expired', 410)
+            binding = decode(bytes(row['binding']))
+            config = self.configuration()
+            return {'request_id': row['request_id'],
+                    'binding_sha256': sha(bytes(row['binding'])),
+                    'device_id': binding['device_id'], 'group_id': binding['group_id'],
+                    'profile': binding['profile'], 'nonce': binding['nonce'],
+                    'server_id': config['server_id'], 'origin': config['origin'],
+                    'expires_at': row['expires'], 'state': row['state']}
+
     def approve(self, request_id, body):
         fields(body, 'user_code binding_sha256 decision')
         text(request_id)
@@ -187,7 +219,8 @@ class DeliveryState:
                 return {'version': 1, 'state': 'denied'}
             credential_id = secrets.token_hex(16)
             existing = db.execute('SELECT 1 FROM devices WHERE device_id=?', (row['device_id'],)).fetchone()
-            if not existing and db.execute('SELECT count(*) FROM devices').fetchone()[0] >= 16:
+            # Counting includes revoked/expired rows; reapproval replaces an existing identity.
+            if not existing and db.execute('SELECT count(*) FROM devices').fetchone()[0] >= MAX_DEVICES:
                 raise DeliveryError('device_capacity', 429)
             try:
                 db.execute('''INSERT INTO devices VALUES (?,?,?,?,?,0)
@@ -219,10 +252,15 @@ class DeliveryState:
         # Includes the private credential identity so a stale form cannot revoke a replacement.
         return sha(encode({key: row[key] for key in ('device_id', 'profile', 'credential_id', 'expires')}))
 
-    def admin_devices(self):
-        """Bounded public view; no credential, verifier or human/device code leaves here."""
+    def admin_devices(self, page=1):
+        """Bounded public view; no credential, verifier or human/device code leaves here.
+
+        The registered list is paged so the fixed 100-identity bound stays readable;
+        the model always reports the honest total and page range.
+        """
         now = int(self.clock())
         config = self.configuration()
+        page = max(1, int(page))
         with self.connection() as db:
             requests = []
             for row in db.execute('SELECT request_id,binding,expires,state FROM enrollments WHERE expires>? ORDER BY request_id LIMIT 128', (now,)):
@@ -231,13 +269,21 @@ class DeliveryState:
                 requests.append({'request_id': row['request_id'], 'binding': binding,
                                  'binding_sha256': sha(bytes(row['binding'])), 'expires': row['expires'],
                                  'state': row['state']})
+            total = db.execute('SELECT count(*) FROM devices').fetchone()[0]
+            pages = max(1, (total + ADMIN_DEVICE_PAGE_SIZE - 1) // ADMIN_DEVICE_PAGE_SIZE)
+            page = min(page, pages)
+            offset = (page - 1) * ADMIN_DEVICE_PAGE_SIZE
             devices = []
-            for row in db.execute('SELECT device_id,profile,credential_id,expires,revoked FROM devices ORDER BY device_id LIMIT 16'):
+            for row in db.execute('''SELECT device_id,profile,credential_id,expires,revoked FROM devices
+                ORDER BY device_id LIMIT ? OFFSET ?''', (ADMIN_DEVICE_PAGE_SIZE, offset)):
                 devices.append({'device_id': row['device_id'], 'profile': row['profile'], 'expires': row['expires'],
                                 'revoked': bool(row['revoked']), 'expired': row['expires'] <= now,
                                 'review_hash': self.device_review_hash(row)})
         return {'requests': requests, 'devices': devices, 'group_id': config['group_id'],
-                'server_id': config['server_id'], 'origin': config['origin'], 'now': now}
+                'server_id': config['server_id'], 'origin': config['origin'], 'now': now,
+                'device_total': total, 'device_page': page, 'device_pages': pages,
+                'device_page_size': ADMIN_DEVICE_PAGE_SIZE, 'device_capacity': MAX_DEVICES,
+                'device_first': offset + 1 if total else 0, 'device_last': offset + len(devices)}
 
     def revoke(self, device_id, review_hash=None):
         text(device_id)

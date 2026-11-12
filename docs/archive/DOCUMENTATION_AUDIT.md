@@ -1,6 +1,6 @@
 # Core documentation audit — 2026-11-05
 
-Dated coordinator review, not requirements, a second progress ledger or a new implementation dispatch. The owner narrowed the audit to the documents needed to understand the product and its execution. Current outcome/acceptance stays in [the sole ledger](TZ_PROGRESS.md).
+Dated coordinator review, not requirements, a second progress ledger or a new implementation dispatch. The owner narrowed the audit to the documents needed to understand the product and its execution. Current outcome/acceptance stays in [the sole ledger](../TZ_PROGRESS.md).
 
 ## Scope and understanding
 

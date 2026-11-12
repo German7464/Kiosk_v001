@@ -59,6 +59,84 @@ unattended startup, profile/page editing and trust lifecycle remain separate req
 lost-response retry, secret-free errors and saved/offline integration; it does not replace
 the existing renderer/transfer/VM acceptance evidence.
 
+## Smartphone QR pairing in the connection window
+
+While a pairing request is pending, the window shows the 8-character code and a
+locally generated QR next to it (`qr_pairing.py`). The QR encodes the coordinator
+contract v1 URL for the exact trusted saved origin: `#v=1&code=<user_code>` in the
+fragment. It is rendered from the vendored MIT
+[Project Nayuki QR Code generator](https://github.com/nayuki/QR-Code-generator)
+(`qrcodegen.py`, pinned commit `bcfe1b018cec5f1f91b5705eca5bb4cdd34e9f8d`; see
+`qrcodegen.LICENSE.txt`) plus Pillow, with a standard 4-module quiet zone. No CDN,
+external QR API, network fetch or custom algorithm is used. The QR carries only the
+public short-lived code and trusted origin; it never carries a device_code, bearer
+secret, credential, private key or bootstrap/CA payload.
+
+The QR clears or is replaced on approval, denial, expiry, access refusal,
+cancellation, a new pending request or worker idle; the manual code remains
+available. The QR URL is derived only from the verified saved `origin`, never an
+arbitrary entered address. Active pairing codes are excluded from the optional
+`--events` JSONL diagnostics. `python -m unittest tests.test_smartphone_pairing`
+covers QR generation, independent offline decode to the exact contract, the
+Tk show/clear behaviour and the diagnostics redaction; it is not physical-phone
+scanning evidence.
+
+`tools/build_windows_delivery.py --connect-ui` packages `kiosk/discovery.py` (the
+top-level module the window actually imports), `qr_pairing.py`, `qrcodegen.py`,
+the Pillow Tk bridge and `qrcodegen.LICENSE.txt`. A fresh portable candidate was
+built from the accepted native shell and exercised against a disposable HTTPS
+lab: the real window showed the pending manual code and QR, the displayed QR
+decoded to the exact contract URL, and the same window cleared both after the
+administrator approved in real mobile-sized Chrome while the existing client
+poller observed `approved`. Details and hashes are under
+`logs/smartphone-pairing-20261108/`.
+
+## In-app administration (Windows)
+
+The connection window now has `Администрирование`. It launches the accepted native
+shell in `--admin` mode, which renders the ordinary server-rendered admin HTML/CSS/JS
+in WebView2; no native admin page is duplicated and browser administration remains.
+The device credential grants no administrator authority.
+
+Only the exact origin from the already verified saved anchor is accepted
+(`https://host:port`, no path/query/credentials). Top-level navigation, frames and
+subresource requests are limited to that origin; foreign navigation, popups,
+downloads and permission requests are refused. Host objects, web messages, script
+dialogs, context menus and DevTools are disabled, and password autosave/general
+autofill are explicitly disabled. Native code never reads, stores, injects or
+autofills the administrator password or any device secret.
+
+Administration uses `<root>/admin-webview` with its own WebView2 user-data folder
+and a single-window lock. The TV/Kiosk display keeps `<root>/profile/runtime-v1/browser`
+(or the separate saved root used for accepted content), so cookies, storage and
+history do not cross. TLS is the actual WebView2/Chromium check against the Windows
+certificate store (chain, hostname, validity); certificate errors are observed and
+cancelled, never allowed. A clean machine must trust the server's issuing CA (or use
+a publicly trusted server certificate); the app does not inject an app-scoped root
+and has no bypass flag.
+
+Logout uses the existing server form: the window observes the CSRF-protected
+`POST /admin/logout`, waits for the ordinary login redirect, then clears this
+profile's cookies, storage, cache and history, resets the WebView navigation
+history and returns to the login page. Closing the window deletes the isolated
+browser data (or marks it for deletion before the next launch). The server also
+records that exact session as logged out, so a copy of the cookie cannot
+authenticate again while other administrator sessions stay valid. When local
+cleanup cannot be confirmed, the connection window reports a qualified message
+(server session ended, local cleanup repeated on the next launch) instead of a
+success claim.
+
+The acceptance-harness DevTools port is no longer derived from the environment.
+Normal operation starts no diagnostic listener; tooling must pass the shell's
+explicit `--diagnostic-port` argument itself, and the product window never does.
+
+Server/network failures show a native banner and a `Повторить` control that
+re-navigates only the selected origin. Administration is additive: TV/Kiosk display
+and accepted saved content are unchanged and need neither the admin session nor the
+network. Focused checks: `python -m unittest tests.test_windows_admin`; the native
+shell is rebuilt by `tools/build_offline_display.py` and packaged by
+`tools/build_windows_delivery.py --connect-ui`.
+
 ## Native server delivery candidate
 
 `python -m kiosk.display.delivery_client --root NEW_PRIVATE_ROOT --shell EXISTING_SHELL enroll
@@ -78,6 +156,18 @@ capture. `confirm-time --utc ...` confirms an independently checked plausible ti
 uncertain boot without replacing registration. `identity` reports renderer/runtime/binary
 facts. Commands share the required `--root`/`--shell` arguments; credentials never enter
 command-line arguments, WebView, URLs or diagnostic request headers/bodies.
+
+Enrollment polling keeps the server's minimum interval plus a one-second margin. A server
+`429`/`503` (`slow_down`, `request_limit`, temporary unavailability, with `Retry-After`) is
+persisted as `retry_not_before`, reported to the UI as a rate limit with the remaining wait,
+and retried with the same request/device identity. The prohibition is checked from persisted
+state before *any* request, so an immediate second click or a process restart cannot reach
+the throttled endpoints early. It is separate from the ordinary `next_poll` schedule; both
+deadlines suppress the pending request, but only the server prohibition is reported as a
+rate limit. A valid longer `Retry-After` (up to one hour) is respected; a missing, non-numeric,
+zero or negative value falls back to five seconds. The wait is cancellable and the workflow
+never resets identity, asks for a second approval or requires a server restart; the
+production limiter and window are unchanged.
 
 The native modules separate concerns: `delivery_authority.py` validates bootstrap, exact
 signed server/group/origin/SPKI and durable generation/digest/time/accepted associations;
@@ -182,7 +272,7 @@ Optional trailing `--diagnostics` enables a fixed read-only DOM counter probe at
 
 ## Evidence and remaining acceptance
 
-The [sole current ledger](../../docs/TZ_PROGRESS.md#active-integration-checkpoint--2026-11-04) records the resource-safety outcome, exact candidate identity, consolidated bounded stage4 acceptance and authorized local source checkpoint. Reuse the completed Windows offline OS restart, native pagination and physical Android evidence in their exact scopes; historical TODOs are not a test queue.
+The [sole current ledger](../../docs/TZ_PROGRESS.md#accepted-evidence-to-reuse) records the resource-safety outcome, exact candidate identity, consolidated bounded stage4 acceptance and authorized local source checkpoint. Reuse the completed Windows offline OS restart, native pagination and physical Android evidence in their exact scopes; historical TODOs are not a test queue.
 
 ### Bounded Events conformance profile
 

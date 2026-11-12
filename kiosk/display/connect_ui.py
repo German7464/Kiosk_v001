@@ -8,14 +8,16 @@ import queue
 import sys
 import tkinter as tk
 from tkinter import ttk
-import webbrowser
 
+from . import admin as admin_ui
 from .connect import Connection, confirmed_time, public_input
+from .qr_pairing import pairing_url, qr_image
 
 
 MESSAGES = {
     'saved': 'Состояние загружено. Для первого подключения введите адрес и публичные данные.',
     'pending': 'Ожидается решение администратора. Сверьте устройство и введите код в админке.',
+    'rate_limited': 'Сервер ограничил частоту запросов. Повтор после паузы, без перезапуска сервера; сохранённые данные не изменены.',
     'approved': 'Подключение одобрено. Запустите Events с синхронизацией.',
     'cancelled': 'Операция остановлена. Сохранённые данные не удалены.',
     'denied': 'Администратор отказал. Данные сохранены; автоматического нового запроса нет.',
@@ -40,6 +42,7 @@ class Window:
         self.closing, self.saved, self.raw = False, False, None
         self.facts = {}
         self.hints = []
+        self.admin_session = None
         root.title('Kiosk — подключение Windows')
         root.geometry(f'900x{min(850, root.winfo_screenheight() - 100)}')
         root.minsize(780, 550)
@@ -101,10 +104,14 @@ class Window:
         self.enroll_button.pack(side='left')
         self.time_button = ttk.Button(row, text='Подтвердить время', command=self.time)
         self.time_button.pack(side='left', padx=6)
-        self.admin_button = ttk.Button(row, text='Открыть админку', command=self.admin)
+        self.admin_button = ttk.Button(row, text='Администрирование', command=self.admin)
         self.admin_button.pack(side='left')
         ttk.Label(box, text='Код сопряжения (действует не более 10 минут)').pack(anchor='w')
         ttk.Label(box, textvariable=self.code, font=('Consolas', 22, 'bold')).pack(anchor='w')
+        ttk.Label(box, text='QR для сопряжения со смартфона (тот же код, генерируется локально)').pack(anchor='w')
+        self.qr_label = ttk.Label(box, text='QR появится после запроса сопряжения.', anchor='w')
+        self.qr_label.pack(anchor='w')
+        self.qr_photo = None
         row = ttk.Frame(box); row.pack(fill='x', pady=8)
         self.mode_box = ttk.Combobox(row, textvariable=self.mode, values=('tv', 'kiosk'), width=9, state='readonly')
         self.mode_box.pack(side='left')
@@ -195,10 +202,38 @@ class Window:
             self.status.set(MESSAGES['time_required'])
 
     def admin(self):
-        # Only a previously verified/saved origin may be opened; never trust an arbitrary entry.
-        address = self.facts.get('origin')
-        if address:
-            webbrowser.open(address + '/admin/devices')
+        # Only the origin from the already verified saved anchor is accepted. The
+        # native window renders the ordinary server admin pages in an isolated
+        # WebView2 profile; this UI never sees or supplies the admin password.
+        origin = self.facts.get('origin') if self.saved else ''
+        if not origin:
+            self.status.set(admin_ui.MESSAGES['admin_origin_required'])
+            return
+        if self.admin_session is None:
+            self.admin_session = admin_ui.AdminSession(self.connection.shell, self.connection.root)
+        try:
+            self.admin_session.open(origin)
+        except admin_ui.AdminError as error:
+            self.status.set(admin_ui.MESSAGES.get(str(error), admin_ui.MESSAGES['admin_unavailable']))
+            return
+        self.status.set('Открыто встроенное администрирование с отдельным профилем. Пароль вводится только в серверной форме.')
+
+    def show_qr(self, origin, code):
+        # Locally renders the coordinator pairing contract for the trusted saved origin.
+        try:
+            from PIL import ImageTk
+            if not origin or not code or len(code) != 8:
+                self.clear_qr()
+                return
+            photo = ImageTk.PhotoImage(qr_image(pairing_url(origin, code)), master=self.root)
+            self.qr_label.configure(image=photo, text='')
+            self.qr_photo = photo  # Keep a reference so Tk does not garbage-collect it.
+        except Exception:
+            self.clear_qr()
+
+    def clear_qr(self):
+        self.qr_photo = None
+        self.qr_label.configure(image='', text='QR появится после запроса сопряжения.')
 
     def run(self, online):
         self.connection.start('display', mode=self.mode.get(), online=online)
@@ -217,7 +252,9 @@ class Window:
                 value = self.connection.events.get_nowait()
                 if self.events:
                     with self.events.open('a', encoding='utf-8') as out:
-                        out.write(json.dumps(value, ensure_ascii=False) + '\n')
+                        # Active pairing codes never enter persistent diagnostics.
+                        recorded = {key: item for key, item in value.items() if key != 'code'}
+                        out.write(json.dumps(recorded, ensure_ascii=False) + '\n')
                 state = value['state']
                 if state == 'discovered':
                     self.hints = value['hints']
@@ -246,12 +283,16 @@ class Window:
                         self.details.set(f"Группа: {value['group']}\nСервер: {value['server']}\nУстройство: {value['device']}\nЗапрос: {value['request']}\nNonce: {value['nonce']}\nПрофиль: {value['profile']}\nСохранённые Events: {'есть' if value['content'] else 'пока нет'}; доступ: {'отозван' if value['revoked'] else 'одобрен' if value['approved'] else 'ожидает одобрения'}")
                 if state == 'pending':
                     self.code.set(value['code'])
-                elif state in ('approved', 'denied', 'expired', 'access_refused'):
+                    self.show_qr(value.get('origin', ''), value.get('code', ''))
+                elif state in ('approved', 'denied', 'expired', 'access_refused', 'cancelled', 'idle'):
                     self.code.set('—')
+                    self.clear_qr()
                 if state in MESSAGES:
                     text = MESSAGES[state]
                     if state == 'saved' and value.get('saved'):
                         text = 'Сохранённое подключение загружено. Для принятого содержимого сеть не нужна.'
+                    if value.get('wait'):
+                        text += f" Повтор через {value['wait']} с."
                     if value.get('http'):
                         text += f" HTTP {value['http']}."
                     if value.get('retained'):
@@ -260,6 +301,10 @@ class Window:
         except queue.Empty:
             pass
         busy = self.connection.busy
+        if self.admin_session is not None:
+            code = self.admin_session.poll()
+            if code is not None:
+                self.status.set(admin_ui.exit_message(code, self.admin_session.last_status()))
         for widget in self.editables:
             widget.configure(state='disabled' if busy else 'normal')
         self.mode_box.configure(state='disabled' if busy else 'readonly')

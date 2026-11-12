@@ -169,6 +169,43 @@ def uninstall(delete_data=False, device_id=None):
         shutil.rmtree(storage.root)
 
 
+def configure_device(storage, *, name, language, mode, orientation, port, autostart):
+    """Supported non-interactive equivalent of the Launcher configuration page.
+
+    The administrator account is created separately by an interactive
+    `setup-admin`; this command never accepts or stores a password.
+    """
+    require_administrator()
+    if not getattr(sys, "frozen", False) or Path(sys.executable).parent != binary_directory():
+        raise ValueError("Run configuration from the installed KioskMaintenance.exe.")
+    if service_state() not in {"absent", "stopped"}:
+        raise RuntimeError("Stop the Kiosk service before changing its configuration.")
+    from kiosk.launcher.storage import new_profile, needs_administrator, save_profile, validate_profile
+
+    current = read_profile(storage.profile) if storage.profile.exists() else None
+    profile = {**current} if current else new_profile(name)
+    profile.update({"device_name": name, "language": language, "mode": mode,
+                    "orientation": orientation, "port": int(port), "server_autostart": bool(autostart)})
+    validate_profile(profile)
+    if needs_administrator(storage):
+        raise ValueError("Create the administrator account with 'setup-admin' before configuring the device.")
+    initialize_directories(storage)
+    save_profile(storage, profile)
+    from kiosk.app import create_app
+    from kiosk.database import get_database, increase_content_version
+
+    app = create_app(storage.app_config())
+    with app.app_context():
+        database = get_database()
+        row = database.execute("SELECT value FROM settings WHERE key = 'interface_language'").fetchone()
+        if row is not None and row[0] != language:
+            database.execute("UPDATE settings SET value = ? WHERE key = 'interface_language'", (language,))
+            increase_content_version(database)
+            database.commit()
+    register_service(storage)
+    return profile
+
+
 def initialize_directories(storage):
     require_administrator()
     storage.root.mkdir(parents=True, exist_ok=True)

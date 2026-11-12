@@ -9,12 +9,16 @@ from .operator import utc
 from .protocol import DeliveryError, PROFILE
 from .routes import decide
 
+# 2**63 - 1 has 19 decimal digits. Reject longer input before int(): Python's
+# int() digit limit would otherwise raise ValueError and be misreported as 503.
+MAX_PAGE_DIGITS = 19
+
 
 def register_device_admin(app):
     state = app.extensions['device_delivery']
 
-    def page(error=None):
-        model = state.admin_devices() if error is None else None
+    def page(error=None, number=1):
+        model = state.admin_devices(number) if error is None else None
         return render_template('admin_devices.html', model=model, error=error, profile=PROFILE, utc=utc)
 
     def guarded(function):
@@ -37,7 +41,19 @@ def register_device_admin(app):
     @admin_required
     @guarded
     def home():
-        return page()
+        number = request.args.get('page', '1')
+        if (not number.isascii() or not number.isdecimal()
+                or len(number) > MAX_PAGE_DIGITS or not 0 < int(number) < 2 ** 63):
+            raise DeliveryError('invalid_page')
+        return page(number=int(number))
+
+    @app.get('/admin/devices/pair', endpoint='admin.devices_pair')
+    def pair():
+        # The pairing entry shell is intentionally reachable without a session so a
+        # freshly scanned phone can capture the code fragment before signing in. It
+        # only renders a form and local JavaScript; the authenticated, CSRF-protected,
+        # HTTPS-only lookup and decision endpoints carry all authority.
+        return render_template('admin_pair.html')
 
     @app.post('/admin/devices/<request_id>/review', endpoint='admin.devices_review')
     @admin_required

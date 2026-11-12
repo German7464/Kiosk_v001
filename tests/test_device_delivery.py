@@ -9,7 +9,7 @@ from kiosk.app import create_app
 from kiosk.core.credentials import save_admin_password
 from kiosk.delivery.protocol import DeliveryError, LIMITS, PROFILE, decode, encode, sha
 from kiosk.delivery.publication import publish
-from kiosk.delivery.state import DeliveryState
+from kiosk.delivery.state import DeliveryState, MAX_DEVICES
 from tests import test_publication_export as fixtures
 
 
@@ -86,6 +86,27 @@ class DeliveryTests(unittest.TestCase):
         self.now += 601
         with self.assertRaisesRegex(DeliveryError, 'enrollment_expired'):
             self.state.begin(self.binding)
+
+    def test_http_poll_rate_limit_recovers_without_restart(self):
+        client = self.app().test_client()
+        origin = self.config['origin']
+        authorized = client.post('/api/v2/device/authorize', json=self.binding, base_url=origin).get_json()
+        body = {'device_code': authorized['device_code']}
+        self.assertEqual(client.post('/api/v2/device/token', json=body, base_url=origin).status_code, 202)
+        limited = client.post('/api/v2/device/token', json=body, base_url=origin)
+        self.assertEqual(limited.status_code, 429)
+        self.assertEqual(limited.headers['Retry-After'], '5')
+        self.assertEqual(limited.get_json()['error'], 'slow_down')
+        # The same process recovers when the bounded window elapses; no restart,
+        # no new request identity and no repeated approval.
+        self.now += 5
+        self.assertEqual(client.post('/api/v2/device/token', json=body, base_url=origin).status_code, 202)
+        self.state.approve(self.binding['request_id'], {
+            'user_code': authorized['user_code'], 'binding_sha256': sha(encode(self.binding)),
+            'decision': 'approve'})
+        approved = client.post('/api/v2/device/token', json=body, base_url=origin)
+        self.assertEqual(approved.status_code, 200)
+        self.assertEqual(approved.get_json()['device_id'], 'phone-1')
 
     def test_credential_replacement_revocation_and_expiry(self):
         self.enroll()
@@ -167,6 +188,8 @@ class DeliveryTests(unittest.TestCase):
         pending = self.state.begin(self.binding)
         self.assertEqual(client.get('/admin/devices/pending', base_url=origin).status_code, 302)
         from kiosk.core.credentials import session_credential_token
+        import time
+        from kiosk.core.admin_sessions import new_session_id
         from kiosk.database import get_database
         with app.app_context():
             user = get_database().execute("SELECT * FROM users WHERE username='admin'").fetchone()
@@ -174,7 +197,8 @@ class DeliveryTests(unittest.TestCase):
             user_id = user['id']
         csrf = 'a' * 64
         with client.session_transaction(base_url=origin) as session:
-            session.update(admin_user_id=user_id, credential_token=credential_token, csrf_token=csrf)
+            session.update(admin_user_id=user_id, credential_token=credential_token, csrf_token=csrf,
+                           session_id=new_session_id(), session_issued=int(time.time()))
         response = client.get('/admin/devices/pending', base_url=origin)
         self.assertEqual(response.status_code, 200)
         row = response.json['requests'][0]
@@ -307,6 +331,110 @@ class DeliveryTests(unittest.TestCase):
         with self.assertRaisesRegex(DeliveryError, 'credential_conflict'):
             self.state.approve(other['request_id'], decision)
         self.assertEqual(self.state.authenticate(self.secret)['credential_id'], first['credential_id'])
+
+    def seed_devices(self, count, revoked=0, expired=0):
+        """Direct fixture rows; the approval path itself still creates the boundary rows."""
+        with self.state.connection() as db:
+            for index in range(count):
+                db.execute('INSERT INTO devices VALUES (?,?,?,?,?,?)', (
+                    'seed-%04d' % index, PROFILE, secrets.token_hex(16), secrets.token_hex(32),
+                    self.now + (1 if index < expired else 7 * 86400), 1 if index < revoked else 0))
+
+    def new_binding(self, device):
+        secret = secrets.token_hex(32)
+        binding = {**self.binding, 'request_id': secrets.token_hex(16), 'device_id': device,
+                   'nonce': secrets.token_hex(16), 'secret_verifier': sha(bytes.fromhex(secret))}
+        return binding, secret
+
+    def approve_binding(self, binding):
+        pending = self.state.begin(binding)
+        self.state.approve(binding['request_id'], {
+            'user_code': pending['user_code'], 'binding_sha256': sha(encode(binding)),
+            'decision': 'approve'})
+        return pending
+
+    def test_registration_passes_former_sixteen_device_boundary(self):
+        for index in range(17):
+            binding, secret = self.new_binding('boundary-%02d' % index)
+            self.approve_binding(binding)
+            self.assertEqual(self.state.authenticate(secret)['device_id'], binding['device_id'])
+        with self.state.connection() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM devices').fetchone()[0], 17)
+
+    def test_capacity_admits_hundredth_device_and_refuses_next_without_partial_changes(self):
+        self.seed_devices(99, revoked=5, expired=3)  # revoked/expired rows still count
+        self.publication()
+        with self.state.connection() as db:
+            before = {table: [tuple(row) for row in db.execute('SELECT * FROM ' + table)] for table in
+                      ('assignments', 'assignment_history', 'assignment_cohorts',
+                       'assignment_targets', 'receipts')}
+        hundredth, secret = self.new_binding('device-100')
+        self.approve_binding(hundredth)
+        self.assertEqual(self.state.authenticate(secret)['device_id'], 'device-100')
+        refused, _ = self.new_binding('device-101')
+        pending = self.state.begin(refused)
+        decision = {'user_code': pending['user_code'], 'binding_sha256': sha(encode(refused)),
+                    'decision': 'approve'}
+        with self.assertRaisesRegex(DeliveryError, 'device_capacity'):
+            self.state.approve(refused['request_id'], decision)
+        with self.state.connection() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM devices').fetchone()[0], MAX_DEVICES)
+            self.assertIsNone(db.execute('SELECT 1 FROM devices WHERE device_id=?', ('device-101',)).fetchone())
+            enrollment = db.execute('SELECT state,credential_id FROM enrollments WHERE request_id=?',
+                                    (refused['request_id'],)).fetchone()
+            self.assertEqual((enrollment['state'], enrollment['credential_id']), ('pending', None))
+            for table, rows in before.items():
+                self.assertEqual([tuple(row) for row in db.execute('SELECT * FROM ' + table)], rows)
+
+    def test_existing_device_reapproval_at_capacity_replaces_credential_only(self):
+        self.seed_devices(99)
+        first, first_secret = self.new_binding('device-100')
+        self.approve_binding(first)
+        replacement, replacement_secret = self.new_binding('device-100')
+        self.approve_binding(replacement)
+        with self.state.connection() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM devices').fetchone()[0], MAX_DEVICES)
+            self.assertEqual(db.execute('SELECT count(*) FROM devices WHERE device_id=?',
+                                        ('device-100',)).fetchone()[0], 1)
+        self.assertEqual(self.state.authenticate(replacement_secret)['device_id'], 'device-100')
+        with self.assertRaisesRegex(DeliveryError, 'invalid_credential'):
+            self.state.authenticate(first_secret)
+
+    def test_concurrent_approvals_at_capacity_admit_exactly_one(self):
+        self.seed_devices(99)
+        attempts = []
+        for index in range(5):
+            binding, _ = self.new_binding('race-%02d' % index)
+            attempts.append((binding, self.state.begin(binding)))
+
+        def decide(item):
+            binding, pending = item
+            try:
+                self.state.approve(binding['request_id'], {
+                    'user_code': pending['user_code'], 'binding_sha256': sha(encode(binding)),
+                    'decision': 'approve'})
+                return 'approved'
+            except DeliveryError as error:
+                return error.code
+
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            results = list(pool.map(decide, attempts))
+        self.assertEqual(results.count('approved'), 1)
+        self.assertEqual(results.count('device_capacity'), 4)
+        winner = next(binding['device_id'] for (binding, _), outcome in zip(attempts, results)
+                      if outcome == 'approved')
+        with self.state.connection() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM devices').fetchone()[0], MAX_DEVICES)
+            for binding, _ in attempts:
+                if binding['device_id'] == winner:
+                    self.assertIsNotNone(db.execute('SELECT 1 FROM devices WHERE device_id=?',
+                                                    (winner,)).fetchone())
+                    continue
+                self.assertIsNone(db.execute('SELECT 1 FROM devices WHERE device_id=?',
+                                             (binding['device_id'],)).fetchone())
+                row = db.execute('SELECT state,credential_id FROM enrollments WHERE request_id=?',
+                                 (binding['request_id'],)).fetchone()
+                self.assertEqual((row['state'], row['credential_id']), ('pending', None))
 
 
 if __name__ == '__main__':

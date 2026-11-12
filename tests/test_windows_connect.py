@@ -11,7 +11,7 @@ import time
 import unittest
 from unittest.mock import Mock, patch
 
-from kiosk.delivery.protocol import encode, sha
+from kiosk.delivery.protocol import PROFILE, encode, sha
 from kiosk.display.connect import Connection, Cancelled, _Response, public_input, confirmed_time, error_status
 from kiosk.display.delivery_client import Client
 from kiosk.display.delivery_transport import TransportError
@@ -121,6 +121,21 @@ class ConnectTests(unittest.TestCase):
         self.assertEqual(fake.native.data['binding']['request_id'], 'r')
         self.assertEqual(fake.native.data['secret'], 'a'*64)
 
+    def test_long_rate_limit_wait_is_reported_and_cancellable(self):
+        fake = FakeClient(self.root)
+        fake.native.data = {'bootstrap': PUBLIC, 'secret': 'a'*64,
+                            'binding': {'device_id': 'd', 'request_id': 'r'}}
+        fake.enroll = Mock(return_value={'result': 'rate_limited', 'user_code': 'ABCDEFGH',
+                                         'retry_after': 600, 'device_id': 'd'})
+        connection = Connection(self.root, self.root/'shell.exe', client_factory=lambda *a, **k: fake)
+        connection.start('enroll')
+        event = connection.events.get(timeout=1)
+        self.assertEqual(event['state'], 'rate_limited')
+        self.assertEqual(event['wait'], 600)
+        connection.cancel()
+        # The worker waits through the cancellable stop event, not an uninterruptible sleep.
+        self.assertEqual([v['state'] for v in self.drain(connection)], ['cancelled', 'idle'])
+
     def test_saved_connection_cannot_be_replaced_by_input_failure(self):
         fake = FakeClient(self.root)
         old = deepcopy(PUBLIC); old['server_id'] = 'old-server'
@@ -188,6 +203,105 @@ class ConnectTests(unittest.TestCase):
             self.assertEqual(client.enroll()['result'], 'pending')
         self.assertEqual(calls[0], calls[1])
         self.assertEqual(client.native.data['secret'], 'a'*64)
+
+    def test_enrollment_rate_limit_waits_and_resumes_same_request(self):
+        client = object.__new__(Client)
+        client.native = State()
+        client.native.data = {'bootstrap': PUBLIC, 'secret': 'a'*64,
+                              'binding': {'request_id': 'fixed-request', 'device_id': 'device'}}
+        client.native.now = lambda: NOW
+        pending = {'version': 1, 'request_id': 'fixed-request', 'device_code': 'b'*64,
+                   'user_code': 'ABCDEFGH', 'expires_in': 600, 'interval': 5}
+        credential = {'version': 1, 'state': 'approved', 'device_id': 'device', 'profile': PROFILE,
+                      'credential_id': 'c'*32, 'expires_at': NOW + 86400,
+                      'scopes': ['read_assignment', 'submit_receipt']}
+        calls, tokens = [], []
+        def request(path, **kwargs):
+            calls.append(path)
+            if path.endswith('/status'):
+                raise TransportError('native_http_refused', 401)
+            if path.endswith('/authorize'):
+                return pending
+            tokens.append(path)
+            if len(tokens) == 1:
+                raise TransportError('request_limit', 429, retry_after=7)
+            return credential
+        transport = Mock()
+        transport.json.side_effect = request
+        client.connect = lambda: transport
+        with patch('time.time', return_value=NOW):
+            result = client.enroll()
+        self.assertEqual(result['result'], 'rate_limited')
+        self.assertEqual(result['retry_after'], 7)
+        self.assertEqual(client.native.data['retry_not_before'], NOW + 7)
+        self.assertEqual(client.native.data['next_poll'], NOW + 8)
+        self.assertEqual(client.native.data['binding'], {'request_id': 'fixed-request', 'device_id': 'device'})
+        # Before the persisted wait elapses NOTHING reaches the transport: the old
+        # code still sent the status request here.
+        before = len(calls)
+        with patch('time.time', return_value=NOW + 3):
+            deferred = client.enroll()
+        self.assertEqual(deferred['result'], 'rate_limited')
+        self.assertEqual(deferred['retry_after'], 4)
+        self.assertEqual(len(calls), before)
+        self.assertEqual(len(tokens), 1)
+        with patch('time.time', return_value=NOW + 9):
+            self.assertEqual(client.enroll()['result'], 'approved')
+        self.assertEqual(len(tokens), 2)
+        self.assertEqual(client.native.data['credential']['credential_id'], 'c'*32)
+        self.assertNotIn('retry_not_before', client.native.data)
+
+    def test_persisted_backoff_survives_restart_and_respects_long_server_delay(self):
+        # A 600 s Retry-After (the device-decision budget) must not be truncated to 60.
+        self.assertEqual(TransportError('request_limit', 429, retry_after=600).retry_after, 600)
+        for supplied, expected in [('soon', 5), ('', 5), (None, 5), ('-3', 5), ('0', 5),
+                                   (str(10**9), 3600), (10**9, 3600), ('17', 17), (17, 17)]:
+            with self.subTest(supplied=supplied):
+                self.assertEqual(TransportError('request_limit', 429, retry_after=supplied).retry_after,
+                                 expected)
+        client = object.__new__(Client)
+        client.native = State()
+        client.native.data = {'bootstrap': PUBLIC, 'secret': 'a'*64,
+                              'binding': {'request_id': 'fixed-request', 'device_id': 'device'},
+                              'pending': {'device_code': 'b'*64, 'user_code': 'ABCDEFGH'},
+                              'retry_not_before': NOW + 600}
+        client.native.now = lambda: NOW
+        transport = Mock()
+        transport.json.side_effect = AssertionError('network during persisted backoff')
+        client.connect = lambda: transport
+        with patch('time.time', return_value=NOW + 10):
+            first = client.enroll()
+        # A new object over the same persisted state models a process restart.
+        restarted = object.__new__(Client)
+        restarted.native = client.native
+        restarted.native.now = lambda: NOW
+        restarted.connect = lambda: transport
+        with patch('time.time', return_value=NOW + 20):
+            second = restarted.enroll()
+        for result in (first, second):
+            self.assertEqual(result['result'], 'rate_limited')
+            self.assertGreaterEqual(result['retry_after'], 580)
+            self.assertEqual(result['user_code'], 'ABCDEFGH')
+            self.assertEqual(result['device_id'], 'device')
+        transport.json.assert_not_called()
+        self.assertEqual(client.native.data['binding']['request_id'], 'fixed-request')
+
+    def test_malformed_persisted_deadline_does_not_block_forever(self):
+        client = object.__new__(Client)
+        client.native = State()
+        client.native.data = {'bootstrap': PUBLIC, 'secret': 'a'*64,
+                              'binding': {'request_id': 'fixed-request', 'device_id': 'device'},
+                              'retry_not_before': 'not-a-number', 'next_poll': None}
+        client.native.now = lambda: NOW
+        credential = {'version': 1, 'state': 'approved', 'device_id': 'device', 'profile': PROFILE,
+                      'credential_id': 'c'*32, 'expires_at': NOW + 86400,
+                      'scopes': ['read_assignment', 'submit_receipt']}
+        transport = Mock()
+        transport.json.return_value = credential
+        client.connect = lambda: transport
+        with patch('time.time', return_value=NOW):
+            self.assertEqual(client.enroll()['result'], 'approved')
+        self.assertEqual(transport.json.call_count, 1)
 
     def test_offline_reopen_never_connects_and_queues_actual_display_only(self):
         fake = FakeClient(self.root)

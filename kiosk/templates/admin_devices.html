@@ -1,5 +1,14 @@
 {% extends "base.html" %}
 {% macro tr(en, ru, de) -%}{{ ru if active_language == 'ru' else de if active_language == 'de' else en }}{%- endmacro %}
+{% macro pager(model) -%}
+{% if model.device_pages > 1 %}
+<nav class="device-pages" aria-label="{{ tr('Registered device pages', 'Страницы зарегистрированных устройств', 'Seiten registrierter Geräte') }}">
+    {% if model.device_page > 1 %}<a href="{{ url_for('admin.devices_home', page=model.device_page - 1) }}">← {{ tr('Previous devices', 'Предыдущие устройства', 'Vorherige Geräte') }}</a>{% endif %}
+    <span>{{ tr('Page', 'Страница', 'Seite') }} {{ model.device_page }} / {{ model.device_pages }}</span>
+    {% if model.device_page < model.device_pages %}<a href="{{ url_for('admin.devices_home', page=model.device_page + 1) }}">{{ tr('Next devices', 'Следующие устройства', 'Nächste Geräte') }} →</a>{% endif %}
+</nav>
+{% endif %}
+{%- endmacro %}
 {% block title %}{{ tr('Devices and pairing', 'Устройства и сопряжение', 'Geräte und Kopplung') }}{% endblock %}
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_delivery.css') }}">
@@ -46,6 +55,8 @@
     {% else %}<p>{{ tr('No unexpired pairing requests.', 'Неистёкших запросов сопряжения нет.', 'Keine gültigen Kopplungsanfragen.') }}</p>{% endfor %}
     <h2>{{ tr('Registered devices', 'Зарегистрированные устройства', 'Registrierte Geräte') }}</h2>
     <p>{{ tr('Access is separate from activation history. Silence does not confirm offline status. Ready does not prove physical screen power.', 'Доступ и история активации учитываются отдельно. Отсутствие сообщений не подтверждает офлайн. Ready не доказывает включение экрана.', 'Zugriff und Aktivierungshistorie sind getrennt. Keine Meldung bestätigt keinen Offlinezustand. Ready beweist keinen eingeschalteten Bildschirm.') }}</p>
+    <p class="device-totals">{{ tr('Registered devices', 'Зарегистрированные устройства', 'Registrierte Geräte') }}: <strong>{{ model.device_total }}</strong> / {{ model.device_capacity }}{% if model.device_total %} · {{ tr('Showing', 'Показаны', 'Angezeigt') }} {{ model.device_first }}–{{ model.device_last }}{% endif %}{% if model.device_pages > 1 %} · {{ tr('Page', 'Страница', 'Seite') }} {{ model.device_page }} / {{ model.device_pages }}{% endif %}</p>
+    {{ pager(model) }}
     {% for item in model.devices %}
     <article class="device-request">
         <h3><code>{{ item.device_id }}</code></h3>
@@ -63,6 +74,7 @@
         {% endif %}
     </article>
     {% else %}<p>{{ tr('No registered devices.', 'Зарегистрированных устройств нет.', 'Keine registrierten Geräte.') }}</p>{% endfor %}
+    {{ pager(model) }}
     {% endif %}
     <p><a href="{{ url_for('admin.devices_home') }}">{{ tr('Refresh devices and requests', 'Обновить устройства и запросы', 'Geräte und Anfragen aktualisieren') }}</a></p>
 </section>

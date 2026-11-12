@@ -7,6 +7,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from kiosk.core.credentials import session_credential_token, uses_default_credentials, validate_password
+from kiosk.core.admin_sessions import revoke_current_session, session_revoked, start_session
 from kiosk.core.i18n import translate
 from kiosk.core.images import process_event_image, process_system_icon
 from kiosk.core.request_security import csrf_token
@@ -22,6 +23,9 @@ def admin_required(route_handler):
         user = find_user_by_id(session.get("admin_user_id"))
         token = session.get("credential_token")
         if user is None or not isinstance(token, str) or uses_default_credentials(user) or not hmac.compare_digest(token, session_credential_token(user)):
+            session.clear()
+            return redirect(url_for("admin.login"))
+        if session_revoked(session.get("session_id"), session.get("session_issued")):
             session.clear()
             return redirect(url_for("admin.login"))
 
@@ -552,7 +556,12 @@ def move_event(event_id):
 
 @admin_blueprint.get("/login")
 def login():
-    return render_login()
+    return render_login(next=pair_next())
+
+
+def pair_next():
+    # Only one fixed local return is permitted; never an arbitrary/open redirect.
+    return "pair" if request.values.get("next") == "pair" else None
 
 
 def active_admin_language():
@@ -560,12 +569,12 @@ def active_admin_language():
     return row["value"] if row is not None else "en"
 
 
-def render_login(error=None, status=200):
+def render_login(error=None, status=200, next=None):
     database = get_database()
     has_accounts = database.execute("SELECT 1 FROM users LIMIT 1").fetchone() is not None
     admin = find_user_by_username("admin")
     setup_message = "admin.setup_required" if not has_accounts else "admin.default_blocked" if uses_default_credentials(admin) else None
-    return render_template("admin_login.html", error=error, setup_message=setup_message), status
+    return render_template("admin_login.html", error=error, setup_message=setup_message, next=next), status
 
 
 @admin_blueprint.post("/login")
@@ -575,14 +584,18 @@ def login_post():
     user = authenticate_admin_credentials(username, password)
 
     if user is None:
-        return render_login(error="Invalid username or password.", status=401)
+        return render_login(error="Invalid username or password.", status=401, next=pair_next())
 
     session.clear()
     session["admin_user_id"] = user["id"]
     session["admin_username"] = user["username"]
     session["credential_token"] = session_credential_token(user)
+    start_session()
 
-    return redirect(url_for("admin.admin_home"))
+    # A successful sign-in returns to the pairing entry only for the single fixed
+    # local target; any other value falls back to the ordinary admin home.
+    target = "admin.devices_pair" if pair_next() == "pair" else "admin.admin_home"
+    return redirect(url_for(target))
 
 
 @admin_blueprint.post("/fullscreen/validate")
@@ -604,6 +617,9 @@ def fullscreen_csrf():
 
 @admin_blueprint.post("/logout")
 def logout():
+    # Revoke this exact cookie on the server before the signed cookie is cleared,
+    # so a copied copy of the logged-out cookie cannot authenticate again.
+    revoke_current_session()
     session.clear()
     return redirect(url_for("admin.login"))
 
