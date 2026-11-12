@@ -40,6 +40,8 @@ public final class StoredHarnessActivity extends Activity {
     private PreparedAdmission.VerifierProvider admissionVerifiers=PreparedAdmission.UNAVAILABLE;
     private org.kiosk.harness.delivery.DeliveryClient delivery;
     private TextView deliveryStatus;
+    private org.kiosk.harness.pairing.PairingDialog pairing;
+    private final Runnable pairingTick=new Runnable(){public void run(){updatePairing();if(pairing!=null)ui.postDelayed(this,5000);}};
     private org.kiosk.harness.discovery.DiscoveryDialog discovery;
     private final ExecutorService network=Executors.newSingleThreadExecutor();
     private Runnable deliveryRetry;
@@ -62,7 +64,15 @@ public final class StoredHarnessActivity extends Activity {
             deliveryStatus=new TextView(this);root.addView(deliveryStatus);
             LinearLayout nativeControls=new LinearLayout(this);Button connect=new Button(this),sync=new Button(this),reenroll=new Button(this);
             connect.setText("Connect server");sync.setText("Sync Events");reenroll.setText("Re-enroll");nativeControls.addView(connect);nativeControls.addView(sync);nativeControls.addView(reenroll);root.addView(nativeControls);
+            LinearLayout nativeMore=new LinearLayout(this);root.addView(nativeMore);
             connect.setOnClickListener(v->connectServer());sync.setOnClickListener(v->syncServer());
+            Button renew=new Button(this);renew.setText("Renew bootstrap");nativeMore.addView(renew);
+            renew.setOnClickListener(v->renewBootstrap());
+            Button showPairing=new Button(this);showPairing.setText("Show pairing code");nativeMore.addView(showPairing);
+            showPairing.setOnClickListener(v->showPairing());
+            LinearLayout adminRow=new LinearLayout(this);root.addView(adminRow);
+            Button administration=new Button(this);administration.setText("Administration");adminRow.addView(administration);
+            administration.setOnClickListener(v->startActivity(new android.content.Intent(this,org.kiosk.harness.admin.AdminActivity.class)));
             Button resync=new Button(this);resync.setText("Full resync");root.addView(resync);
             resync.setOnClickListener(v->{if(!busy)network.execute(()->{try{delivery.fullResync();nativeStatus("Incomplete capture discarded; checking Events.");ui.post(()->scheduleDelivery(0));}catch(Exception unavailable){nativeStatus("Capture is busy; retry full resync later.");}});});
             Button confirmTime=new Button(this);confirmTime.setText("Confirm device time");root.addView(confirmTime);
@@ -71,7 +81,7 @@ public final class StoredHarnessActivity extends Activity {
                 .setNegativeButton("Cancel",null).setPositiveButton("Confirm",(d,w)->network.execute(()->{try{delivery.confirmClock();nativeStatus("Time confirmed; checking Events.");ui.post(()->scheduleDelivery(0));}catch(Exception e){nativeStatus("Time refused; saved Events retained.");}})).show());
             reenroll.setOnClickListener(v->{if(delivery.confirmed())new android.app.AlertDialog.Builder(this).setTitle("Explicit re-enrollment")
                 .setMessage("Confirm current automatic device time is correct. Replace this device credential through external PC1 approval; retain saved offline Events and the same trust anchor.")
-                .setNegativeButton("Cancel",null).setPositiveButton("Confirm",(d,w)->network.execute(()->{try{delivery.reenroll();delivery.authorize();nativeStatus("Approve on PC1: "+delivery.humanCode());}catch(Exception e){nativeStatus("Re-enrollment refused; check trusted time and bootstrap expiry.");}})).show();});
+                .setNegativeButton("Cancel",null).setPositiveButton("Confirm",(d,w)->network.execute(()->{try{delivery.reenroll();delivery.authorize();nativeStatus("Waiting for administrator approval. Code "+delivery.humanCode()+".");ui.post(()->{showPairing();scheduleDelivery(0);});}catch(Exception e){nativeStatus("Re-enrollment refused; check trusted time and bootstrap expiry.");}})).show();});
         }
         LinearLayout controls=new LinearLayout(this);installA=new Button(this);installB=new Button(this);
         installA.setText("Install / resume A");installB.setText("Install / resume B");controls.addView(installA);controls.addView(installB);root.addView(controls);
@@ -94,17 +104,102 @@ public final class StoredHarnessActivity extends Activity {
     }
     private void confirmServer(String origin){
         if(delivery.confirmed()&&!delivery.trustedOrigin().equals(origin)){nativeStatus("Origin mismatch refused before connection. Saved registration and Events retained.");return;}
-        if(delivery.confirmed()){network.execute(()->{try{if(!delivery.enrolled()){delivery.authorize();nativeStatus("Approve on PC1: "+delivery.humanCode());}else nativeStatus("Enrolled; Sync Events is available.");}catch(Exception e){nativeStatus("Enrollment refused or server unavailable.");}});return;}
+        if(delivery.confirmed()){network.execute(()->{try{if(!delivery.enrolled()){delivery.authorize();nativeStatus("Waiting for administrator approval. Code "+delivery.humanCode()+".");ui.post(()->{showPairing();scheduleDelivery(0);});}else nativeStatus("Enrolled; Sync Events is available.");}catch(Exception e){nativeStatus("Enrollment refused or server unavailable.");}});return;}
         try {
-            byte[] bytes=org.kiosk.harness.core.LocalView.readBounded(getAssets().open("delivery-bootstrap.json"),16384);
+            byte[] bytes=org.kiosk.harness.core.LocalView.readBounded(getAssets().open(getString(R.string.delivery_bootstrap_asset)),16384);
             var b=org.kiosk.harness.delivery.DeliveryProtocol.bootstrap(bytes,System.currentTimeMillis()/1000);
             if(!b.origin().equals(origin)){nativeStatus("Origin differs from independent bootstrap; refused before connection.");return;}
             new android.app.AlertDialog.Builder(this).setTitle("Confirm independent bootstrap")
                 .setMessage("Server: "+b.origin()+"\nGroup: "+b.group()+"\nServer ID: "+b.server()+"\nGroup key SHA256:\n"+b.keyId())
-                .setNegativeButton("Cancel",null).setPositiveButton("Confirm",(dialog,which)->network.execute(()->{try{delivery.confirm(bytes);delivery.authorize();nativeStatus("Approve on PC1: "+delivery.humanCode());}catch(Exception e){nativeStatus("Bootstrap/enrollment refused.");}})).show();
+                .setNegativeButton("Cancel",null).setPositiveButton("Confirm",(dialog,which)->network.execute(()->{try{delivery.confirm(bytes);delivery.authorize();nativeStatus("Waiting for administrator approval. Code "+delivery.humanCode()+".");ui.post(()->{showPairing();scheduleDelivery(0);});}catch(Exception e){nativeStatus("Bootstrap/enrollment refused.");}})).show();
         }catch(Exception e){nativeStatus("Independent bootstrap unavailable or expired.");}
     }
-    private void pollEnrollment()throws Exception {String result=delivery.poll();nativeStatus("approved".equals(result)?"Approved. Checking Events automatically.":"pending".equals(result)?"Approve on PC1: "+delivery.humanCode():"Enrollment "+result);}
+    /** Manual same-anchor renewal of locally delivered public configuration; never a trust or time shortcut. */
+    private void renewBootstrap(){
+        if(delivery==null||closed||closing)return;
+        network.execute(()->{
+            try{
+                byte[] bytes=org.kiosk.harness.core.LocalView.readBounded(getAssets().open("delivery-bootstrap-renewal.json"),16384);
+                var facts=delivery.inspectRenewal(bytes);
+                ui.post(()->{
+                    if(closed||closing)return;
+                    String message="Unsigned public configuration, not new signed authority.\n\n"
+                        +"Bootstrap ID: "+facts.bootstrapId()+"\nOrigin: "+facts.origin()+"\nGroup: "+facts.group()
+                        +"\nServer ID: "+facts.server()+"\nGroup key SHA256:\n"+facts.keyId()
+                        +"\n\nIssued: "+java.time.Instant.ofEpochSecond(facts.issued())+"\nExpires: "+java.time.Instant.ofEpochSecond(facts.expires())
+                        +"\nDevice time: "+java.time.Instant.ofEpochSecond(facts.deviceTime())
+                        +(facts.unchanged()?"\n\nThis exact input is already accepted; confirming makes no change.":"")
+                        +"\n\nConfirm the device date and time against an independent trusted clock before renewing. This does not confirm uncertain-boot time; use Confirm device time separately before network use.";
+                    new android.app.AlertDialog.Builder(this).setTitle("Renew saved server bootstrap")
+                        .setMessage(message).setNegativeButton("Cancel",null)
+                        .setPositiveButton("Renew",(dialog,which)->network.execute(()->{
+                            try{var saved=delivery.renew(bytes,true);
+                                nativeStatus(saved.unchanged()?"Renewal input already accepted; registration retained.":"Bootstrap renewed; registration and Events retained. Confirm device time if the device rebooted.");
+                                ui.post(()->scheduleDelivery(0));
+                            }catch(Exception refused){nativeStatus("Renewal refused; saved registration and Events retained.");}
+                        })).show();
+                });
+            }catch(Exception refused){nativeStatus("Renewal input unavailable, expired, or not the saved anchor; registration retained.");}
+        });
+    }
+    private String pollEnrollment()throws Exception {
+        String result=delivery.poll();
+        if("approved".equals(result)){
+            nativeStatus("Approved. Checking Events automatically.");
+            ui.post(()->{updatePairing();scheduleDelivery(0);});
+        }else if("pending".equals(result)){
+            nativeStatus("Waiting for administrator approval. Code "+delivery.humanCode()+".");
+            ui.post(this::showPairing);
+        }else{
+            nativeStatus("denied".equals(result)?"Pairing denied. Use Re-enroll to start a new request.":"Pairing request expired. Use Re-enroll to request a new code.");
+            ui.post(this::updatePairing);
+        }
+        return result;
+    }
+    /** Displays the exact locally generated QR/manual code for the current pending request. */
+    private void showPairing(){
+        if(delivery==null||closed||closing)return;
+        if(pairing!=null&&!pairing.closed()){updatePairing();return;}
+        closePairing();
+        String payload;long expires;
+        try{payload=delivery.pairingPayload();expires=delivery.pendingExpiresAt();}catch(Exception unavailable){return;}
+        if(payload.isEmpty())return;
+        pairing=new org.kiosk.harness.pairing.PairingDialog(this,new org.kiosk.harness.pairing.PairingDialog.Actions(){
+            @Override public void cancelRequest(){
+                network.execute(()->{
+                    try{delivery.cancelPending();}
+                    catch(Exception refused){nativeStatus("Pairing cancellation refused; saved state retained.");}
+                    ui.post(()->{updatePairing();if(!closed&&!closing&&!delivery.enrolled())scheduleDelivery(60000);});
+                });
+            }
+            @Override public void refresh(){scheduleDelivery(0);}
+        });
+        pairing.show();
+        updatePairing();
+        ui.removeCallbacks(pairingTick);ui.postDelayed(pairingTick,5000);
+    }
+    private void updatePairing(){
+        if(pairing==null)return;
+        if(closed||closing||delivery==null||pairing.closed()){closePairing();return;}
+        try{
+            if(delivery.enrolled()){pairing.setStatus("Approved; credential saved.");closePairing();return;}
+            String payload=delivery.pairingPayload();
+            if(payload.isEmpty()){
+                String reason=delivery.pairingState();
+                if("denied".equals(reason))nativeStatus("Pairing denied. Use Re-enroll to start a new request.");
+                else if("expired".equals(reason))nativeStatus("Pairing code expired. Use Re-enroll to request a new code.");
+                else if("cancelled".equals(reason))nativeStatus("Local pairing wait cancelled; the server request stays pending until its code expires.");
+                else nativeStatus("No displayable pending pairing request. Use Re-enroll for a new code.");
+                closePairing();return;
+            }
+            if(!pairing.update(payload,delivery.pendingExpiresAt(),System.currentTimeMillis()/1000)){
+                nativeStatus("Pairing code expired. Use Re-enroll to request a new code.");
+                closePairing();return;
+            }
+            pairing.setStatus("Pending review. This screen does not approve the device.");
+        }catch(Exception unavailable){closePairing();}
+    }
+    private void closePairing(){ui.removeCallbacks(pairingTick);if(pairing!=null){pairing.close();pairing=null;}}
     private void scheduleDelivery(long delay){if(!closed&&!closing&&deliveryRetry!=null){ui.removeCallbacks(deliveryRetry);ui.postDelayed(deliveryRetry,delay);}}
     private void finishDelivery(boolean success){scheduleDelivery(Math.max(deliverySchedule.finish(success),delivery==null?0:delivery.transferRetryMillis()));}
     private void syncServer(){
@@ -115,8 +210,12 @@ public final class StoredHarnessActivity extends Activity {
             if(!delivery.confirmed()){ui.post(()->finishDelivery(true));return;}
             if(!delivery.enrolled()){
                 // The same persisted enrollment request recovers an authorize response lost before saving its code.
-                if(delivery.humanCode().isEmpty())delivery.authorize();pollEnrollment();
-                if(!delivery.enrolled()){ui.post(()->finishDelivery(false));return;}
+                // A denied, expired or cancelled request waits for the explicit Re-enroll action instead of repeating.
+                if(delivery.humanCode().isEmpty()&&!delivery.pairingBlocked())delivery.authorize();
+                if(delivery.humanCode().isEmpty()){ui.post(()->{updatePairing();deliverySchedule.finish(false);scheduleDelivery(delivery.pairingBlocked()?60000:10000);});return;}
+                String result=pollEnrollment();
+                if(!delivery.enrolled()){boolean waiting="pending".equals(result);
+                    ui.post(()->{deliverySchedule.finish(waiting);scheduleDelivery(waiting?10000:60000);});return;}
             }
             try{delivery.flush();}catch(Exception pending){nativeStatus("Ready receipts retained for retry.");}
             var downloaded=delivery.download(locallyComplete);
@@ -294,12 +393,12 @@ public final class StoredHarnessActivity extends Activity {
     @Override protected void onStop(){if(discovery!=null)discovery.close();super.onStop();}
     @Override protected void onResume(){super.onResume();if(active!=null)active.resume();}
     @Override public void finish(){
-        closing=true;++token;ui.removeCallbacksAndMessages(null);shutdownWorker();
+        closing=true;++token;closePairing();ui.removeCallbacksAndMessages(null);shutdownWorker();
         if(candidate!=null){candidate.dispose();candidate=null;}
         super.finish();
     }
     @Override protected void onDestroy(){
-        closed=true;++token;ui.removeCallbacksAndMessages(null);shutdownWorker();
+        closed=true;++token;closePairing();ui.removeCallbacksAndMessages(null);shutdownWorker();
         if(candidate!=null)candidate.dispose();if(active!=null)active.dispose();candidate=null;active=null;visible=null;visibleMode=null;
         super.onDestroy();
     }

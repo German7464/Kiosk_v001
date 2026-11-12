@@ -25,9 +25,15 @@ public final class DiscoveryProtocol {
         var m=DeliveryJson.object(DeliveryJson.parse(data,SIZE));DeliveryJson.keys(m,"protocol","type","nonce","origin","label");
         need("kiosk-discovery-v1".equals(m.get("protocol"))&&"reply".equals(m.get("type"))&&nonce.equals(m.get("nonce")));
         String origin=origin(DeliveryJson.string(m.get("origin"))),label=DeliveryJson.string(m.get("label"));
-        need(label.codePointCount(0,label.length())<=64);
-        need(label.codePoints().allMatch(c->!Character.isISOControl(c)&&Character.getType(c)!=Character.FORMAT&&Character.getType(c)!=Character.UNASSIGNED&&Character.getType(c)!=Character.LINE_SEPARATOR&&Character.getType(c)!=Character.PARAGRAPH_SEPARATOR));
+        need(label.codePointCount(0,label.length())<=64&&printable(label));
         return new Hint(origin,label);
+    }
+    /** Same common semantics as Python str.isprintable: ASCII space allowed, other Unicode C/Z categories refused. */
+    static boolean printable(String label){
+        return label.codePoints().allMatch(c->c==0x20||switch(Character.getType(c)){
+            case Character.CONTROL,Character.FORMAT,Character.SURROGATE,Character.PRIVATE_USE,Character.UNASSIGNED,
+                 Character.SPACE_SEPARATOR,Character.LINE_SEPARATOR,Character.PARAGRAPH_SEPARATOR->false;
+            default->true;});
     }
     public static final class Results {
         private int inputs;

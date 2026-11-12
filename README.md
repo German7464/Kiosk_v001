@@ -1,5 +1,8 @@
 # Kiosk_v001
 
+Android checkout: use [Android README](android/README.md) and [recovery](docs/DEVELOPMENT_RECOVERY.md). Current Windows/server implementation is a separate PC1 branch; the older server source in this checkout is not its latest integrated version. Common documentation is a coordinator snapshot; acceptance is maintained on PC1.
+
+
 Kiosk_v001 is a diploma project for a local client-server kiosk system that displays event cards on kiosks, Smart TV screens, preview screens, and an admin panel.
 
 ## Technology Stack
@@ -26,7 +29,7 @@ The MVP remains the compatibility baseline. Version 2 follows [the specification
 
 The primary specification is the owner-approved revision 1.2.1 dated 2026-10-27. This status summary reflects the supplied audit/ledger checkpoint; verify the actual checkout and installed build before further implementation or deployment. Approval of requirements does not select the next implementation stage.
 
-Stage 3 Windows Launcher/storage/service/setup is in progress. Bounded second-PC installation, service, boot/sign-in, Chrome, permissions and HTTPS scenarios have passing evidence. The corrected disk-probe candidate also passed separate-user VM GUI/CLI checks; it was not installed over the existing service package. Prepared Edge reserve-browser acceptance remains pending. See the [current acceptance checklist](docs/TZ_PROGRESS.md#current-stage-3-closure-gates) for evidence, package identities and remaining gates; these checks do not establish a completed release.
+Stage 3 Windows Launcher/storage/service/setup is in progress. Bounded second-PC installation, service, boot/sign-in, Chrome, permissions and HTTPS scenarios have passing evidence. The corrected disk-probe candidate also passed separate-user VM GUI/CLI checks; it was not installed over the existing service package. Prepared Edge reserve-browser acceptance remains pending. See the [current acceptance checklist](docs/archive/TZ_PROGRESS_2026-11-07.md#current-stage-3-closure-gates) for evidence, package identities and remaining gates; these checks do not establish a completed release.
 
 The development bundle is built in `dist/KioskLauncher`; package checkpoints are documented in [Launcher documentation](kiosk/launcher/README.md). Extract the whole archive before opening `KioskLauncher.exe`; do not transfer only the executable. Its source UI can be inspected with `python launcher.py`; source/uninstalled configuration saving is deliberately rejected. Existing MVP commands remain available.
 

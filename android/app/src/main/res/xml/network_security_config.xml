@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Production baseline: platform system trust only, no cleartext. A private-CA
+  deployment must supply its own CA resource/build overlay; this file deliberately
+  contains no lab host or lab certificate.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

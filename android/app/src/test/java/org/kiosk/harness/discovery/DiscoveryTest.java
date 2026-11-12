@@ -28,6 +28,13 @@ public class DiscoveryTest {
         for(String label:List.of("x\ny","x\u0000y","x\u007fy","x\u202ey","x\u2028y","x".repeat(65)))rejects(reply("https://x:443",label));
         assertEquals("<b>&PC1",DiscoveryProtocol.reply(reply("https://x:443","<b>&PC1"),nonce).label());assertNotNull(DiscoveryProtocol.reply(reply("https://x:443","😀".repeat(64)),nonce));
     }
+    @Test public void printableLabelParity()throws Exception{
+        // Python str.isprintable: ASCII space is the only allowed Zs; Unicode C/Z categories otherwise refused.
+        for(String label:List.of("x\uE000y","x\u00A0y","x\u2003y","x\u2028y","x\u2029y","x\u0000y","x\u007fy","x\u202ey","x\u00ADy","x\u200By"))rejects(reply("https://x:443",label));
+        for(String label:List.of("PC1 events","Пример","café","😀","日本語"))assertEquals(label,DiscoveryProtocol.reply(reply("https://x:443",label),nonce).label());
+        assertTrue(DiscoveryProtocol.printable("a b"));
+        assertFalse(DiscoveryProtocol.printable("a\u00A0b"));assertFalse(DiscoveryProtocol.printable("a\uE000b"));
+    }
     @Test public void dedupResultAndInputCaps(){
         var r=new DiscoveryProtocol.Results();for(int i=0;i<100;i++)r.accept(reply("https://host"+i+":443","label"),nonce);assertEquals(32,r.hints().size());
         assertNull(r.accept(valid(),nonce));while(!r.full())r.accept(new byte[513],nonce);assertEquals(256,r.inputs());assertNull(r.accept(valid(),nonce));assertEquals(256,r.inputs());

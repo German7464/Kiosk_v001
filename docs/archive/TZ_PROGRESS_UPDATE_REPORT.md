@@ -4,7 +4,7 @@ Date: **2026-10-27**. This report replaces earlier packaging reports. Scope: the
 
 ## Authority and file layout
 
-Root [AGENTS](../AGENTS.md) and [README](../README.md); full documentation under docs, mapped by the [index](README.md). Primary requirements: owner-approved [TZ_RECONCILED.md](TZ_RECONCILED.md), revision **1.2.1**. Single current status ledger: [TZ_PROGRESS.md](TZ_PROGRESS.md). Supporting procedures/audits do not override requirements or convert dated evidence into current acceptance. No obsolete target plans or active CHAT_HANDOFF are needed.
+Root [AGENTS](../../AGENTS.md) and [README](../../README.md); full documentation under docs, mapped by the [index](../README.md). Primary requirements: owner-approved [TZ_RECONCILED.md](../TZ_RECONCILED.md), revision **1.2.1**. Single current status ledger: [TZ_PROGRESS.md](../TZ_PROGRESS.md). Supporting procedures/audits do not override requirements or convert dated evidence into current acceptance. No obsolete target plans or active CHAT_HANDOFF are needed.
 
 ## File integration
 

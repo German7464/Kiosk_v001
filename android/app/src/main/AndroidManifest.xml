@@ -3,8 +3,13 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <application android:label="Events offline experiment" android:theme="@android:style/Theme.Material.Light.NoActionBar"
-        android:allowBackup="false" android:usesCleartextTraffic="false" android:supportsRtl="true">
+        android:allowBackup="false" android:usesCleartextTraffic="false" android:supportsRtl="true"
+        android:networkSecurityConfig="@xml/network_security_config">
         <activity android:name=".HarnessActivity" android:exported="true" />
+        <!-- Separate process/data directory: WebView cookies and storage cannot mix with the
+             local display view, which disables cookies and loads only packaged content. -->
+        <activity android:name=".admin.AdminActivity" android:exported="false" android:process=":admin"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
         <activity android:name=".StoredHarnessActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

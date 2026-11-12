@@ -10,6 +10,7 @@ import java.util.*;
 import org.json.*;
 import org.kiosk.harness.binding.*;
 import org.kiosk.harness.core.LocalView;
+import org.kiosk.harness.pairing.PairingPayload;
 import org.kiosk.harness.storage.PreparedAdmission;
 import static org.kiosk.harness.delivery.DeliveryProtocol.*;
 
@@ -47,11 +48,67 @@ public final class DeliveryClient implements PreparedAdmission.SourceVerifier {
     }
     public boolean confirmed(){return anchor!=null;}
     public String trustedOrigin(){Bootstrap b=anchor;return b==null?"":b.origin();}
+    /**
+     * Bounded preflight for the separate administration WebView process. It validates
+     * the bootstrap window, certain time, TLS chain/hostname and the saved leaf pin,
+     * but grants no admin authority: the server still requires its own web login.
+     */
+    public synchronized void checkAdminAvailability()throws Exception {
+        need(anchor!=null);
+        long now=clock.now();
+        DeliveryClock.check(now,state.optLong("highest_time",0),processWall,clock.elapsed(),processElapsed,
+            anchor.issued(),anchor.expires(),Long.MAX_VALUE,bootCount(),state.getInt("clock_boot"),clock.automatic());
+        String pin=state.optString("peer","");
+        var response=call("/api/version",null,false,pin.matches("[a-f0-9]{64}")?pin:null);
+        need(response.status()==200);
+    }
     public synchronized void confirm(byte[] bytes)throws Exception {
         need(anchor==null);long now=clock.now();Bootstrap b=bootstrap(bytes,now);wires.create(b);
         JSONObject initial=new JSONObject().put("bootstrap",new String(bytes,StandardCharsets.UTF_8)).put("confirmed_at",now).put("highest_time",now).put("clock_boot",bootCount())
             .put("device",UUID.randomUUID().toString()).put("request",UUID.randomUUID().toString()).put("nonce",UUID.randomUUID().toString());
         byte[] secret=new byte[32];new SecureRandom().nextBytes(secret);initial.put("secret",hex(secret));disk.write(initial);state=initial;loadAnchor();
+    }
+    /** Public facts for the operator confirmation step; contains no credential or secret. */
+    public record Renewal(String bootstrapId,String origin,String group,String server,String keyId,
+                          long issued,long expires,long deviceTime,boolean unchanged){}
+    /** Validates a same-anchor public renewal without persisting it. */
+    public synchronized Renewal inspectRenewal(byte[] bytes)throws Exception {return renewal(bytes,false,true);}
+    /**
+     * Additive manual same-anchor renewal. The operator attests the displayed independent time here; this
+     * never marks uncertain-boot time confirmed, so confirmClock() remains a separate action before network use.
+     */
+    public synchronized Renewal renew(byte[] bytes,boolean operatorConfirmedTime)throws Exception {
+        need(operatorConfirmedTime);return renewal(bytes,true,true);
+    }
+    private Renewal renewal(byte[] bytes,boolean commit,boolean operatorConfirmedTime)throws Exception {
+        need(anchor!=null&&operatorConfirmedTime);
+        long now=clock.now(),elapsed=clock.elapsed();
+        Bootstrap current=anchor,next=bootstrap(bytes,now);
+        need(sameAnchor(current,next));
+        long highest=state.optLong("highest_time",0);
+        // Strict monotonic input: no older issuance, no shorter validity, no window already behind the trusted floor.
+        need(next.issued()>=current.issued()&&next.expires()>=current.expires()&&next.expires()>highest);
+        need(now>=highest&&elapsed>=processElapsed&&now+2>=processWall+(elapsed-processElapsed)/1000);
+        // Existing accepted registration must still be finite and the saved signed trust/leaf must bound this input.
+        need(enrolled());long credentialExpires=state.optLong("credential_expires",0);
+        need(credentialExpires>0&&credentialExpires!=Long.MAX_VALUE&&credentialExpires>now);
+        String peer=state.optString("peer",""),envelope=state.optString("trust_envelope","");
+        need(!peer.isEmpty()&&!envelope.isEmpty());
+        Trust trust=trust(Base64.getDecoder().decode(envelope),current,peer,now,
+            state.optLong("trust_generation",0),state.optString("trust_digest",""));
+        need(next.expires()<=trust.expires());
+        boolean unchanged=next.id().equals(current.id())&&next.issued()==current.issued()&&next.expires()==current.expires();
+        Renewal facts=new Renewal(next.id(),next.origin(),next.group(),next.server(),next.keyId(),next.issued(),next.expires(),now,unchanged);
+        if(!commit||unchanged)return facts;
+        DeliveryIO.Wire validated=wires.create(next);
+        state.put("bootstrap",new String(bytes,StandardCharsets.UTF_8)).put("confirmed_at",now).put("highest_time",now);
+        save();
+        anchor=next;transport=validated;
+        return facts;
+    }
+    private static boolean sameAnchor(Bootstrap a,Bootstrap b){
+        return a.group().equals(b.group())&&a.server().equals(b.server())&&a.origin().equals(b.origin())
+            &&a.ca().equals(b.ca())&&a.keyId().equals(b.keyId())&&a.key().equals(b.key());
     }
     private static String hex(byte[] b){StringBuilder s=new StringBuilder();for(byte v:b)s.append(String.format(Locale.ROOT,"%02x",v&255));return s.toString();}
     private byte[] body(JSONObject value){return value.toString().getBytes(StandardCharsets.UTF_8);}
@@ -61,6 +118,30 @@ public final class DeliveryClient implements PreparedAdmission.SourceVerifier {
     }
     public synchronized String humanCode(){return state.optString("user_code","");}
     public synchronized boolean enrolled(){return state.has("credential");}
+    /**
+     * Exact QR contract for the current pending request, or empty when there is nothing displayable.
+     * Expiry is evaluated against the device clock only to stop showing a dead code; authority still
+     * comes from the server's own request state.
+     */
+    public synchronized String pairingPayload()throws Exception{
+        if(anchor==null||enrolled())return "";
+        String code=humanCode(),origin=anchor.origin();long expires=state.optLong("pair_expires",0);
+        if(!code.matches(PairingPayload.USER_CODE)||expires<=0||clock.now()>=expires)return "";
+        return PairingPayload.of(origin,code);
+    }
+    public synchronized long pendingExpiresAt(){return state.optLong("pair_expires",0);}
+    /** Terminal denial/expiry/cancel stops automatic re-request until an explicit re-enrollment. */
+    public synchronized boolean pairingBlocked(){return !state.optString("pair_blocked","").isEmpty();}
+    public synchronized String pairingState(){return state.optString("pair_blocked","pending");}
+    /** Drops local waiting only. The server request is left pending until the administrator decides. */
+    public synchronized void cancelPending()throws Exception{
+        need(anchor!=null&&!enrolled());
+        clearPending("cancelled");
+    }
+    private void clearPending(String reason)throws Exception{
+        state.remove("device_code");state.remove("user_code");state.remove("pair_expires");
+        state.put("request",UUID.randomUUID().toString()).put("nonce",UUID.randomUUID().toString()).put("pair_blocked",reason);save();
+    }
     private int bootCount(){return clock.boot();}
     /** A native operator confirms uncertain reboot time without replacing a valid enrollment. */
     public synchronized void confirmClock()throws Exception {
@@ -73,7 +154,7 @@ public final class DeliveryClient implements PreparedAdmission.SourceVerifier {
         confirmClock();
         byte[] secret=new byte[32];new SecureRandom().nextBytes(secret);
         state.put("secret",hex(secret)).put("request",UUID.randomUUID().toString()).put("nonce",UUID.randomUUID().toString()).put("clock_boot",bootCount());
-        for(String key:List.of("credential","credential_expires","device_code","user_code"))state.remove(key);save();
+        for(String key:List.of("credential","credential_expires","device_code","user_code","pair_expires","pair_blocked"))state.remove(key);save();
     }
     public synchronized void authorize()throws Exception {
         need(anchor!=null);if(enrolled())return;
@@ -84,16 +165,18 @@ public final class DeliveryClient implements PreparedAdmission.SourceVerifier {
         if(response.status()==410){var recovered=call("/api/v2/client/status",null,true,null);need(recovered.status()==200);acceptCredential(recovered.body());return;}
         need(response.status()==200);
         var m=json(response.body(),2*1024*1024);DeliveryJson.keys(m,"version","request_id","device_code","user_code","expires_in","interval");version(m);
-        need(state.getString("request").equals(str(m,"request_id"))&&str(m,"device_code").matches("[a-f0-9]{64}")&&str(m,"user_code").matches("[A-Z2-9]{8}")&&num(m,"expires_in")>0&&num(m,"expires_in")<=600&&num(m,"interval")==5);
-        state.put("device_code",str(m,"device_code")).put("user_code",str(m,"user_code"));save();
+        need(state.getString("request").equals(str(m,"request_id"))&&str(m,"device_code").matches("[a-f0-9]{64}")&&str(m,"user_code").matches(PairingPayload.USER_CODE)&&num(m,"expires_in")>0&&num(m,"expires_in")<=600&&num(m,"interval")==5);
+        state.put("device_code",str(m,"device_code")).put("user_code",str(m,"user_code"))
+            .put("pair_expires",clock.now()+num(m,"expires_in")).remove("pair_blocked");save();
     }
     public synchronized String poll()throws Exception {
         if(enrolled())return "approved";need(state.has("device_code"));
         var response=call("/api/v2/device/token",new JSONObject().put("device_code",state.getString("device_code")),false,null);
         if(response.status()==202||response.status()==429)return "pending";
-        if(response.status()==403)return "denied";if(response.status()==410){
+        if(response.status()==403){clearPending("denied");return "denied";}if(response.status()==410){
             // Approved credentials remain recoverable after the authorization request itself expires.
-            response=call("/api/v2/client/status",null,true,null);if(response.status()!=200)return "expired";
+            response=call("/api/v2/client/status",null,true,null);
+            if(response.status()!=200){clearPending("expired");return "expired";}
         }
         need(response.status()==200);acceptCredential(response.body());return "approved";
     }
@@ -101,7 +184,8 @@ public final class DeliveryClient implements PreparedAdmission.SourceVerifier {
         var m=json(bytes,2*1024*1024);DeliveryJson.keys(m,"version","state","device_id","profile","credential_id","expires_at","scopes");version(m);
         need("approved".equals(str(m,"state"))&&state.getString("device").equals(str(m,"device_id"))&&PROFILE.equals(str(m,"profile"))&&DeliveryJson.array(m.get("scopes")).equals(List.of("read_assignment","submit_receipt")));
         id(str(m,"credential_id"));need(num(m,"expires_at")>clock.now());
-        state.put("credential",str(m,"credential_id")).put("credential_expires",num(m,"expires_at"));state.remove("user_code");save();
+        state.put("credential",str(m,"credential_id")).put("credential_expires",num(m,"expires_at"));
+        state.remove("user_code");state.remove("pair_expires");state.remove("pair_blocked");save();
     }
     private long certainNow()throws Exception {
         long now=clock.now();

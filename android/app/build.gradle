@@ -18,7 +18,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     signingConfigs { debug { storeFile = rootProject.file(providers.gradleProperty('kioskDebugKeystore').getOrElse('.gradle/debug.keystore')) } }
-    buildTypes { debug { applicationIdSuffix = '.debug' } }
+    buildTypes {
+        debug { applicationIdSuffix = '.debug' }
+        // Debug-only disposable identity for a separate lab group. Same source/transport as debug;
+        // the distinct application id isolates app data, so a parallel enrollment cannot overwrite
+        // the retained phone registration. Not a production multi-account feature.
+        sandbox { initWith debug; applicationIdSuffix = '.sandbox'; versionNameSuffix = '-sandbox'; signingConfig = signingConfigs.debug }
+    }
     testOptions { unitTests.all {
         systemProperty 'fixtureRoot', file('src/main/assets/views').absolutePath
         systemProperty 'packageFixtureRoot', file('src/androidTest/assets/package-cases').absolutePath
@@ -27,6 +33,9 @@ android {
         systemProperty 'preparationFixtureRoot', rootProject.file('testdata/local-admission').absolutePath
         systemProperty 'bindingFixtureRoot', rootProject.file('testdata/generic-binding').absolutePath
     } }
+    // Debug remains the default test build type. The disposable sandbox lab can be
+    // selected explicitly for its isolated WebView/network-security test APK.
+    testBuildType = providers.gradleProperty('kioskTestBuildType').getOrElse('debug')
     sourceSets {
         test.java.srcDir 'src/sharedTest/java'
         androidTest.java.srcDir 'src/sharedTest/java'

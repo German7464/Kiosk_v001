@@ -4,7 +4,7 @@ Related documents: [historical MVP scope](MVP_SCOPE.md), [current ledger](TZ_PRO
 
 ## Verified checkpoint
 
-This is a historical measurement checkpoint. Its results and acceptance limits describe the measured source/environment only. Stage 2 subsequently completed on 2026-10-24 within its agreed scope; use [TZ Progress](TZ_PROGRESS.md#current-stage-3-closure-gates) for the current stage and outstanding checks. Historical pending statements below do not override that ledger.
+This is a historical measurement checkpoint. Its results and acceptance limits describe the measured source/environment only. Stage 2 subsequently completed on 2026-10-24 within its agreed scope; use [TZ Progress](archive/TZ_PROGRESS_2026-11-07.md#current-stage-3-closure-gates) for the current stage and outstanding checks. Historical pending statements below do not override that ledger.
 
 Measured at 2026-10-18T22:58:27.722593+00:00 (UTC) with `python -m tools.measure_mvp_baseline`. Source artifact: ignored `logs/measurements/mvp-20261018T225827722593Z.json`. This is a local Windows developer checkpoint for TZ sections 20, 21, and stage 2 of section 22, not system acceptance.
 

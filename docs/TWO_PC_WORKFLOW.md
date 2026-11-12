@@ -1,43 +1,24 @@
-# Two-PC development workflow
+# Two-PC workflow
 
-PC1 owns Windows/server work, integration review and documentation coordination.
-PC2 owns bounded Android/Android TV tasks. Both use separate local clones of
-German7464/Kiosk_v001, never a shared working directory/index. The integration
-branch is `v2`; preserve `master` MVP and all reference tags.
+## Current ownership and dispatch
 
-Start each task by inspecting applicable AGENTS, branch, index and working tree.
-Fetch/check remote identity when authorized; do not assume origin/v2 or local v2
-is current. Branch short tasks from the agreed v2 commit. Never switch over
-unfinished changes, reset another task or force-push to repair divergence.
-Submit task branches through Pull Requests targeting v2. Resolve overlapping
-work explicitly; no concurrent edits of contracts/shared renderer without PC1
-coordination. Contract/requirement changes require agreement before dependent
-implementation; documentation of an existing format is not a new protocol.
+Coordinator on PC1 owns common documentation, contracts, sole [ledger](TZ_PROGRESS.md) and acceptance. PC1 worker owns Windows/server code, affected tests and module READMEs. PC2 owns android/, its tests and README. Owner manually forwards complete tasks; no automated dispatcher or additional agents without explicit permission. Assign exclusive files and coordinate shared contract changes before dependent implementation.
 
-PC1 alone maintains [TZ_PROGRESS.md](TZ_PROGRESS.md) after reviewing both sides'
-changes and reproducible evidence. PC2 updates [Android README](../android/README.md)
-and returns a report through the owner, including exact base/head, changed paths,
-tests and pending hardware gates. A second status ledger is prohibited. A PASS
-statement alone does not establish acceptance.
+Each task states goal, machine/checkout, base/branch, allowed files, constraints, acceptance, required evidence and stopping condition. Return one report with actual source/package identity, changed paths, checks/failures and pending hardware gates. A PASS statement alone is not acceptance. Collect reported evidence once; do not poll or duplicate executor implementation.
 
-## PC2 startup gate
+## Git boundaries
 
-1. PC1 verifies preparation in its task branch.
-2. Owner separately authorizes publication and PR integration into v2.
-3. PC1 reads the actual merged v2 commit and records its full40-character hash.
-4. Replace the explicit pending base in [the Android task draft](ANDROID_TASK_DRAFT.md)
-   with that verified hash, then send the complete task to PC2.
+PC1 checkout: `C:\Users\admin\PycharmProjects\Kiosk_v001`, branch `work/windows-layout-checks`. PC2: `C:\Users\admin\AndroidStudioProjects\Kiosk_v001`, branch `android/events-conformance-design`. Source checkpoint identities and private-data exclusions are in [recovery](DEVELOPMENT_RECOVERY.md). Both source checkpoints are published; neither master nor v2 combines them.
 
-Until all four conditions hold, do not start Android implementation. Preparation
-commit/base is not a substitute for the resulting v2 commit. Push, merge and
-GitHub settings are not authorized by this preparation task. Stage4 remains
-incomplete; other stage boundaries remain as recorded in the single ledger.
+Inspect branch/HEAD/index/status at task start. Preserve unrelated changes. Do not switch to or branch from old v2 solely because it is the integration target. When separately authorized, coordinated task PRs target v2; integration is not part of restoration or cleanup. No reset/clean/force-push, broad staging or overwriting another worker. New commit/push requires explicit permission; the completed checkpoint permission is consumed.
 
-For authorized remote task submission, verify PC2 identity, intended Codex window,
-project path and conversation purpose; do not interrupt an active task or replace
-an unrelated conversation. Use existing RustDesk/Windows-MCP only; do not change
-remote-access/security/accounts/permissions. If unavailable, give the owner the
-complete prompt and precise blocker. Confirm task acceptance/start once; no
-polling, waiting or automatic result collection. The owner returns the report.
-PC1 may continue independent selected Windows checks while shared inputs stay
-fixed. Review source/diffs and evidence before updating the ledger.
+## Current scope
+
+Resume only from [the current checkpoint](TZ_PROGRESS.md#current-checkpoint). Android discovery returned PARTIAL; authenticated continuation awaits the exact owner decision in [the proposal](ANDROID_LAN_CONTINUATION.md). Previous Windows tasks are closed. Do not redispatch old prompts. Stages7–10 remain unauthorized; stage6 waits for mandatory prerequisites. Cleanup does not select continuation or change acceptance.
+
+## SSH and laboratory
+
+- PC2: `ssh admin@192.168.1.117`.
+- Windows10 VM: `ssh work@192.168.1.220`; older admin/KioskTestAdmin endpoints are historical.
+- Preserve strict host-key verification; verify actual host/account/checkout/boot/runtime before relying on a connection. If the restricted execution account lacks known_hosts, use the authorized ordinary-user environment, never disable checking or erase a mismatch.
+- Access failures are precise blockers, not reasons to rerun product tests. A VM reboot alone is not acceptance evidence. Apply [lab policy](TEST_LAB_POLICY.md); old processes/listeners/trust observations are not perpetual health.

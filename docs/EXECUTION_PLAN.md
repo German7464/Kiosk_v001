@@ -2,6 +2,8 @@
 
 Owner-approved roadmap, 2026-10-28. Product requirements remain in [TZ_RECONCILED.md](TZ_RECONCILED.md), revision 1.2.2. [TZ_PROGRESS.md](TZ_PROGRESS.md) alone records actual implementation, evidence, failures, acceptance and next action. This document defines sequence and exit criteria; it is not a second status ledger.
 
+Current execution resumes only from [the active ledger](TZ_PROGRESS.md) and [current ownership](TWO_PC_WORKFLOW.md#current-ownership-and-dispatch). Dated queues below do not redispatch completed A01/stage4 work.
+
 ## Authority and execution boundary
 
 Owner approved sequential implementation of stages 3–6 on 2026-10-29. Stages 7–10 remain planning only and require separate selection. D13 approval and concrete authorization for privileged/live/risky operations remain mandatory. Earlier milestone names M0–M3 organize work; they are not additional specification stages. Approval of this roadmap does not authorize deployment or every future stage.
@@ -109,13 +111,11 @@ After each coherent checkpoint: run proportional required tests, review diff/ind
 
 Use at most two subagents only when allowed and useful for independent components/reviews; never overlap writes or GUI control. Preserve current stage gates and scope; a completed internal point is not a reason to stop.
 
-When **reliable current telemetry** shows context usage at least **70%**, do not start a large operation: reach a safe checkpoint, run minimum required checks, update the ledger, report the threshold, stop and ask the owner to run `/compact`. Do not invoke it yourself. After compact/continue, restore the checkpoint rather than replan.
-
-When reliable current telemetry shows the replenishing **usage budget at 10% or less**, safely finish the operation, record the checkpoint and stop until the owner resumes after replenishment. Context and usage budget are different indicators; stop on the first reached threshold. Never infer percentages from conversation length or stale screenshots. If telemetry is unavailable, state that limitation and use safe checkpoints without claiming thresholds. If platform interruption occurs first, do not claim a handoff was saved.
+Follow root AGENTS for context/budget handoff thresholds. When reliable remaining-context telemetry exists, prepare a handoff near15% and stop starting new tasks near10%; never infer a percentage from conversation length or a dated screenshot. Without telemetry, use compaction and a safe checkpoint without inventing a limit. This roadmap does not introduce a separate70%-used stopping gate or require an owner interruption merely to compact.
 
 Each handoff in TZ_PROGRESS records active stage/point, implementation, passing/failing/pending checks, changed files, Git cautions, owned processes, blockers and exact next action. Resume with bounded Git/process/checkpoint inspection, not a new project audit.
 
-## Nearest authorized queue
+## Historical queue — 2026-10-28 (superseded)
 
 1. Save this roadmap/link and align current revision/scope pointers without rewriting history.
 2. Verify Windows-MCP/RustDesk and safe text input; if blocked record it and continue item 5.
@@ -134,4 +134,4 @@ The test target is a persistent Windows 10 Pro VM, not a disposable VM. The owne
 
 Use Windows MCP through RustDesk for GUI observation; use shared clipboard for text and configured RustDesk file transfer. Do not use Computer Use. Prefer SSH for commands/files/logs after verifying server identity and key authentication. Inspect existing access first; agree concrete service/account/firewall changes before privileged setup. SSH does not replace visual Chrome acceptance.
 
-Next queue: verify management channels; perform the remaining isolated-profile A01 check; review stage-3 closure; proceed sequentially through selected stages 4–6. Preserve valid previous evidence. Historical references to retired documents are provenance, not blockers or instructions to recreate them.
+Historical next queue (superseded by the active progress ledger): verify management channels; perform the remaining isolated-profile A01 check; review stage-3 closure; proceed sequentially through selected stages 4–6. Preserve valid previous evidence. Historical references to retired documents are provenance, not blockers or instructions to recreate them.

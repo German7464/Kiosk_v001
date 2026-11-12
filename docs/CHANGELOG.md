@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-07 — documentation cleanup
+
+Common architecture now records reviewed reuse candidates with licenses, integration cost and limits; spec/AGENTS point to that coordinator snapshot. No dependencies/source/hardware acceptance changed.
+
+Shortened Android README; retained original history with repaired paths. Updated common coordinator documentation snapshot and root instructions; kept Android changelog and source unchanged. No build/device/acceptance change, commit or push.
+
+
 ## 2026-11-03
 
 - Completed the bounded native-admission hardware chain on moto g85 using the clean candidate main APK after explicitly authorized synthetic-store cleanup and verified backup. A/nine refusals/B/external stop/no-issuer refusal/test-only private reopen preserve exact bytes and receipts with zero assets reseeding. Added only one existing-test measurement observer for physical image time/allocation samples; production trust/resource policy and stage4 acceptance remain open. See [Android physical report](../android/README.md).
@@ -319,7 +326,7 @@
 
 - Repair kiosk Events initial-load retry, request deadlines and stale/overlapping update protection with focused JavaScript regressions.
 - Add initial internal offline-manifest integrity validation and Python tests; no offline client acceptance claimed.
-- Record owner specification revision 1.2.2 and selected sequential stages 3–6. Actual checks and pending gates: [progress ledger](TZ_PROGRESS.md#active-execution-checkpoint--2026-10-28-takes-precedence-over-earlier-pending-decisions).
+- Record owner specification revision 1.2.2 and selected sequential stages 3–6. Actual checks and pending gates: [progress ledger](archive/TZ_PROGRESS_2026-11-07.md#active-execution-checkpoint--2026-10-28-takes-precedence-over-earlier-pending-decisions).
 
 
 ## 2026-10-28 — Bounded Events export and A01 regression evidence

@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory=$true)][string]$AndroidSdk,
     [string]$ReadOnlyDependencyCache = '',
     [string]$DebugKeystore = '',
+    [string]$TestBuildType = '',
     [string[]]$Tasks = @(':app:testDebugUnitTest', ':app:assembleDebug', ':app:assembleDebugAndroidTest')
 )
 $ErrorActionPreference = 'Stop'
@@ -23,4 +24,7 @@ New-Item -ItemType Directory -Force -Path "$harnessRoot/.gradle" | Out-Null
 if (!$DebugKeystore) { $DebugKeystore = "$harnessRoot/.gradle/debug.keystore" }
 if (!(Test-Path -LiteralPath $DebugKeystore -PathType Leaf)) { throw 'Existing debug signer required; never regenerate a lost device signer during build' }
 $resolvedDebugKeystore = (Resolve-Path -LiteralPath $DebugKeystore).Path
-Invoke-HarnessNative "$harnessRoot/gradlew.bat" (@('-p', $harnessRoot, "-PkioskDebugKeystore=$resolvedDebugKeystore") + $Tasks)
+$gradleArguments = @('-p', $harnessRoot, "-PkioskDebugKeystore=$resolvedDebugKeystore")
+if ($TestBuildType) { $gradleArguments += "-PkioskTestBuildType=$TestBuildType" }
+$gradleArguments += $Tasks
+Invoke-HarnessNative "$harnessRoot/gradlew.bat" $gradleArguments

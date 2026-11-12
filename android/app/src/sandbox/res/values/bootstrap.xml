@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Disposable lab group for the pairing journey; never the retained phone registration. -->
+    <string name="delivery_bootstrap_asset" translatable="false">delivery-bootstrap-sandbox.json</string>
+</resources>
