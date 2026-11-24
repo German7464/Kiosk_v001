@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-24 - Kiosk Flash workflow
+
+- Consolidated the direct Flash profile and launcher, executor handoff, lab boundaries and publication workflow. Recorded the existing Stage 5 acceptance in the ledger.
+
 ## 2026-11-24 - unified source checkpoint
 
 - Owner authorized preserving the accumulated notebook server, Windows and Android source, tests and documentation in the existing GitHub branch.

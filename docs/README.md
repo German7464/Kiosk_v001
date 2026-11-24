@@ -10,7 +10,8 @@ Start with [AGENTS](../AGENTS.md), branch/status and [the current checkpoint](TZ
 | [Current ledger](TZ_PROGRESS.md) | Factual stage status, accepted evidence, retained laboratory inventory and one next action. |
 | [Two-PC workflow](TWO_PC_WORKFLOW.md) | Ownership, manual dispatch, Git boundaries and SSH references. |
 | [Recovery](DEVELOPMENT_RECOVERY.md) | Separate source checkpoints, environments and private-backup limitations. |
-| [Lab policy](TEST_LAB_POLICY.md) | Exact retained trust/runtime scope; no automatic renewal. |
+| [Lab policy](TEST_LAB_POLICY.md) | Test environment boundaries and retained state. |
+| [Kiosk Flash](../tools/kiosk-flash/README.md) | Profile and launcher restoration and use. |
 | [VM GUI harness](WINDOWS_GUI_HARNESS.md) | Required GUI testing method for the lab VMs: offline install, AI instructions, security rules and known limits. |
 | [Android continuation proposal](ANDROID_LAN_CONTINUATION.md) | Historical selected8443 scope; completed results and current validity are in the ledger. |
 | [Returned Android task](PC2_LAN_DISCOVERY_TASK.md) | Partial result scope; not a prompt to redispatch. |

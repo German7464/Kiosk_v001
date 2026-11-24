@@ -1,20 +1,14 @@
 # Kiosk development progress
 
-Updated: 2026-11-17. Sole current factual ledger. Requirements: [TZ](TZ_RECONCILED.md), revision1.2.2. [Historical reviews through Nov12](archive/TZ_PROGRESS_2026-11-12.md) preserve detailed identities, failures and decisions; old next actions there are not a work queue.
+Updated: 2026-11-24. Sole current factual ledger. Requirements: [TZ](TZ_RECONCILED.md), revision1.2.2. [Historical reviews through Nov12](archive/TZ_PROGRESS_2026-11-12.md) preserve detailed identities, failures and decisions; old next actions there are not a work queue.
 
 ## Current checkpoint
 
-Stage5 PARTIAL; stage6 not started. Stages3вЂ“6 remain sequential. Owner selected one early, bounded stage7 slice on Nov12: manual offline Windows application updates and repeatable build/deploy/check commands. This does not select all stage7 or close TZ15. Android work is independent build/deploy/verification consolidation, not a new updater protocol. Stages8вЂ“10 remain unselected.
+Stage 5 accepted by ChatGPT Work on 2026-11-24 within the recorded test scope: 37 PASS, 0 FAIL, 0 BLOCKED. Final cleanup verified, retained data and rollbacks preserved, original Android application preserved. No product rerun. Qualification used work/windows-layout-checks / 72d22ed plus the recorded working sources and artifacts. See the local qualification matrix at logs/stage5-final-20261121/README.md and final teardown at logs/stage5-final-20261121/coverage-review/r-stage5-final-cleanup-verified.json.
 
-Accepted within recorded limits: Events native delivery, device administration, Windows/Android advisory discovery and pairing, Android retained-group renewal/LAN ready, Windows portable and installed administration, disconnected two-VM Windows operation, supported Windows service/client installation and migration. No blanket release, production trust lifecycle,100-live-client or72-hour acceptance.
+Earlier accepted bounds still apply to the Windows updater/Android workflow, Events delivery and content progress, device administration, Windows/Android discovery and renewal, and Windows deployment. In the Nov15 content-progress closeout at 12:34:54Z, PC1 reported task-owned 20443/20765 stopped and the task rule removed, with 18443/19443 and all data/evidence preserved.
 
-## Current work and ownership
-
-Windows offline updater, Android workflow tooling and isolated LAN lifecycle v2 pilot are COMPLETE within their recorded bounds; the dated continuation sections below are history, not active assignments. Production D13 and whole stage5 remain unaccepted. See the final Nov14 closeout for current evidence limits.
-
-Content-progress-v1 server/Windows and physical Android block COMPLETE within recorded isolated Events bounds Nov15. No further journey/re-enrollment/fault replay is required. Coordinator confirms PC1 may stop only task-owned20443 resources and remove its task-owned access rule, preserving18443/19443 and all unique data/evidence. Cleanup COMPLETE per PC1 report Nov15 12:34:54Z: owned20443/20765 stopped, task rule removed, retained18443/19443 and all data/evidence preserved. Whole-stage5 and production D13 remain unaccepted.
-
-Use DeepSeek Flash by default; use Codex for a demonstrated blocker or targeted security-sensitive review. DeepSeek Pro is discontinued by owner decision Nov14. Preserve existing edits and original phone application. No new Git writes, retained-service deployment, firewall/trust changes or authority extension is implied. Reuse healthy authorized isolated fixtures; material new access or privilege needs must be stated concretely.
+Stage 6 has not started and awaits a separate owner assignment. The bounded Nov12 manual Windows offline update/build slice remains selected. Full Stage 7 and Stages 8–10 remain unselected. No blanket release, production rollout, 100-live-client or 72-hour acceptance. The dated results and gaps below are historical checkpoints.
 
 ## Unified development migration — accepted Nov15
 
@@ -49,7 +43,7 @@ Remaining: production Android app-private-CA WebView provisioning; justified rou
 
 Executor reports retained19443 pilot task re-registration, trust generation1->2 through2027-11-16 and diagnostic revocation of retained device8abcf008; the report's simultaneous retained19443-untouched assertion is inconsistent. Preserve current state/evidence; no automatic rollback or re-pairing. Reconcile exact authorized changes before acceptance. Owner's five behavior decisions remain approved; no production protocol/migration/stage acceptance implied.
 
-## Remaining mandatory stage5 outcomes
+## Historical Stage 5 gap review - Nov15
 
 | Requirement | Current gap / next boundary |
 | --- | --- |
@@ -244,4 +238,4 @@ Notebook verification:40 Maintenance Python tests PASS, pip check/imports/Tcl/re
 
 Owner narrowed transfer to required work material and allowed verified obsolete/duplicate cleanup. Large historic builds, browser profiles, live labs and old archives stay on PC1; selected compact current acceptance evidence and required build dependencies were copied. Only task-created redundant transport archives were removed; unique historical evidence/keys/source retained. One archival private SSH key was unreadable during the superseded full-copy attempt; protection was preserved and it is not required by the selected working set.
 
-Evidence: logs/notebook-migration-20261119/report.md, essential.json/essential-manifest.json, notebook-verification/. Source identity checks and new-machine tests do not close product Stage5 or the existing Maintenance frozen-service/cross-OS/persistent-recovery gaps. PC4/.124 and PC5/.125 SSH timed out from both PC1 and notebook; no guest/firewall/SSH changes. Phone subsequently connected to notebook and independently verified Nov19: ADB device ZY22KDWDNH authorized, moto g85 5G/Android16/API36; original debug and sandbox packages present, original lastUpdate Nov8 and sandbox Nov15, run-as read checks pass. No APK installation/data reset; external Android config now selects this serial. Evidence phone-notebook-check.json. Next implementation must run only on notebook; reload IDEs/OpenCode or reboot to consume the user environment, then continue the existing bounded Maintenance work.
+Evidence: logs/notebook-migration-20261119/report.md, essential.json/essential-manifest.json, notebook-verification/. Source identity checks and new-machine tests do not close product Stage5 or the existing Maintenance frozen-service/cross-OS/persistent-recovery gaps. PC4/.124 and PC5/.125 SSH timed out from both PC1 and notebook; no guest/firewall/SSH changes. Phone subsequently connected to notebook and independently verified Nov19: ADB device ZY22KDWDNH authorized, moto g85 5G/Android16/API36; original debug and sandbox packages present, original lastUpdate Nov8 and sandbox Nov15, run-as read checks pass. No APK installation/data reset; external Android config now selects this serial. Evidence phone-notebook-check.json. At migration closeout, implementation was assigned to the notebook. The then-pending Maintenance work and prior setup are historical; see the current checkpoint.

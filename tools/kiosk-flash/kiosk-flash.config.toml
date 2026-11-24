@@ -1,0 +1,63 @@
+model = "deepseek-flash"
+model_provider = "deepseek_flash"
+model_reasoning_effort = "low"
+model_reasoning_summary = "none"
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
+default_permissions = "kiosk-task"
+web_search = "disabled"
+
+developer_instructions = """
+Work on one assigned Kiosk result. Read the repository instructions and stay within
+the assigned files, lab boundaries and evidence locations. Preserve unrelated edits.
+Use local commands for exact searches and comparisons. Keep secrets out of model
+context, command output and evidence. Honor runtime denials. Preserve strict SSH and
+TLS. Return findings, diff, targeted checks and evidence to primary Codex. Never
+stage, commit, push, delegate or change unrelated host settings.
+"""
+
+[model_providers.deepseek_flash]
+name = "DeepSeek Flash"
+base_url = "https://api.deepseek.com"
+env_key = "DEEPSEEK_API_KEY"
+wire_api = "responses"
+requires_openai_auth = false
+supports_websockets = false
+request_max_retries = 0
+stream_max_retries = 0
+
+[permissions.kiosk-task.filesystem]
+":root" = "read"
+"~/.codex/auth.json" = "deny"
+
+[permissions.kiosk-task.network]
+enabled = false
+
+[features]
+request_permissions_tool = true
+goals = false
+shell_snapshot = false
+apps = false
+hooks = false
+memories = false
+multi_agent = false
+multi_agent_v2 = false
+plugins = false
+
+[mcp_servers.pycharm]
+enabled = false
+url = "http://127.0.0.1:1"
+
+[mcp_servers.node_repl]
+enabled = false
+command = "cmd.exe"
+
+[shell_environment_policy]
+exclude = ["DEEPSEEK_API_KEY", "OPENAI_API_KEY"]
+ignore_default_excludes = false
+
+[shell_environment_policy.set]
+PYTHONDONTWRITEBYTECODE = "1"
+
+[analytics]
+enabled = false
