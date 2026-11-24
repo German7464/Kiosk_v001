@@ -1,0 +1,189 @@
+.kpg {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    color: inherit;
+    font: inherit;
+}
+
+.kpg-instructions,
+.kpg-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.kpg-surface {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: repeat(var(--kpg-columns, 12), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--kpg-rows, 8), minmax(0, 1fr));
+    width: 100%;
+    min-height: clamp(18rem, 52vw, 42rem);
+    overflow: hidden;
+    border: 0;
+    border-radius: 0.55rem;
+    background-color: var(--soft, #f5f7ff);
+    background-image:
+        linear-gradient(to right, rgba(51, 65, 85, 0.14) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(51, 65, 85, 0.14) 1px, transparent 1px);
+    background-size:
+        calc(100% / var(--kpg-columns, 12)) 100%,
+        100% calc(100% / var(--kpg-rows, 8));
+    box-sizing: border-box;
+    box-shadow: inset 0 0 0 1px rgba(30, 41, 59, 0.26);
+}
+
+.kpg-item {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    margin: 3px;
+    overflow: hidden;
+    flex-direction: column;
+    border: 1px solid rgba(30, 64, 175, 0.32);
+    border-radius: 0.45rem;
+    background: var(--panel-solid, #ffffff);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+    box-sizing: border-box;
+}
+
+.kpg-item.is-active {
+    z-index: 3;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3), var(--shadow-soft, 0 16px 42px rgba(79, 70, 229, 0.14));
+}
+
+.kpg-item.is-preview {
+    opacity: 0.88;
+}
+
+.kpg-item.is-invalid {
+    border-color: var(--danger, #b91c1c);
+    box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.28);
+}
+
+.kpg-item-header {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.35rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.38);
+    background: var(--soft, #f5f7ff);
+}
+
+.kpg-order {
+    flex: 0 0 auto;
+    min-width: 1.2rem;
+    color: var(--muted, #64748b);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.kpg-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--ink, #172033);
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kpg-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.18rem;
+}
+
+.kpg button {
+    min-height: 1.7rem;
+    border: 1px solid rgba(71, 85, 105, 0.45);
+    border-radius: 0.28rem;
+    background: var(--panel-solid, #ffffff);
+    color: var(--ink, #172033);
+    font: inherit;
+    font-size: 0.72rem;
+    line-height: 1;
+}
+
+.kpg button:focus-visible {
+    outline: 2px solid var(--blue, #2563eb);
+    outline-offset: 2px;
+}
+
+.kpg button:disabled {
+    cursor: default;
+    opacity: 0.42;
+}
+
+.kpg-drag-handle {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.32rem;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.kpg-drag-handle.is-grabbed {
+    cursor: grabbing;
+}
+
+.kpg-action {
+    padding: 0.15rem 0.28rem;
+}
+
+.kpg-preview {
+    flex: 1 1 auto;
+    min-height: 1.5rem;
+    background:
+        repeating-linear-gradient(
+            135deg,
+            rgba(148, 163, 184, 0.12) 0,
+            rgba(148, 163, 184, 0.12) 6px,
+            rgba(255, 255, 255, 0) 6px,
+            rgba(255, 255, 255, 0) 12px
+        );
+}
+
+.kpg-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 1.4rem;
+    height: 1.4rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted, #64748b);
+    cursor: nwse-resize;
+    touch-action: none;
+    user-select: none;
+}
+
+@media (max-width: 34rem) {
+    .kpg-label {
+        font-size: 0.74rem;
+    }
+
+    .kpg-action {
+        padding-inline: 0.2rem;
+    }
+}

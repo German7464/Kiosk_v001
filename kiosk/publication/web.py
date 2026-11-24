@@ -44,6 +44,10 @@ def protect():
     limiter=current_app.extensions['roaming_limiter']
     if limiter.reserve(request.remote_addr or 'unknown',request.endpoint or 'unknown'):
         raise WorkspaceError('request_limit',429)
+    path = request.path
+    if ((path == '/editor/pages' or path.startswith('/editor/pages/'))
+            and not workspace.stage6_pages):
+        raise WorkspaceError('page_workspace_unavailable', 404)
     if request.method not in ('GET','HEAD','OPTIONS'):
         if request.endpoint not in ('roaming_editor.native_challenge','roaming_editor.native_accept','roaming_editor.native_approve'):
             expected=session.get('csrf_token')
@@ -75,7 +79,7 @@ def headers(response):
     response.headers['Cache-Control']='no-store'
     response.headers['Referrer-Policy']='no-referrer'
     response.headers['X-Content-Type-Options']='nosniff'
-    response.headers['Content-Security-Policy']="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+    response.headers.setdefault('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
     return response
 
 
@@ -85,7 +89,7 @@ def home():
         identity=store().authenticate(secret())
     except (ValueError,WorkspaceError):
         identity=None
-    return render_template('roaming_editor.html',identity=identity)
+    return render_template('roaming_editor.html', identity=identity, stage6_pages=store().stage6_pages)
 
 
 @editor.post('/login/start')
@@ -148,6 +152,75 @@ def ready_object(identity):
     value=body();fields(value,'version')
     store().ready(secret(),identity,value['version'])
     return jsonify(state='ready')
+
+
+@editor.get('/pages')
+def page_library():
+    identity = store().authenticate(secret())
+    return render_template('page_library.html', identity=identity)
+
+
+@editor.get('/pages/objects')
+def page_objects():
+    return jsonify(objects=store().page_objects(secret()))
+
+
+@editor.post('/pages/objects/<identity>')
+def save_page_object(identity):
+    value = body()
+    fields(value, 'expected_version payload dependencies')
+    version = store().save_page(secret(), identity, value['expected_version'],
+                                value['payload'], value['dependencies'])
+    return jsonify(version=version), 201
+
+
+@editor.post('/pages/objects/<identity>/ready')
+def ready_page_object(identity):
+    value = body()
+    fields(value, 'version')
+    store().ready_page(secret(), identity, value['version'])
+    return jsonify(state='ready')
+
+
+@editor.get('/pages/plan')
+def page_plan():
+    return jsonify(store().page_plan(secret()))
+
+
+@editor.get('/pages/target-preview')
+def page_target_preview():
+    target = request.args.get('target', '')
+    preview = store().page_target_preview(secret(), request.args.get('device', ''), target,
+                                          request.args.get('revision_sha256', ''))
+    media = {}
+    for event in preview['events']:
+        for field in ('image_tv', 'image_kiosk', 'image_thumb'):
+            path = event[field]
+            if path is not None and path.startswith('/static/uploads/'):
+                media[path] = url_for('static', filename=path.removeprefix('/static/'))
+    preview.update(mode=target.split('-', 1)[0], media=media)
+    response = current_app.make_response(render_template('page_target_preview.html', preview=preview))
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; "
+        "frame-ancestors 'none'; base-uri 'none'")
+    return response
+
+
+@editor.get('/pages/objects/<identity>/dependants')
+def page_dataset_dependants(identity):
+    return jsonify(store().dataset_dependants(secret(), identity))
+
+
+@editor.get('/pages/modules/events')
+def page_events_status():
+    return jsonify(store().module_status(secret()))
+
+
+@editor.post('/pages/modules/events')
+def page_update_events_status():
+    value = body()
+    fields(value, 'expected_version enabled')
+    return jsonify(store().set_events_enabled(secret(), value['expected_version'], value['enabled']))
 
 
 @editor.get('/sessions')
@@ -315,7 +388,8 @@ def configure(app):
     # Explicit installation opt-in. Root SPKI is separately authenticated public
     # configuration, never supplied by this delivery server's enrollment/login.
     workspace=Workspace(config['database'],base64.b64decode(config['root_spki'],validate=True),
-                        config['group_id'],config['origin'])
+                        config['group_id'],config['origin'],
+                        stage6_pages=config.get('stage6_pages') is True)
     if config.get('policy'):
         workspace.startup_policy(decode(Path(config['policy']).read_bytes()))
     app.extensions['roaming_workspace']=workspace

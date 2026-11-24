@@ -80,6 +80,84 @@ class RoamingWebTests(unittest.TestCase):
         self.client.set_cookie('session',cookie,domain='kiosk.example')
         self.assertEqual(self.get('/objects').status_code,401)
 
+    def test_opt_in_pages_keep_legacy_content_routes_read_only(self):
+        from kiosk.core.credentials import save_admin_password
+        from kiosk.database import get_database
+
+        self.assertEqual(self.get('/pages/objects').status_code, 404)
+        self.store.stage6_pages = True
+        self.assertEqual(self.get('/pages/objects').status_code, 401)
+        csrf = self.login()
+        library = self.get('/pages')
+        self.assertEqual(library.status_code, 200)
+        self.assertIn('page_library.js', library.text)
+        self.assertNotIn('id="events-module-toggle"', library.text)
+        self.assertNotIn('data-new-kind="assignment"', library.text)
+        dataset = 'dataset-' + '1' * 32
+        draft = dict(expected_version=0, payload=dict(schema=1, name='Shared', module='events', events=[]),
+                     dependencies={})
+        self.assertEqual(self.post('/pages/objects/' + dataset, draft).status_code, 403)
+        self.assertEqual(self.post('/pages/objects/' + dataset, draft, csrf).status_code, 201)
+        self.assertEqual(self.post('/pages/objects/' + dataset, draft, csrf).status_code, 409)
+        self.assertEqual(self.post('/objects/' + dataset, draft, csrf).status_code, 400)
+        self.assertEqual(self.get('/pages/objects').json['objects'][0]['published_version'], 0)
+        self.assertEqual(self.get('/objects').json['objects'], [])
+
+        save_admin_password(self.app, 'disposable-stage6-smoke-password', setup=True)
+        page = self.client.get('/admin/login', base_url=self.origin)
+        csrf = re.search(r'<meta name="csrf-token" content="([^"]+)"', page.text).group(1)
+        login = self.client.post('/admin/login', base_url=self.origin,
+                                 data=dict(username='admin', password='disposable-stage6-smoke-password'),
+                                 headers={'X-CSRF-Token': csrf})
+        self.assertEqual(login.status_code, 302)
+        page = self.client.get('/admin', base_url=self.origin)
+        csrf = re.search(r'<meta name="csrf-token" content="([^"]+)"', page.text).group(1)
+        paths = ('settings', 'events/create', 'events/1/edit', 'events/1/tags',
+                 'events/1/delete', 'events/1/toggle', 'events/1/move',
+                 'tags/create', 'tags/1/edit', 'tags/1/delete')
+        public_before = self.client.get('/api/version', base_url=self.origin).json
+        for path in paths:
+            with self.subTest(path=path):
+                response = self.client.post('/admin/' + path, base_url=self.origin,
+                                            headers={'X-CSRF-Token': csrf})
+                self.assertEqual(response.status_code, 409)
+                self.assertEqual(response.json['error'], 'shared_drafts_required')
+        with self.app.app_context():
+            self.assertEqual(get_database().execute('SELECT COUNT(*) FROM events').fetchone()[0], 0)
+            self.assertEqual(get_database().execute('SELECT COUNT(*) FROM tags').fetchone()[0], 0)
+        self.assertEqual(self.client.get('/api/version', base_url=self.origin).json, public_before)
+
+    def test_two_signed_browser_sessions_reject_stale_page_edit(self):
+        self.store.stage6_pages = True
+        alice_client, alice_csrf = self.client, self.login()
+        dataset = 'dataset-' + '2' * 32
+        endpoint = '/pages/objects/' + dataset
+        draft = dict(expected_version=0, payload=dict(schema=1, name='Initial', module='events', events=[]),
+                     dependencies={})
+        self.assertEqual(self.post(endpoint, draft, alice_csrf).status_code, 201)
+
+        bob_client = self.app.test_client()
+        self.client = bob_client
+        self.device = generate_private_key()
+        self.grant = dict(self.grant, user_id='bob',
+                          device_key=base64.b64encode(spki_der(self.device)).decode())
+        self.chain = [a.signed(self.root, 'device', self.grant)]
+        bob_csrf = self.login()
+        bob_version = self.get('/pages/objects').json['objects'][0]['version']
+
+        self.client = alice_client
+        alice_save = dict(draft, expected_version=1, payload=dict(draft['payload'], name='Alice saved'))
+        self.assertEqual(self.post(endpoint, alice_save, alice_csrf).json['version'], 2)
+        self.client = bob_client
+        bob_save = dict(draft, expected_version=bob_version,
+                        payload=dict(draft['payload'], name='Bob unsaved'))
+        refused = self.post(endpoint, bob_save, bob_csrf)
+        self.assertEqual(refused.status_code, 409)
+        self.assertEqual(refused.json['error'], 'draft_version_conflict')
+        shared = self.get('/pages/objects').json['objects'][0]
+        self.assertEqual((shared['author'], shared['payload']['name'], shared['published_version']),
+                         ('alice', 'Alice saved', 0))
+
 
 class RoamingPrepareWebTests(unittest.TestCase):
     """Browser prepare -> exact package -> native approval -> signed assignment."""

@@ -32,6 +32,8 @@ def main():
     sources = [p for folder in DATA for p in (ROOT / folder).rglob('*') if p.is_file()]
     sources += sorted((ROOT / 'kiosk/maintenance').glob('*.py')) + [Path(__file__)]
     sources += sorted((ROOT / 'kiosk/publication').glob('*.py'))
+    sources += sorted((ROOT / 'kiosk/features/events').glob('*.py'))
+    sources += [ROOT / 'kiosk/features/admin/routes.py']
     sources += [ROOT / 'kiosk/publication/authority.py'] + sorted((ROOT / 'kiosk/trust').glob('*.py'))
     sources += [ROOT / name for name in ('kiosk/display/cache.py', 'kiosk/display/delivery_capture.py',
                                         'kiosk/delivery/state.py', 'kiosk/delivery/profiles.py',

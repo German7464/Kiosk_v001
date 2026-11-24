@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime, timezone
 from functools import wraps
 
-from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from kiosk.core.credentials import session_credential_token, uses_default_credentials, validate_password
@@ -15,6 +15,12 @@ from kiosk.database import get_database, increase_content_version
 
 
 admin_blueprint = Blueprint("admin", __name__, url_prefix="/admin")
+
+_PUBLIC_EDIT_ROUTES = frozenset({
+    'save_admin_settings', 'create_tag', 'edit_tag_post', 'delete_tag',
+    'create_event_post', 'edit_event_post', 'edit_event_tags_post',
+    'delete_event', 'toggle_event', 'move_event',
+})
 
 
 def admin_required(route_handler):
@@ -29,6 +35,10 @@ def admin_required(route_handler):
             session.clear()
             return redirect(url_for("admin.login"))
 
+        workspace = current_app.extensions.get('roaming_workspace')
+        if (request.method == 'POST' and route_handler.__name__ in _PUBLIC_EDIT_ROUTES
+                and workspace is not None and workspace.stage6_pages):
+            return jsonify(error='shared_drafts_required', editor=url_for('roaming_editor.home')), 409
         return route_handler(*args, **kwargs)
 
     return wrapped_route

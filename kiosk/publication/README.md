@@ -180,3 +180,37 @@ camera/app handler or paste), automatic retained migration or full page builder.
 Native review/Publish, independent publisher-root confirmation, guided user-CA
 WebView HTTPS and offline restart have evidence within the recorded packages and
 devices. Remaining installed whole-chain maintenance limits are reported separately.
+
+## Stage 6 page draft workspace
+
+For an isolated fixture, set `ROAMING_WORKSPACE.stage6_pages` to `true` in the
+Content configuration. Open `/editor` at the configured HTTPS origin, use the
+existing authorized browser login, then open **Page draft library**. Keep the
+original installed configuration and data separate. Seed an existing verified
+Events snapshot with the [disposable seed](../features/events/README.md#fixture-seed).
+
+The library stores versioned datasets, blocks, layouts, pages, shared profiles
+and individual assignments. Save with the loaded object version and current
+dependency pins. Mark the exact saved version Ready after its dependencies are
+Ready or published at the same version. A conflict response leaves the current
+form intact. Removing a block from a layout leaves its dataset intact.
+Dataset reference checks report working and published dependants. Dataset
+deletion waits for the Stage 7 recycle-bin workflow.
+
+The proposed revision lists included and excluded changes with authors and
+reasons. The target preview uses its exact digest and refuses a stale request.
+Layouts use grid units. A missing mode/orientation uses the designated default,
+reflowed to full-width rows in the declared block order. Preview is draft data
+served only in the authenticated workspace.
+
+Profiles, assignments and module enable/disable require administrator rights.
+The Events module switch lives in the group workspace. It blocks new Events
+and Events-dataset operations while disabled. The switch preserves stored
+module data, references and previously published content. A health failure
+refuses module operations and leaves independent page drafts available.
+
+The opt-in draft workspace freezes legacy content writes and v1 preparation
+and new approvals. Page revisions still need integration with the trusted
+review, target-specific signed delivery and client activation protocol before
+Stage 6 qualification. Existing deployments without the opt-in keep the
+Stage 5 workflow. See the [current checkpoint](../../docs/TZ_PROGRESS.md#current-checkpoint).

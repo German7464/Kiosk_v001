@@ -11,7 +11,8 @@ import time
 from pathlib import Path
 
 from kiosk.delivery.protocol import decode, digest, encode, sha, text
-from . import authority
+from kiosk.features import events
+from . import authority, pages
 from .mapping import SETTINGS_LIMIT, settings as mapped_settings
 
 IDLE_SECONDS = 15 * 60
@@ -36,51 +37,13 @@ def _exact_version(value, minimum=0):
     return value
 
 
-def _payload(value):
-    if not isinstance(value, dict) or len(encode(value)) > MAX_OBJECT_BYTES:
-        raise WorkspaceError('draft_limit', 413)
-    # Events only. References are versioned separately; no arbitrary HTML/script.
-    allowed = {'title', 'short_description', 'full_description', 'event_date', 'place',
-               'sort_order', 'status', 'images', 'tags'}
-    if set(value) != allowed:
-        raise WorkspaceError('invalid_event_fields')
-    for name, maximum in (('title', 300), ('short_description', 4096),
-                          ('full_description', 16384), ('event_date', 64), ('place', 512)):
-        item = value[name]
-        if name == 'event_date' and item is None:
-            continue
-        if not isinstance(item, str) or len(item) > maximum or '\x00' in item:
-            raise WorkspaceError('invalid_event_text')
-    if not value['title'].strip() or value['status'] not in ('active', 'hidden'):
-        raise WorkspaceError('invalid_event')
-    if type(value['sort_order']) is not int or not -100000 <= value['sort_order'] <= 100000:
-        raise WorkspaceError('invalid_event_order')
-    for field, maximum in (('images', 3), ('tags', 32)):
-        items = value[field]
-        if not isinstance(items, list) or len(items) > maximum or any(not isinstance(x, str) and
-                not (field == 'images' and len(items) == 3 and x is None) for x in items):
-            raise WorkspaceError('invalid_event_references')
-        if field == 'tags' and len(set(items)) != len(items):
-            raise WorkspaceError('invalid_event_references')
-        for item in items:
-            if field == 'images':
-                if item is None:
-                    continue
-                if (not item.startswith('/static/uploads/') or '\\' in item
-                        or any(part in ('', '.', '..') for part in item.split('/')[1:])
-                        or len(item) > 512 or '\x00' in item or '?' in item or '#' in item or '%' in item):
-                    raise WorkspaceError('invalid_event_references')
-            elif not item.strip() or len(item) > 128 or '\x00' in item:
-                raise WorkspaceError('invalid_event_references')
-    return value
-
-
 class Workspace:
-    def __init__(self, path, root_spki, group_id, origin, *, clock=time.time):
+    def __init__(self, path, root_spki, group_id, origin, *, clock=time.time, stage6_pages=False):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.root_spki = bytes(root_spki)
         self.group_id, self.origin, self.clock = text(group_id), authority.origin(origin), clock
+        self.stage6_pages = stage6_pages
         with self.db() as db:
             db.executescript('''
                 CREATE TABLE IF NOT EXISTS policy (singleton INTEGER PRIMARY KEY CHECK(singleton=1), version INTEGER NOT NULL, envelope BLOB NOT NULL);
@@ -100,6 +63,8 @@ class Workspace:
                     content INTEGER NOT NULL);
                 CREATE TABLE IF NOT EXISTS staged (id TEXT PRIMARY KEY, snapshot BLOB NOT NULL,
                     settings BLOB NOT NULL, content_version INTEGER NOT NULL, created INTEGER NOT NULL);
+                CREATE TABLE IF NOT EXISTS feature_modules (id TEXT PRIMARY KEY,
+                    enabled INTEGER NOT NULL CHECK(enabled IN (0,1)), version INTEGER NOT NULL);
                 CREATE TABLE IF NOT EXISTS service_nonces (value TEXT PRIMARY KEY, seen INTEGER NOT NULL);
                 CREATE TABLE IF NOT EXISTS placement (singleton INTEGER PRIMARY KEY CHECK(singleton=1),
                     mode TEXT NOT NULL, generation INTEGER NOT NULL, active INTEGER NOT NULL,
@@ -264,7 +229,10 @@ class Workspace:
         if len(raw) > MAX_SETTINGS_BYTES:
             raise WorkspaceError('settings_limit', 413)
         with self.db() as db:
-            self._session(db, secret)
+            device, _ = self._session(db, secret)
+            if self.stage6_pages:
+                self._require_active_write(db)
+                self._edit_authority(device, 'event')
             self._capacity(len(raw) * 2 + 16384)
             current, _ = self._settings(db)
             if current != expected_version:
@@ -381,14 +349,96 @@ class Workspace:
 
     def save(self, secret, identity, expected_version, payload, dependencies):
         text(identity)
+        if pages.IDENTITY.fullmatch(identity):
+            raise WorkspaceError('page_route_required')
+        if self.stage6_pages:
+            try:
+                pages.kind(identity)
+            except pages.PageError as error:
+                raise WorkspaceError(str(error)) from None
+        return self._save(secret, identity, expected_version, payload, dependencies, page=False)
+
+    @staticmethod
+    def _edit_authority(device, object_kind):
+        scope = device.get('scope')
+        if scope is not None and 'edit' not in scope['permissions']:
+            raise WorkspaceError('edit_permission_required', 403)
+        if object_kind in ('profile', 'assignment') and device['role'] != 'administrator':
+            raise WorkspaceError('administrator_required', 403)
+
+    def _require_active_write(self, db):
+        if self.stage6_pages:
+            row = db.execute('SELECT active,fence FROM placement WHERE singleton=1').fetchone()
+            if row is not None and (not row['active'] or row['fence']):
+                raise WorkspaceError('service_fenced', 409)
+
+    def _events_status(self, db):
+        row = db.execute("SELECT enabled,version FROM feature_modules WHERE id='events'").fetchone()
+        enabled, version = (bool(row['enabled']), row['version']) if row else (True, 0)
+        state = 'disabled'
+        if enabled:
+            try:
+                state = 'ready' if events.health()['status'] == 'ok' else 'faulted'
+            except (RuntimeError, OSError, KeyError, TypeError, ValueError):
+                state = 'faulted'
+        return dict(id='events', enabled=enabled, version=version, state=state)
+
+    def module_status(self, secret):
+        with self.db() as db:
+            self._session(db, secret)
+            return self._events_status(db)
+
+    def set_events_enabled(self, secret, expected_version, enabled):
         _exact_version(expected_version)
-        _payload(payload)
+        if type(enabled) is not bool:
+            raise WorkspaceError('invalid_module_setting')
+        with self.db() as db:
+            device, _ = self._session(db, secret)
+            self._require_active_write(db)
+            self._edit_authority(device, 'profile')
+            status = self._events_status(db)
+            if status['version'] != expected_version:
+                raise WorkspaceError('module_version_conflict', 409)
+            if status['enabled'] != enabled:
+                db.execute("INSERT INTO feature_modules VALUES ('events',?,?) "
+                           'ON CONFLICT(id) DO UPDATE SET enabled=excluded.enabled,version=excluded.version',
+                           (enabled, expected_version + 1))
+            return self._events_status(db)
+
+    def _require_events(self, db, object_kind):
+        if self.stage6_pages and object_kind in ('event', 'dataset'):
+            if self._events_status(db)['state'] != 'ready':
+                raise WorkspaceError('events_module_unavailable', 503)
+
+    def save_page(self, secret, identity, expected_version, payload, dependencies):
+        return self._save(secret, identity, expected_version, payload, dependencies, page=True)
+
+    def _save(self, secret, identity, expected_version, payload, dependencies, *, page):
+        text(identity)
+        _exact_version(expected_version)
+        if not page:
+            events.validate_payload(payload, WorkspaceError)
+        elif len(encode(payload)) > MAX_OBJECT_BYTES:
+            raise WorkspaceError('draft_limit', 413)
         if not isinstance(dependencies, dict) or len(dependencies)>100:
             raise WorkspaceError('dependency_limit')
         for name, version in dependencies.items():
             text(name); _exact_version(version,1)
+        if page:
+            try:
+                object_kind = pages.kind(identity)
+                pages.validate_dependencies(identity, payload, dependencies)
+            except pages.PageError as error:
+                raise WorkspaceError(str(error)) from None
+        else:
+            object_kind = 'event'
+            if any(pages.IDENTITY.fullmatch(name) for name in dependencies):
+                raise WorkspaceError('incompatible_page_dependency')
         with self.db() as db:
             device,_ = self._session(db,secret)
+            self._require_active_write(db)
+            self._edit_authority(device, object_kind)
+            self._require_events(db, object_kind)
             self._capacity(len(encode(payload))*2+16384)
             if db.execute('SELECT COUNT(*) FROM revisions').fetchone()[0]>=10000:
                 raise WorkspaceError('revision_capacity',507)
@@ -397,6 +447,17 @@ class Workspace:
                 raise WorkspaceError('draft_version_conflict',409)
             if not old and db.execute('SELECT COUNT(*) FROM objects').fetchone()[0]>=MAX_OBJECTS:
                 raise WorkspaceError('draft_object_limit',413)
+            if object_kind == 'assignment':
+                for row in db.execute("SELECT id,payload FROM objects WHERE id LIKE 'assignment-%' AND id!=?", (identity,)):
+                    if decode(row['payload'])['device'] == payload['device']:
+                        raise WorkspaceError('duplicate_page_assignment', 409)
+                if old:
+                    previous = db.execute('SELECT payload FROM objects WHERE id=?', (identity,)).fetchone()
+                    if decode(previous['payload'])['device'] != payload['device']:
+                        raise WorkspaceError('assignment_identity_changed', 409)
+                scope = device.get('scope')
+                if scope is not None and payload['device'] not in scope['targets']:
+                    raise WorkspaceError('publisher_scope_refused', 403)
             version=expected_version+1
             raw,refs=encode(payload),encode(dependencies)
             db.execute('INSERT INTO revisions VALUES (?,?,?,?,?)',(identity,version,raw,device['user_id'],refs))
@@ -404,39 +465,187 @@ class Workspace:
                 ON CONFLICT(id) DO UPDATE SET version=excluded.version,payload=excluded.payload,
                     author=excluded.author,dependencies=excluded.dependencies,ready=0''',
                 (identity,version,raw,device['user_id'],refs))
-            # Readiness pins dependency versions; recursively invalidated below
-            # at planning too, so an interrupted request cannot publish stale refs.
-            for row in db.execute('SELECT id,dependencies FROM objects WHERE ready=1').fetchall():
-                if identity in decode(row['dependencies']):
-                    db.execute('UPDATE objects SET ready=0 WHERE id=?',(row['id'],))
+            dependants = {}
+            for row in db.execute('SELECT id,dependencies FROM objects'):
+                for dependency in decode(row['dependencies']):
+                    dependants.setdefault(dependency, []).append(row['id'])
+            invalidated = {identity}
+            pending = deque([identity])
+            while pending:
+                for dependant in dependants.get(pending.popleft(), ()):
+                    if dependant not in invalidated:
+                        invalidated.add(dependant)
+                        pending.append(dependant)
+            db.executemany('UPDATE objects SET ready=0 WHERE id=?', ((item,) for item in invalidated))
             return version
 
-    def _ready(self, db, row, visiting=None):
-        visiting=set() if visiting is None else visiting
+    def _ready(self, db, row, visiting=None, verified=None):
+        visiting = set() if visiting is None else visiting
+        verified = set() if verified is None else verified
+        if row['id'] in verified:
+            return
         if row['id'] in visiting:
             raise WorkspaceError('dependency_cycle',409)
-        visiting=visiting|{row['id']}
+        visiting.add(row['id'])
+        dependencies = {}
         for identity,version in decode(row['dependencies']).items():
             dep=db.execute('SELECT * FROM objects WHERE id=?',(identity,)).fetchone()
             if dep is None or dep['version']!=version or (not dep['ready'] and dep['published_version']!=version):
                 raise WorkspaceError('dependency_not_ready',409)
-            self._ready(db,dep,visiting)
+            self._ready(db, dep, visiting, verified)
+            dependencies[identity] = decode(dep['payload'])
+        if row['id'].startswith('page-'):
+            try:
+                pages.validate_layout_targets(decode(row['payload']), dependencies)
+            except pages.PageError as error:
+                raise WorkspaceError(str(error), 409) from None
+        visiting.remove(row['id'])
+        verified.add(row['id'])
 
     def ready(self, secret, identity, version):
+        return self._mark_ready(secret, identity, version, page=False)
+
+    def ready_page(self, secret, identity, version):
+        return self._mark_ready(secret, identity, version, page=True)
+
+    def _mark_ready(self, secret, identity, version, *, page):
+        text(identity)
+        if bool(pages.IDENTITY.fullmatch(identity)) != page:
+            raise WorkspaceError('incompatible_page_route')
+        if self.stage6_pages:
+            try:
+                pages.kind(identity)
+            except pages.PageError as error:
+                raise WorkspaceError(str(error)) from None
         with self.db() as db:
-            self._session(db,secret)
+            device, _ = self._session(db,secret)
+            self._require_active_write(db)
+            object_kind = pages.kind(identity) if page else 'event'
+            self._edit_authority(device, object_kind)
+            self._require_events(db, object_kind)
             row=db.execute('SELECT * FROM objects WHERE id=?',(identity,)).fetchone()
             if row is None or row['version']!=_exact_version(version,1):
                 raise WorkspaceError('draft_version_conflict',409)
+            if page and identity.startswith('assignment-') and device.get('scope') is not None:
+                if decode(row['payload'])['device'] not in device['scope']['targets']:
+                    raise WorkspaceError('publisher_scope_refused', 403)
             self._ready(db,row)
             db.execute('UPDATE objects SET ready=1 WHERE id=?',(identity,))
 
     def objects(self, secret):
+        return self._objects(secret, include_pages=False)
+
+    def page_objects(self, secret):
+        return self._objects(secret, include_pages=True)
+
+    def _objects(self, secret, *, include_pages):
         with self.db() as db:
-            self._session(db,secret)
+            device, _ = self._session(db,secret)
+            scope = device.get('scope')
             return [dict(id=r['id'],version=r['version'],payload=decode(r['payload']),author=r['author'],
                          dependencies=decode(r['dependencies']),ready=bool(r['ready']),published_version=r['published_version'])
-                    for r in db.execute('SELECT * FROM objects ORDER BY id')]
+                    for r in db.execute('SELECT * FROM objects ORDER BY id')
+                    if (include_pages or not pages.IDENTITY.fullmatch(r['id']))
+                    and (scope is None or not r['id'].startswith('assignment-')
+                         or decode(r['payload'])['device'] in scope['targets'])]
+
+    def page_plan(self, secret):
+        """Read-only draft selection. It does not authorize or publish anything."""
+        with self.db() as db:
+            device, _ = self._session(db, secret)
+            plan, snapshot = self._page_plan(db, device.get('scope'))
+            return dict(plan, revision_sha256=sha(encode(dict(plan=plan, objects=snapshot))))
+
+    def page_target_preview(self, secret, device_id, target, revision_sha256):
+        """Render inputs for the exact current proposed revision, never public."""
+        digest(revision_sha256)
+        text(device_id)
+        with self.db() as db:
+            device, _ = self._session(db, secret)
+            scope = device.get('scope')
+            if scope is not None and device_id not in scope['targets']:
+                raise WorkspaceError('publisher_scope_refused', 403)
+            plan, snapshot = self._page_plan(db, scope)
+            if sha(encode(dict(plan=plan, objects=snapshot))) != revision_sha256:
+                raise WorkspaceError('prepared_snapshot_changed', 409)
+            try:
+                projected, selected_events = pages.target_content(snapshot, device_id, target)
+                public = events.derive(selected_events, {}, 1) if selected_events else dict(events=[], tags=[])
+            except (pages.PageError, events.MappingError, KeyError):
+                raise WorkspaceError('target_preview_unavailable', 409) from None
+            return dict(page=projected, events=public['events'], tags=public['tags'])
+
+    def _page_plan(self, db, scope):
+        current = {row['id']: row for row in db.execute('SELECT * FROM objects ORDER BY id')}
+        published = {
+            row['id']: row for row in db.execute(
+                'SELECT r.* FROM revisions r JOIN objects o ON r.id=o.id AND r.version=o.published_version')
+        }
+        changed = {identity: row for identity, row in current.items()
+                   if row['version'] != row['published_version']}
+        reasons = {}
+        events_ready = self._events_status(db)['state'] == 'ready'
+        for identity, row in changed.items():
+            if (scope is not None and identity.startswith('assignment-')
+                    and decode(row['payload'])['device'] not in scope['targets']):
+                reasons[identity] = 'target_out_of_scope'
+            elif not events_ready and (identity.startswith('dataset-') or not pages.IDENTITY.fullmatch(identity)):
+                reasons[identity] = 'events_module_unavailable'
+            elif not row['ready']:
+                reasons[identity] = 'working'
+            else:
+                try:
+                    self._ready(db, row)
+                except WorkspaceError as error:
+                    reasons[identity] = error.code
+        # A group revision contains one version of each object. Preserve pinned
+        # published dependants until their consistent replacements are ready.
+        while True:
+            active = published | {key: row for key, row in changed.items() if key not in reasons}
+            rejected = {}
+            for identity, row in active.items():
+                for dependency, version in decode(row['dependencies']).items():
+                    actual = active.get(dependency)
+                    if actual is not None and actual['version'] == version:
+                        continue
+                    if identity in changed and identity not in reasons:
+                        rejected[identity] = 'dependency_not_in_plan'
+                    elif dependency in changed and dependency not in reasons:
+                        rejected[dependency] = 'published_dependant_pinned'
+            if not rejected:
+                break
+            reasons.update(rejected)
+
+        def entry(identity, row):
+            return dict(id=identity, version=row['version'], author=row['author'])
+
+        plan = dict(
+            included=[entry(identity, row) for identity, row in changed.items() if identity not in reasons],
+            excluded=[dict(entry(identity, row), reason=reasons[identity])
+                      for identity, row in changed.items()
+                      if identity in reasons and reasons[identity] != 'target_out_of_scope'])
+        snapshot = {identity: dict(version=row['version'], payload=decode(row['payload']),
+                                   dependencies=decode(row['dependencies']), author=row['author'])
+                    for identity, row in active.items()}
+        return plan, snapshot
+
+    def dataset_dependants(self, secret, identity):
+        if not pages.IDENTITY.fullmatch(identity) or not identity.startswith('dataset-'):
+            raise WorkspaceError('invalid_dataset_identity')
+        with self.db() as db:
+            self._session(db, secret)
+            if db.execute('SELECT 1 FROM objects WHERE id=?', (identity,)).fetchone() is None:
+                raise WorkspaceError('dataset_not_found', 404)
+
+            def references(query):
+                return sorted(row['id'] for row in db.execute(query)
+                              if identity in decode(row['dependencies']))
+            return dict(
+                working=references("SELECT id, dependencies FROM objects WHERE id LIKE 'block-%'"),
+                published=references('SELECT r.id, r.dependencies FROM revisions r '
+                                     'JOIN objects o ON r.id=o.id AND r.version=o.published_version '
+                                     "WHERE r.id LIKE 'block-%'"),
+                deletion='stage7_recycle_bin_required')
 
     def _snapshot(self, db, selected):
         if not isinstance(selected, dict) or not 1<=len(selected)<=MAX_OBJECTS:
@@ -444,6 +653,8 @@ class Workspace:
         snapshot={}
         for identity,version in sorted(selected.items()):
             text(identity);_exact_version(version,1)
+            if pages.IDENTITY.fullmatch(identity):
+                raise WorkspaceError('page_publication_required', 409)
             obj=db.execute('SELECT * FROM objects WHERE id=?',(identity,)).fetchone()
             if obj is None or obj['version']!=version or not obj['ready']:
                 raise WorkspaceError('plan_revision_not_ready',409)
@@ -466,6 +677,8 @@ class Workspace:
         """
         with self.db() as db:
             self._session(db,secret)
+            if self.stage6_pages:
+                raise WorkspaceError('page_publication_required', 409)
             self._capacity(2*1024*1024)
             snapshot=self._snapshot(db,selected)
             _,values=self._settings(db)
@@ -510,6 +723,8 @@ class Workspace:
         validate_metadata(publication)
         with self.db() as db:
             device,row=self._session(db,secret)
+            if self.stage6_pages:
+                raise WorkspaceError('page_publication_required', 409)
             self._capacity(2*1024*1024)
             if db.execute('SELECT COUNT(*) FROM plans').fetchone()[0]>=1024:
                 raise WorkspaceError('plan_capacity',507)
@@ -676,6 +891,8 @@ class Workspace:
                 if bytes(row['approval'])!=proof:
                     raise WorkspaceError('plan_approval_conflict',409)
                 return document
+            if self.stage6_pages:
+                raise WorkspaceError('page_publication_required', 409)
             if self.now()-row['created']>=15*60:
                 raise WorkspaceError('prepared_review_expired',410)
             for identity,obj in document['objects'].items():

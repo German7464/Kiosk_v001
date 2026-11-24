@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}Page library{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/page_grid.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/page_library.css') }}">
+<section class="admin-panel admin-panel-wide page-library-panel"
+         data-page-library
+         data-csrf="{{ csrf_token() }}"
+         data-role="{{ identity.role }}"
+         data-user-id="{{ identity.user_id }}">
+    <header class="page-library-header">
+        <div>
+            <h1>Page library</h1>
+            <p class="admin-copy">Shared pages, layouts, blocks and datasets. Working drafts do not change displayed content.</p>
+        </div>
+        <p class="page-library-identity">Signed in as <strong>{{ identity.user_id }}</strong> ({{ identity.role }})</p>
+    </header>
+
+    <p id="page-library-status" class="page-library-status" role="status" aria-live="polite"></p>
+    <div class="page-library-toolbar">
+        <span id="events-module-state" role="status"></span>
+        {% if identity.role == 'administrator' %}
+        <button id="events-module-toggle" type="button" hidden></button>
+        {% endif %}
+    </div>
+
+    <div class="page-library-toolbar">
+        <button type="button" id="library-reload">Reload listed objects</button>
+        <button type="button" id="plan-reload">Reload publication preview</button>
+        <span>Reloading the list discards unsaved editor fields only after your confirmation.</span>
+    </div>
+
+    <div class="page-library-main">
+        <nav class="page-library-sidebar" aria-label="Page library objects">
+            <h2>Objects</h2>
+            <div id="library-objects"></div>
+        </nav>
+
+        <div class="page-library-workspace">
+            <div class="page-library-new-actions" aria-label="Create object">
+                <button type="button" data-new-kind="dataset">New dataset</button>
+                <button type="button" data-new-kind="block">New block</button>
+                <button type="button" data-new-kind="layout">New layout</button>
+                <button type="button" data-new-kind="page">New page</button>
+                {% if identity.role == 'administrator' %}
+                <button type="button" data-new-kind="profile">New profile</button>
+                <button type="button" data-new-kind="assignment">New assignment</button>
+                {% endif %}
+            </div>
+
+            <p id="editor-meta" class="page-library-editor-meta">Choose an object or create a new one.</p>
+
+            <article id="dataset-editor" class="page-library-editor" hidden>
+                <form id="dataset-form" class="admin-form page-library-form" data-kind="dataset">
+                    <input type="hidden" name="schema" value="1">
+                    <input type="hidden" name="id">
+                    <input type="hidden" name="version" value="0">
+                    <div>
+                        <p class="label">Dataset</p>
+                        <h2>Shared Events dataset</h2>
+                    </div>
+                    <label>
+                        <span>Name</span>
+                        <input type="text" name="name" maxlength="120" required autocomplete="off">
+                    </label>
+                    <label>
+                        <span>Feature module</span>
+                        <select name="module">
+                            <option value="events">Events</option>
+                        </select>
+                    </label>
+                    <fieldset class="page-library-fieldset">
+                        <legend>Events</legend>
+                        <p class="page-library-hint">Only existing Events are listed. Their IDs stay numeric and their current versions become dependencies.</p>
+                        <div class="page-library-checkbox-list" data-event-choices></div>
+                    </fieldset>
+                    <p class="page-library-hint" data-dataset-usage></p>
+                    <div class="page-library-form-actions">
+                        <button type="submit">Save dataset draft</button>
+                        <button type="button" data-ready>Mark loaded version ready</button>
+                        <button type="button" class="page-library-secondary" data-close>Close</button>
+                    </div>
+                </form>
+            </article>
+
+            <article id="block-editor" class="page-library-editor" hidden>
+                <form id="block-form" class="admin-form page-library-form" data-kind="block">
+                    <input type="hidden" name="schema" value="1">
+                    <input type="hidden" name="id">
+                    <input type="hidden" name="version" value="0">
+                    <div>
+                        <p class="label">Block</p>
+                        <h2>Block instance</h2>
+                    </div>
+                    <label>
+                        <span>Name</span>
+                        <input type="text" name="name" maxlength="120" required autocomplete="off">
+                    </label>
+                    <label>
+                        <span>Dataset</span>
+                        <select name="dataset" required></select>
+                    </label>
+                    <p class="page-library-hint" data-block-dataset-info></p>
+                    <label>
+                        <span>Tags (comma separated)</span>
+                        <input type="text" name="tags" maxlength="2048" autocomplete="off">
+                    </label>
+                    <label>
+                        <span>Limit</span>
+                        <input type="number" name="limit" min="1" max="100" step="1" value="20" required>
+                    </label>
+                    <label>
+                        <span>Appearance</span>
+                        <select name="appearance">
+                            <option value="cards">Cards</option>
+                            <option value="list">List</option>
+                        </select>
+                    </label>
+                    <div class="page-library-form-actions">
+                        <button type="submit">Save block draft</button>
+                        <button type="button" data-ready>Mark loaded version ready</button>
+                        <button type="button" class="page-library-secondary" data-close>Close</button>
+                    </div>
+                </form>
+            </article>
+
+            <article id="layout-editor" class="page-library-editor" hidden>
+                <form id="layout-form" class="admin-form page-library-form" data-kind="layout">
+                    <input type="hidden" name="schema" value="1">
+                    <input type="hidden" name="id">
+                    <input type="hidden" name="version" value="0">
+                    <div>
+                        <p class="label">Layout</p>
+                        <h2>Adaptive grid layout</h2>
+                    </div>
+                    <div class="page-library-inline-fields">
+                        <label>
+                            <span>Target</span>
+                            <select name="target">
+                                <option value="tv-landscape">TV landscape</option>
+                                <option value="tv-portrait">TV portrait</option>
+                                <option value="kiosk-landscape">Kiosk landscape</option>
+                                <option value="kiosk-portrait">Kiosk portrait</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Columns</span>
+                            <input type="number" name="columns" min="1" max="24" step="1" value="12" required>
+                        </label>
+                        <label>
+                            <span>Rows</span>
+                            <input type="number" name="rows" min="1" max="24" step="1" value="12" required>
+                        </label>
+                    </div>
+                    <section class="page-library-grid-section">
+                        <h3>Grid</h3>
+                        <p class="page-library-hint">Drag and resize in grid units. Overlap and out-of-bounds placements are refused before saving.</p>
+                        <div id="layout-grid" class="page-library-grid" aria-label="Layout grid editor"></div>
+                    </section>
+                    <section class="page-library-placement-section">
+                        <h3>Placements</h3>
+                        <div class="page-library-placement-controls">
+                            <label>
+                                <span>Add block</span>
+                                <select id="layout-new-block"></select>
+                            </label>
+                            <button type="button" id="layout-add-placement">Add placement</button>
+                        </div>
+                        <div class="page-library-table-scroll">
+                            <table class="page-library-placements">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Block</th>
+                                        <th scope="col">X</th>
+                                        <th scope="col">Y</th>
+                                        <th scope="col">W</th>
+                                        <th scope="col">H</th>
+                                        <th scope="col">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody data-layout-placements></tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <div class="page-library-form-actions">
+                        <button type="submit">Save layout draft</button>
+                        <button type="button" data-ready>Mark loaded version ready</button>
+                        <button type="button" class="page-library-secondary" data-close>Close</button>
+                    </div>
+                </form>
+            </article>
+
+            <article id="page-editor" class="page-library-editor" hidden>
+                <form id="page-form" class="admin-form page-library-form" data-kind="page">
+                    <input type="hidden" name="schema" value="1">
+                    <input type="hidden" name="id">
+                    <input type="hidden" name="version" value="0">
+                    <div>
+                        <p class="label">Page</p>
+                        <h2>Page and target layouts</h2>
+                    </div>
+                    <div class="page-library-inline-fields">
+                        <label>
+                            <span>Name</span>
+                            <input type="text" name="name" maxlength="120" required autocomplete="off">
+                        </label>
+                        <label>
+                            <span>Order</span>
+                            <input type="number" name="order" min="0" max="10000" step="1" value="0" required>
+                        </label>
+                    </div>
+                    <fieldset class="page-library-fieldset">
+                        <legend>Layouts by target</legend>
+                        <div class="page-library-target-grid">
+                            <label>
+                                <span>TV landscape</span>
+                                <select name="layout-tv-landscape" data-page-layout-target="tv-landscape"></select>
+                            </label>
+                            <label>
+                                <span>TV portrait</span>
+                                <select name="layout-tv-portrait" data-page-layout-target="tv-portrait"></select>
+                            </label>
+                            <label>
+                                <span>Kiosk landscape</span>
+                                <select name="layout-kiosk-landscape" data-page-layout-target="kiosk-landscape"></select>
+                            </label>
+                            <label>
+                                <span>Kiosk portrait</span>
+                                <select name="layout-kiosk-portrait" data-page-layout-target="kiosk-portrait"></select>
+                            </label>
+                        </div>
+                    </fieldset>
+                    <label>
+                        <span>Fallback target</span>
+                        <select name="fallback" id="page-fallback" required></select>
+                    </label>
+                    <p class="page-library-hint">The fallback must be one of the supplied layout targets. A missing preview target is shown as full-width rows from this fallback.</p>
+                    <fieldset class="page-library-fieldset">
+                        <legend>Target preview (read-only)</legend>
+                        <label>
+                            <span>Preview target</span>
+                            <select id="page-preview-target">
+                                <option value="tv-landscape">TV landscape</option>
+                                <option value="tv-portrait">TV portrait</option>
+                                <option value="kiosk-landscape">Kiosk landscape</option>
+                                <option value="kiosk-portrait">Kiosk portrait</option>
+                            </select>
+                        </label>
+                        <p class="page-library-hint" data-page-preview-note></p>
+                        <div id="page-preview-grid" class="page-library-grid" aria-label="Page target preview"></div>
+                    </fieldset>
+                    <div class="page-library-form-actions">
+                        <button type="submit">Save page draft</button>
+                        <button type="button" data-ready>Mark loaded version ready</button>
+                        <button type="button" class="page-library-secondary" data-close>Close</button>
+                    </div>
+                </form>
+            </article>
+
+            <article id="profile-editor" class="page-library-editor" hidden>
+                <form id="profile-form" class="admin-form page-library-form" data-kind="profile">
+                    <input type="hidden" name="schema" value="1">
+                    <input type="hidden" name="id">
+                    <input type="hidden" name="version" value="0">
+                    <div>
+                        <p class="label">Profile</p>
+                        <h2>Shared display profile</h2>
+                    </div>
+                    <label>
+                        <span>Name</span>
+                        <input type="text" name="name" maxlength="120" required autocomplete="off">
+                    </label>
+                    <fieldset class="page-library-fieldset">
+                        <legend>Pages</legend>
+                        <div class="page-library-checkbox-list" data-page-choices></div>
+                    </fieldset>
+                    <div class="page-library-inline-fields">
+                        <label>
+                            <span>Start page</span>
+                            <select name="start_page" required></select>
+                        </label>
+                        <label>
+                            <span>Transition seconds</span>
+                            <input type="number" name="transition_seconds" min="5" max="600" step="1" value="10" required>
+                        </label>
+                    </div>
+                    <div class="page-library-form-actions">
+                        <button type="submit">Save profile draft</button>
+                        <button type="button" data-ready>Mark loaded version ready</button>
+                        <button type="button" class="page-library-secondary" data-close>Close</button>
+                    </div>
+                </form>
+            </article>
+
+            {% if identity.role == 'administrator' %}
+            <article id="assignment-editor" class="page-library-editor" hidden>
+                <form id="assignment-form" class="admin-form page-library-form" data-kind="assignment">
+                    <input type="hidden" name="schema" value="1">
+                    <input type="hidden" name="id">
+                    <input type="hidden" name="version" value="0">
+                    <div>
+                        <p class="label">Administrator assignment</p>
+                        <h2>Device display assignment</h2>
+                    </div>
+                    <label>
+                        <span>Device</span>
+                        <input type="text" name="device" maxlength="128" required autocomplete="off">
+                    </label>
+                    <label>
+                        <span>Shared profile</span>
+                        <select name="profile" id="assignment-profile"></select>
+                    </label>
+                    <p class="page-library-hint">Choose a shared profile, or keep Individual selection to assign a page set directly to this device.</p>
+                    <fieldset class="page-library-fieldset" data-assignment-individual>
+                        <legend>Individual selection</legend>
+                        <div class="page-library-checkbox-list" data-page-choices></div>
+                        <div class="page-library-inline-fields">
+                            <label>
+                                <span>Start page</span>
+                                <select name="start_page" required></select>
+                            </label>
+                            <label>
+                                <span>Transition seconds</span>
+                                <input type="number" name="transition_seconds" min="5" max="600" step="1" value="10" required>
+                            </label>
+                        </div>
+                    </fieldset>
+                    <div class="page-library-form-actions">
+                        <button type="submit">Save assignment draft</button>
+                        <button type="button" data-ready>Mark loaded version ready</button>
+                        <button type="button" class="page-library-secondary" data-close>Close</button>
+                    </div>
+                </form>
+            </article>
+            {% endif %}
+        </div>
+    </div>
+
+    <section class="page-library-plan" aria-labelledby="publication-preview-title">
+        <div class="page-library-plan-header">
+            <div>
+                <h2 id="publication-preview-title">Publication preview</h2>
+            </div>
+            <p id="plan-status" class="page-library-status" role="status" aria-live="polite"></p>
+        </div>
+        <p class="page-library-hint">Included and excluded ready objects, as reported by the server. This preview cannot sign or publish.</p>
+        <form id="target-preview-form" method="get" action="{{ url_for('roaming_editor.page_target_preview') }}"
+              class="page-library-inline-fields">
+            <input type="hidden" name="revision_sha256">
+            <label>Device ID <input name="device" required maxlength="128"></label>
+            <label>Target layout
+                <select name="target">
+                    <option value="tv-landscape">TV landscape</option>
+                    <option value="tv-portrait">TV portrait</option>
+                    <option value="kiosk-landscape">Kiosk landscape</option>
+                    <option value="kiosk-portrait">Kiosk portrait</option>
+                </select>
+            </label>
+            <button type="submit" disabled>Open target preview</button>
+        </form>
+        <div class="page-library-plan-grid">
+            <section>
+                <h3>Included</h3>
+                <ul id="plan-included" class="page-library-plan-list"></ul>
+            </section>
+            <section>
+                <h3>Excluded</h3>
+                <ul id="plan-excluded" class="page-library-plan-list"></ul>
+            </section>
+        </div>
+    </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/page_grid.js') }}"></script>
+<script src="{{ url_for('static', filename='js/page_library.js') }}"></script>
+{% endblock %}

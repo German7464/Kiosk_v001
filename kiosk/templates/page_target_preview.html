@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kiosk target preview</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/page_display.css') }}">
+  <script defer src="{{ url_for('static', filename='js/page_display.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='js/page_target_preview.js') }}"></script>
+</head>
+<body>
+  <header><p>Draft preview for {{ preview.page.target }}</p></header>
+  <main id="page-display"></main>
+  <script type="application/json" id="page-preview-data">{{ preview | tojson }}</script>
+</body>
+</html>

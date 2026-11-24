@@ -5,7 +5,7 @@ Check the [agent rules](../AGENTS.md) and [current checkpoint](TZ_PROGRESS.md#cu
 | Task | Where to start |
 | --- | --- |
 | Find the approved scope or stage gates | [Specification, §22](TZ_RECONCILED.md#22-development-order-and-stage-boundaries) and [§23](TZ_RECONCILED.md#23-acceptance-criteria). Use the [requirement map](REQUIREMENT_MAP.md) to trace the Russian original. |
-| Change display pages, shared data or layouts | [Specification, §9.5](TZ_RECONCILED.md#95-pages-layouts-and-blocks-new-mandatory-requirement) and [§17.1](TZ_RECONCILED.md#171-layout-profiles-and-webview). |
+| Change display pages, shared data or layouts | [Specification, §9.5](TZ_RECONCILED.md#95-pages-layouts-and-blocks-new-mandatory-requirement) and [§17.1](TZ_RECONCILED.md#171-layout-profiles-and-webview). See the [Stage 6 page draft workspace](../kiosk/publication/README.md#stage-6-page-draft-workspace) for the isolated preview. |
 | Check later owner decisions on trust, publication or service placement | [Architecture, Supplemental owner decisions](ARCHITECTURE.md#supplemental-owner-decisions). |
 | Confirm acceptance and locate test evidence | [Ledger, Current checkpoint](TZ_PROGRESS.md#current-checkpoint) and [Dated evidence](TZ_PROGRESS.md#dated-evidence). |
 | Start the source app, install Python dependencies or build Windows | [Root README, Running Locally](../README.md#running-locally), [Verified Dependency Installation](../README.md#verified-dependency-installation) and [Building The Windows EXE](../README.md#building-the-windows-exe). |
