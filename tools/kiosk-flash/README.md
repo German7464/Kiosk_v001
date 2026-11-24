@@ -43,4 +43,10 @@ foreach ($name in @('ds.config.toml', 'ds-kiosk.config.toml')) {
 
 For real assignments use the launcher with `-RepoRoot` and a non-secret `-TaskFile` outside writable directories. Use `-Lab` only when the assignment needs the existing test network, SSH or ADB. The launcher enables sandboxed shell networking for that run. Endpoint scope still comes from the [lab policy](../../docs/TEST_LAB_POLICY.md) and task. Windows CLI 0.171.0 exposes a network enable flag, so the launcher does not claim host/port filtering. Use `-WriteDir` for existing output subdirectories below `%LOCALAPPDATA%\KioskFlash` when the checkout is unsuitable for output. Local checks may still be limited by sandbox and Windows ACLs. Keep required environment confirmations. Hand back blocked operations to primary Codex.
 
+## Parallel work
+
+The launcher pins every Kiosk Flash worker to `high` so the checkout configuration cannot override the profile. Follow the [repository delegation rules](../../AGENTS.md) for every assignment. Primary Codex queues work past the five active slots and keeps each task with its original worker. Check intended outcomes, write ownership, dependencies and test resources before dispatch. Separate worktrees can still share lab or build resources. For a correction after the CLI exits, pass `-ResumeSession <session-id>` to the launcher with the original checkout and permissions. Reuse the original session in the running CLI when possible.
+
+Use the launcher for every new worker. It reserves one of five Windows mutex slots until the CLI process returns. The slots are shared across launcher processes and worktrees on the notebook. A sixth launch exits before starting Codex. `-Check` validates configuration and consumes no slot. If a launcher was forcibly stopped, confirm its CLI child has stopped before starting another worker.
+
 To restore the previous local state, restore the affected files from the private backup and remove the new named profile only if the backup had no previous copy. To undo a published group, revert its commit normally. Old records and evidence remain historical.

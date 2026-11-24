@@ -13,7 +13,7 @@ of guessing from the HTTP status (see `delivery_transport.refusal_reason`):
 | `uncertain_time` | time confirmation | confirm independently checked UTC |
 
 A server-confirmed revocation is durable until the operator uses the new
-`Восстановить сопряжение` action. That action keeps the confirmed bootstrap, the
+**Restore pairing** action (Russian UI: `Восстановить сопряжение`). That action keeps the confirmed bootstrap, the
 stable `device_id`, the secret verifier and all accepted offline packages, and only
 requests a fresh administrator approval for the same identity, so retained display
 content stays valid. An expired credential or expired signed authority never sets
@@ -142,7 +142,7 @@ poller observed `approved`. Details and hashes are under
 
 ## In-app administration (Windows)
 
-The connection window now has `Администрирование`. It launches the accepted native
+The connection window now has an **Administration** control (Russian UI: `Администрирование`). It launches the accepted native
 shell in `--admin` mode, which renders the ordinary server-rendered admin HTML/CSS/JS
 in WebView2; no native admin page is duplicated and browser administration remains.
 The device credential grants no administrator authority.
@@ -179,7 +179,7 @@ The acceptance-harness DevTools port is no longer derived from the environment.
 Normal operation starts no diagnostic listener; tooling must pass the shell's
 explicit `--diagnostic-port` argument itself, and the product window never does.
 
-Server/network failures show a native banner and a `Повторить` control that
+Server/network failures show a native banner and a **Retry** control (Russian UI: `Повторить`) that
 re-navigates only the selected origin. Administration is additive: TV/Kiosk display
 and accepted saved content are unchanged and need neither the admin session nor the
 network. Focused checks: `python -m unittest tests.test_windows_admin`; the native
@@ -327,39 +327,13 @@ Optional trailing `--diagnostics` enables a fixed read-only DOM counter probe at
 
 ## Evidence and remaining acceptance
 
-The [sole current ledger](../../docs/TZ_PROGRESS.md#accepted-evidence-to-reuse) records the resource-safety outcome, exact candidate identity, consolidated bounded stage4 acceptance and authorized local source checkpoint. Reuse the completed Windows offline OS restart, native pagination and physical Android evidence in their exact scopes; historical TODOs are not a test queue.
-
-### Bounded Events conformance profile
-
-This defines the demonstrated stage4 client scope, not release qualification for arbitrary hardware or a waiver of later-stage requirements. It adds no content types or product requirements to the approved specification.
-
-| Area | Supported evidence and limits |
-| --- | --- |
-| Content | Existing versioned Events-v1 publication, shared HTML/CSS/JS renderer, local kiosk navigation and TV rotation/pagination. Existing public Events behavior is preserved. No new video/audio module or arbitrary executable-module update is inferred. |
-| Windows | x64 Windows10 build19045. Prior VM/WebView2 156.0.4314.50 covers native pagination at914x363 and411x866 plus real TV timing. PC1/WebView2 156.0.4314.58 covers the final resource guard, local readiness, process-tree exit and preserved-publication recovery. The exact new EXE was not OS-rebooted; earlier real reboot is reused for unchanged publication/cache formats and boot-independent local recovery, supplemented by the new ordinary-process/profile-recreation proof. Chrome/HTTPS remain available. |
-| Android | Physical moto g85 5G/Android16/API36/arm64/WebView156.0.8078.47. Reuse the reviewed private-store/media/navigation/pagination evidence and real offline reboot/receipt recovery. The Nov4 resumable-transfer build boundary is recorded in the ledger; no identical-APK or new reboot claim is inferred. Android TV/remote and other models are unqualified. |
-| Images | Static JPEG Events derivatives are the common demonstrated subset; Windows JPEG/native image-layout fixtures and Android PNG/JPEG native readability evidence retain their own identities. The server's normal upload path converts supported source pictures to Events JPEG derivatives. Android admission caps each image at2M pixels and32MiB accounted encoded-buffer plus bitmap bytes, with cooperative5s/image and15s/pass checks. Native decoder/RSS overhead is outside that accounting; native decode is not forcibly cancellable. Windows currently enforces encoded inventory/view bounds, not Android's pixel/bitmap budget. Other routed formats are not a broader cross-platform media claim. |
-| Resources | Windows store/cache256MiB each, view128MiB and profile256MiB with the runtime guard/reserve above. Android uses the authenticated request's existing capture/store/image budgets and preserves active/recovery files. No universal minimum-RAM, RSS ceiling, hard decoder deadline, power-loss,100-device or72-hour guarantee is asserted. Widening the hardware/media profile requires relevant evidence, not repetition of unchanged checks. |
-
-The Windows guard can end a display during resource exhaustion while retaining its offline publication. It does not promise uninterrupted rendering after arbitrary disk/runtime failure. Source authority, enrollment/discovery, Windows network delivery and unattended trusted-time recovery remain stage5; they do not reopen stage4's already-demonstrated local restart checks.
+Use the [dated ledger](../../docs/TZ_PROGRESS.md#dated-evidence) for the accepted device, media and build scope. For exact Stage 4 candidate versions, resource measurements or prior failures, use the [historical evidence index](../../docs/archive/README.md#acceptance-and-owner-decisions). A display stopped by the runtime guard retains its offline publication.
 
 ### Engine policy fixture
 
 `python tools/build_engine_policy_fixture.py --candidate IDENTIFIED_CANDIDATE --destination NEW_FIXTURE` builds a separate WinForms test host referencing the unchanged `KioskOfflineDisplay.exe` assembly. It verifies the candidate SDK, source and binary inventories before building; no SDK fetch or product test bridge is added. The fixture source is `tests/native/EnginePolicyFixture.cs`. In the interactive VM session, run `KioskEnginePolicyFixture.exe NEW_RUN_ROOT VERIFIED_VIEW_DIRECTORY`; the root must not already contain its `profile` or result file. It uses a dedicated profile, closes within75seconds, and writes only case names, numeric counters and runtime identity to `engine-policy-result.json` (exit0 PASS,1 failure,2 invalid arguments/reused run). Retain the fixture build inventory and result with the ledger evidence.
 
-On Windows10 Pro/WebView2 156.0.4314.50,25 real-engine assertions passed against candidate8: HTTPS/HTTP/file/data and external-anchor navigation cancelled, query/wrong-port navigation cancelled, old page retained, new window handled, CSP denied external frames/images/fetch, unlisted resource returned local403, blob download cancelled, geolocation permission denied, and bridges/debug settings disabled. Synthetic probes are injected by the separate native test host, never by a package or product IPC. This exercises the production `LocalView`/`PreparedView` classes in a test Form, not a new installed release or complete OS/shell security assessment. Exact cases, identities and cleanup are recorded in the ledger.
-
-The [controlled offline restart procedure](../../docs/OFFLINE_RESTART_CHECK.md) defines program-scoped isolation, ordinary reboot, interactive-session recovery, evidence and exact-rule cleanup. The owner's standing VM-test authorization is recorded in the ledger; preparation alone establishes no acceptance.
-
-A controlled Windows VM restart subsequently passed with outbound Firewall blocks for the exact shell and runtime executables. A bounded coordinator fixture reopened the same verified publication/cache after reboot with fresh PID/session and native text/image readiness; publication and receipt hashes remained unchanged. A separate two-card native TV run under the same isolation confirmed64 diagnostic samples/7 transitions/zero probe failures. Both rules and the temporary shortcut were removed; owned fixture processes reached zero. This is manual interactive startup with program-scoped network isolation, not disconnected-adapter, power-loss or D12 automatic-start acceptance. Exact artifacts and evidence are in the ledger.
-
-The ledger links candidate/source hashes, compile/policy/tamper checks, store-to-view/cache tests and VM observations. Native kiosk loading, image/version, Next and fullscreen/window button passed. An instrumented native TV follow-up confirmed13 automatic counter transitions in120 samples, no probe failures, and both cards visually. Closing and reopening with the same local view/profile again displayed and rotated content; this is process restart with networking enabled, not disconnected OS-reboot acceptance. Chrome file-view rotation and Node timer checks remain separate valid evidence.
-
-Native startup follow-up confirmed a fresh session/PID and renderer readiness; a competing host could not acquire the same profile. A separately frozen synthetic coordinator fixture ran on the VM, confirmed version7, then deliberately broke only generated version8 HTML (updating its integrity inventory). It returned to the confirmed version7 view after startup failure while preserving the version8 publication pointer. Both windows closed normally and owned fixture processes reached zero. The fixture is an isolated test bundle, not an installed Kiosk release or disconnected restart test.
-
-Same-window VM checks confirmed versions7 -> 8, rejection of a deliberately broken generated version9 while retaining8 and its receipt, then successful version10, all in one native PID with fullscreen preserved. Actual native command tests covered stale session, traversal, oversized input, duplicate last request and wrong package identity. A separate broken first-start exited1 with startup_failed true. Screenshots/statuses are sampled evidence, not a frame-by-frame no-flicker measurement.
-
-No disconnected OS restart, installed-package update, real touch/portrait, long-content endurance, process-crash recovery of the WebView host or Android acceptance is established. WebView2 was installed per-user on the dedicated VM under the owner's test authorization; its installer identity and retained fixture paths are in the ledger. Existing production installations were not modified.
+Use the [offline restart procedure](../../docs/OFFLINE_RESTART_CHECK.md#execution-and-evidence) for a separately assigned program-scoped isolation and reboot check.
 
 ## Published Events display configuration
 

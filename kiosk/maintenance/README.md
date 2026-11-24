@@ -1,6 +1,6 @@
 # Maintenance service
 
-## Stage5 candidate qualification (Nov22)
+## TLS lifecycle and offline recovery
 
 Fresh IP-based setup provisions the LAN TLS issuer on the trusted side. Content
 submits a local-key CSR with a separate MAC credential; it cannot request the
@@ -42,9 +42,7 @@ The 90-second request window starts on export. Have the backup and offline
 administrator ready before exporting. Roots and endpoint keys are preserved.
 `install-tls-issuer` is initial setup only.
 
-These are candidate features: source integration and the physical Android
-validator passed. Installed full-chain qualification, offline custody release
-and new-component relocation remain open in `logs/stage5-final-20261121/README.md`.
+See the [ledger](../../docs/TZ_PROGRESS.md#dated-evidence) for installed qualification and relocation evidence.
 
 A separate trusted-side service for human maintenance work. It owns its SQLite
 database, secrets, cookie scope and HTTPS origin; it never opens the content

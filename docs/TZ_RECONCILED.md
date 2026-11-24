@@ -1,923 +1,930 @@
-# ТЕХНИЧЕСКОЕ ЗАДАНИЕ
-## Kiosk v2.0 — модульная система управления информационными киосками и экранами
+# Technical Specification
 
-**Версия ТЗ:** 1.2.2 — решения владельца по этапам 3–6 от 2026-10-28
-**Статус:** основное ТЗ, утверждённое владельцем 2026-10-27 для требований и порядка этапов; выполнение новых этапов требует отдельного выбора  
-**Исходный проект:** Kiosk v1.0.0 MVP  
-**Целевая ветка интеграции:** `v2`; текущие рабочие ветки и правила объединения — в `docs/TWO_PC_WORKFLOW.md`
-**Базовый Git-тег:** `v1.0.0-mvp`  
-**Основания:** сохранённая история MVP, [аудит от 2026-10-26](archive/PROJECT_AUDIT.md), [история приёмки](archive/TZ_PROGRESS_2026-11-07.md) и 32 решения владельца (приложение А). Старые планы — только происхождение сведений, не действующие требования.
-**Позиция относительно реализации:** текст описывает целевой продукт, а не подтверждает готовность отсутствующих функций.
+## Kiosk v2.0 - Modular management system for information kiosks and screens
 
-**Редакторская правка 2026-11-07:** сокращены повторы и исторические пояснения; требования, номера разделов, решения и критерии приёмки сохранены. Фактический статус разработки — только в [текущем журнале](TZ_PROGRESS.md); правила исполнителей — в [AGENTS](../AGENTS.md).
+**Specification revision:** 1.2.2 - owner decisions for stages 3-6 dated 2026-10-28.
 
-**Изменения 1.2.2 (2026-10-28):** владелец исключил Edge из обязательной приёмки, выбрал исправление A01 сейчас и последовательную работу этапов 3–6. Целевые клиенты — собственные WebView-оболочки Windows/Android с нативным хранилищем; Chrome сохраняется до приёмки замены. Уточнены D16 и ограничение D13. Это не подтверждает реализацию или завершение этапов.
+**Authority:** English rendering of the Russian specification approved by the owner on 2026-10-27 for requirements and stage order. Use the [requirement map](REQUIREMENT_MAP.md) to retrieve the controlling original if wording is disputed. Starting a new stage requires separate owner selection. See the [current checkpoint](TZ_PROGRESS.md#current-checkpoint) for acceptance.
+
+**Source project:** Kiosk v1.0.0 MVP.
+
+**Target integration branch:** `v2`; current work branches and merge rules are in `docs/TWO_PC_WORKFLOW.md`.
+
+**Base Git tag:** `v1.0.0-mvp`.
+
+**Basis:** preserved MVP history, the 2026-10-26 audit and acceptance history indexed in the [archive](archive/README.md), and the 32 owner decisions in Appendix A. Old plans are provenance only, not current requirements.
+
+**Position on implementation:** this text describes the target product; it does not confirm that missing functions exist.
+
+**Editorial note 2026-11-07:** repetition and historical explanation were condensed; requirements, section numbers, decisions and acceptance criteria were preserved. Current development status is recorded only in the [current ledger](TZ_PROGRESS.md); executor rules are in [AGENTS](../AGENTS.md).
+
+**Changes in 1.2.2 (2026-10-28):** the owner removed Edge from mandatory acceptance, selected the A01 fix now, and selected sequential work on stages 3-6. Target clients are Kiosk WebView shells for Windows and Android with native storage; Chrome remains until the replacement is accepted. D16 and the D13 limit were clarified. This does not confirm implementation or stage completion.
 
 ---
 
-# 1. Назначение системы
+# 1. System Purpose
 
-Разработать на основе существующего Kiosk MVP единую модульную систему управления информационными киосками, телевизорами и другими экранами в локальной сети организации.
+Build, on the existing Kiosk MVP, one modular management system for information kiosks, televisions and other screens on an organization's local network.
 
-Система должна позволять устанавливать устройства, объединять их в группы, управлять содержимым, публиковать изменения, контролировать синхронизацию и восстанавливать работоспособность после сбоев.
+The system must support device installation, grouping, content management, publication of changes, synchronization monitoring, and recovery after failure.
 
-Основные принципы:
+Core principles:
 
-1. **Автономность.** Интернет не требуется для повседневной работы, запуска, управления, синхронизации и восстановления.
-2. **Надёжность.** Подготовленные устройства продолжают показывать сохранённое содержимое при отказе сервера или сети.
-3. **Модульность.** Необязательные функциональные модули не должны нарушать работу ядра.
-4. **Сохранность данных.** Изменения фиксируются с понятным уровнем гарантий; предусматриваются резервирование и восстановление.
-5. **Совместимость.** Существующие функции и данные сохраняются при переходе на новые версии в рамках утверждённого пути обновления.
-6. **Простота.** Основные операции доступны пользователю без навыков программирования.
-7. **Контролируемость.** Состояние устройств, публикаций, обновлений и ошибок должно быть понятно оператору.
-8. **Безопасность.** Управление устройствами и содержимым выполняется только авторизованными участниками.
+1. **Autonomy.** The Internet is not required for day-to-day operation, startup, management, synchronization or recovery.
+2. **Reliability.** Prepared devices continue to display saved content when the server or network fails.
+3. **Modularity.** Optional feature modules must not disrupt the core.
+4. **Data durability.** Changes are recorded with a clear durability level; backup and recovery are provided.
+5. **Compatibility.** Existing functions and data survive upgrades within the approved update path.
+6. **Simplicity.** A user can perform routine operations without programming skills.
+7. **Observability.** Device, publication, update and error state must be understandable to the operator.
+8. **Security.** Only authorized participants may manage devices and content.
 
-**Согласованная продуктовая модель:** один пользовательский продукт с платформенными сборками Windows 10 и Android. На Windows доступны локальная самостоятельная установка, сетевой сервер и клиент; на Android — клиент отображения и сетевого администрирования с автономным показом. Переходы между режимами контролируемы. Реализация различается по платформам, но форматы пользовательских данных и контракты ядра общие.
+**Agreed product model:** one product with platform builds for Windows 10 and Android. Windows provides a standalone local installation, a network server and a client; Android provides a display and network-administration client with offline display. Mode changes are controlled. Implementations differ by platform, but user-data formats and core contracts are shared.
 
-**Различие состояний:** целевые требования настоящего ТЗ не означают, что соответствующие функции уже реализованы или приняты. Статус фактической разработки определяется исходным кодом, актуальным журналом этапов и отдельными результатами испытаний.
+**Distinction of states:** target requirements do not mean that functions are implemented or accepted. Actual status is determined by source code, the current stage ledger and separate test results.
 
-# 2. Исходный проект и ограничения разработки
+# 2. Source Project and Development Constraints
 
-Основой является существующее приложение Kiosk, в котором уже реализованы:
+The source MVP provides:
 
-- Управление событиями.
-- Работа с тегами.
-- Настройки приложения.
-- Загрузка и обработка изображений.
-- Авторизация.
-- Переводы интерфейса.
-- Публичные режимы отображения.
-- Проверка обновления содержимого.
-- Хранение данных в SQLite.
-- Запуск с Waitress.
-- Конфигурация сборки через PyInstaller.
+- Event management.
+- Tags.
+- Application settings.
+- Image upload and processing.
+- Authorization.
+- Interface translations.
+- Public display modes.
+- Content-update checks.
+- SQLite storage.
+- Startup with Waitress.
+- PyInstaller build configuration.
 
-Используемые технологии: Python, Flask, SQLite, HTML, CSS, JavaScript, Pillow, Waitress, PyInstaller.
+Technology stack: Python, Flask, SQLite, HTML, CSS, JavaScript, Pillow, Waitress and PyInstaller.
 
-Требования:
+Requirements:
 
-1. Сохранить Git-тег `v1.0.0-mvp` и историю MVP без изменений.
-2. Сохранять `v2` как целевую ветку интеграции; использовать согласованные рабочие ветки по `docs/TWO_PC_WORKFLOW.md`, не переключая и не объединяя их автоматически.
-3. Повторно использовать существующие проверенные компоненты.
-4. Не переписывать работающий функционал без технической необходимости.
-5. Не удалять данные пользователя при переходе на новую версию.
-6. Изменение технологического стека допускать только по обоснованному архитектурному решению и после необходимых испытаний.
-7. Не считать предыдущие smoke-тесты подтверждением совместимости с физическими Android TV, длительной стабильности или установки на чистый компьютер.
+1. Preserve the Git tag `v1.0.0-mvp` and MVP history unchanged.
+2. Preserve `v2` as the target integration branch; use agreed work branches under `docs/TWO_PC_WORKFLOW.md`, without automatically switching or merging them.
+3. Reuse existing proven components.
+4. Do not rewrite working functionality without technical necessity.
+5. Do not delete user data during an upgrade.
+6. Permit a technology-stack change only through a justified architectural decision and required tests.
+7. Do not treat previous smoke tests as proof of physical Android TV compatibility, long-term stability, or clean-computer installation.
 
-Разработка версии 2 не означает автоматического разрешения на добавление любых новых функциональных модулей.
+Development of version 2 does not automatically authorize adding arbitrary new feature modules.
 
-## 2.1. Фактическая отправная точка (аудит от 2026-10-26)
+## 2.1. Actual Starting Point (2026-10-26 Audit)
 
-Историческая база: Events/Tags/изображения, Flask/SQLite/Waitress, браузерные TV/киоск, Windows Launcher/служба и ограниченная HTTPS-конфигурация. Аудит не подтверждал законченные автономные клиенты, конструктор страниц, групповую публикацию, репликацию, независимое восстановление, изоляцию модулей или подписанные обновления. Его находки и прежняя приёмка сохранены в [архиве аудита](archive/PROJECT_AUDIT.md) и [историческом журнале](archive/TZ_PROGRESS_2026-11-07.md).
+The historical base comprised Events/Tags/images, Flask/SQLite/Waitress, browser TV/kiosk modes, a Windows Launcher/service, and a limited HTTPS configuration. The audit did not confirm finished offline clients, a page builder, group publication, replication, independent recovery, module isolation or signed updates. The [historical index](archive/README.md#design-and-benchmarks) locates the original findings if needed.
 
-Это исходная точка на 2026-10-26, не сегодняшнее состояние. Последующая реализация и принятые ограничения определяются [текущим журналом](TZ_PROGRESS.md). Сохранять проверенные пути до подтверждённой замены; изменение ТЗ не исправляет дефекты и не принимает этапы.
+This is the starting point on 2026-10-26, not current state. Later implementation and accepted limits are determined by the [current ledger](TZ_PROGRESS.md). Preserve verified paths until a replacement is confirmed; changing the specification neither fixes defects nor accepts stages.
 
-## 2.2. Границы доказательств аудита и статус сборок
+## 2.2. Audit Evidence Boundaries and Build Status
 
-Аудит проверял коммит `e74a0d1301b2fa9e4b5dd2dcc4c7c2cda27dd30a`; метка `2.0-stage3-dev` не является релизом. Теги `v1.0.0-mvp` и `v2-stage2-baseline` сохраняются. Перед разработкой/развёртыванием проверять фактические Git-состояние, пакет, установку и целевые устройства.
+The audit examined commit `e74a0d1301b2fa9e4b5dd2dcc4c7c2cda27dd30a`; label `2.0-stage3-dev` is not a release. Tags `v1.0.0-mvp` and `v2-stage2-baseline` are preserved. Before development or deployment, verify actual Git state, package, installation and target devices.
 
-Исходники, собранный кандидат, установленная сборка и физические испытания — разные доказательства. Манифест хешей доказывает целостность, не подписанное происхождение или установку именно этого пакета. Частичный повтор тестов не считается полным успешным прогоном; исходные сбои и ограничения сохраняются в архиве.
+Source, a built candidate, an installed build and physical tests are distinct evidence. A hash manifest proves integrity, not signed origin or that this package was installed. A partial repeat of tests is not a complete successful run; original failures and limits remain in the archive.
 
-Chrome остаётся проверенным Windows-путём до отдельной приёмки замены; обязательный Edge-gate исключён владельцем. Не обходить отказ политики выполнения другим способом и не повторять действительные проверки без технической причины. Границы HTTP/HTTPS определены в §18.3, текущая приёмка — в журнале.
+Chrome remains the verified Windows path until a replacement is separately accepted; the owner removed the mandatory Edge gate. Do not bypass an execution-policy denial by another method, and do not repeat valid checks without technical reason. HTTP/HTTPS boundaries are defined in §18.3; current acceptance is in the ledger.
 
-# 3. Поддерживаемые платформы и устройства
+# 3. Supported Platforms and Devices
 
-## 3.1. Платформы и режимы
+## 3.1. Platforms and Modes
 
-**Единственный поддерживаемый набор платформ продукта: Windows 10 и Android** (в том числе Android TV на утверждённых моделях). Отдельные сборки используют общие протоколы, форматы содержимого и редакторы там, где это допускают возможности ОС. Исполняемый Windows EXE не используется на Android.
+**The only supported product platform set is Windows 10 and Android**, including Android TV on approved models. Separate builds use shared protocols, content formats and editors where OS capabilities allow. A Windows EXE is not executed on Android.
 
-| Функция | Windows 10 | Android |
+| Capability | Windows 10 | Android |
 | --- | --- | --- |
-| Поиск сервера и ручное подключение | Да | Да |
-| Экран TV / сенсорный киоск | Да | Да, на проверенных устройствах |
-| Автономный показ опубликованных страниц после перезапуска | Да | Да |
-| Администрирование и редактирование подключённого сервера | Да | Да, при наличии связи и полномочий |
-| Полноценная независимая локальная база с редактированием | Да | Нет |
-| Основной/назначенный резервный сервер | Да | Нет |
-| Системная служба/компонент восстановления | По поддерживаемому сценарию Windows | По возможностям Android |
+| Server discovery and manual connection | Yes | Yes |
+| TV screen / touch kiosk | Yes | Yes, on tested devices |
+| Offline display of published pages after restart | Yes | Yes |
+| Administration and editing of a connected server | Yes | Yes, with connectivity and permission |
+| Full independent local database with editing | Yes | No |
+| Primary / designated backup server | Yes | No |
+| System service / recovery component | Per supported Windows scenario | Per Android capabilities |
 
-На Windows локальная автономная установка и сервер используют **один серверный движок** с одной рабочей базой. В автономном режиме сетевой доступ к движку запрещён и обслуживаются только локальные обращения; сетевой режим разрешается отдельно, после проверки безопасности. Подключённый Windows-клиент не обязан запускать полнофункциональный сервер.
+On Windows, the standalone local installation and server use **one server engine** and one working database. In local mode, network access to the engine is prohibited and only local calls are served; network mode is enabled separately after a security check. A connected Windows client need not run the full server.
 
-На Android отсутствуют режим собственного сервера, резервного сервера и независимого локального редактирования. Автономным остаётся **только показ ранее проверенного содержимого**. Функция аварийного Android-сервера исключена из обязательного продукта; её возможное изучение в будущем не создаёт обязательства реализации.
+Android has no own-server mode, backup-server mode or independent local editing. **Only display of previously verified content remains offline.** An emergency Android server is outside the mandatory product; possible future study creates no implementation obligation.
 
-Назначения экранов расширяемы. Первоначально — **сенсорный киоск** и **TV/экран без сенсорного управления**; они не тождественны операционным или серверным ролям. Сервер Windows при наличии ресурсов может одновременно показывать содержимое.
+Screen purposes are extensible. Initially they are **touch kiosk** and **TV/screen without touch control**; these are not operating-system or server roles. A Windows server may also display content when resources permit.
 
-Целевая Windows ОС — Windows 10, точная редакция/сборка и политика поддержки безопасности утверждаются по матрице испытаний. Для Android обязательны испытания конкретных моделей, версий Android/WebView, процессоров, разрешений и экранных ориентаций. Ориентир для Android TV — около 2 ГБ ОЗУ и 32 ГБ общего хранилища или более слабые устройства при фактическом подтверждении. Окончательные пределы ресурсов не заявляются без измерений.
+The target Windows OS is Windows 10; the exact edition/build and security-support policy are approved through the test matrix. Android requires testing of specific models, Android/WebView versions, processors, resolutions and screen orientations. The Android TV target is about 2 GB RAM and 32 GB total storage, or weaker devices if actually confirmed. Final resource limits are not claimed without measurements.
 
-## 3.2. Масштаб
+## 3.2. Scale
 
-Целевой масштаб — **до 100 зарегистрированных устройств суммарно во всех группах одной установки**, а не 100 на группу. Проверяются число групп, устройств, одновременных клиентов и редакторов, объёмы фото/видео, событий, интенсивность публикаций и свойства сети. Поддержка этого масштаба подтверждается нагрузочными испытаниями, а не расчётным предположением.
+The target is **up to 100 registered devices in total across all groups in one installation**, not 100 per group. Test group and device counts, concurrent clients and editors, photo/video and event volumes, publication intensity, and network properties. Support for this scale is proven by load tests, not by calculation alone.
 
-# 4. Архитектура системы
+# 4. System Architecture
 
-Система представляет единый пользовательский продукт с логически разделёнными компонентами. **Логическое разделение не требует запуска каждого компонента в своём процессе**. Серверные компоненты на Windows могут объединяться или выделяться по результатам анализа сбоев и ресурсов. Визуальный блок страницы не является отдельным процессом ОС.
+The product is one user-facing system with logically separated components. **Logical separation does not require every component to run in its own process.** Windows server components may be combined or separated based on failure and resource analysis. A page's visual block is not a separate OS process.
 
-## 4.1. Core — минимальное ядро
+## 4.1. Core - Minimal Kernel
 
-Core предоставляет: идентичности групп и устройств; проверку прав и сессий; серверные полномочия; версии API и форматов; контролируемый доступ к данным; регистрацию и жизненный цикл модулей; ревизии публикаций; синхронизацию; координацию репликации и обновлений; диагностику и восстановление. Бизнес-логика конкретного модуля не должна становиться обязательной зависимостью ядра.
+Core provides group and device identities; rights and session checks; server authority; API and format versions; controlled data access; module registration and lifecycle; publication revisions; synchronization; replication and update coordination; diagnostics and recovery. Business logic of a specific module must not become a mandatory Core dependency.
 
-## 4.2. Launcher — точка входа и локального обслуживания
+## 4.2. Launcher - Entry Point and Local Service
 
-Launcher отвечает за мастер первоначальной настройки, выбор допустимой роли, открытие экранов и панели, локальное состояние, системный автозапуск, сервисные операции, диагностику и восстановление. Обычное закрытие Launcher не обязано останавливать Windows-службу. Привилегированные действия выполняются только через контролируемый механизм ОС.
+The Launcher owns first-run setup, selection of an allowed role, opening screens and the panel, local state, OS autostart, service operations, diagnostics and recovery. Normal Launcher closure need not stop the Windows service. Privileged actions use only a controlled OS mechanism.
 
-## 4.3. Display Client — клиент отображения
+## 4.3. Display Client
 
-Целевой клиент — собственная платформенная оболочка со встроенным WebView на поддерживаемом существующем движке. Она отображает опубликованные страницы и блоки, поддерживает TV/сенсорное управление, ориентацию, полный проверенный пакет назначенных данных и медиа в нативном хранилище, атомарную активацию ревизий и запуск после перезагрузки без сервера и сети. При ошибке новой загрузки сохраняется предыдущая пригодная публикация. Клиент не получает серверную БД, серверные закрытые ключи и чужие учётные данные. Существующий Chrome-путь сохраняется до отдельной приёмки оболочки; будущая архитектура не ограничивается внешним браузером.
+The target client is Kiosk’s own platform shell with embedded WebView on a supported existing engine. It displays published pages and blocks, supports TV/touch control, orientation, the full verified package of assigned data and media in native storage, atomic revision activation, and startup after reboot without server or network. If a new download fails, the previous usable publication remains. The client receives no server database, server private keys or other users' credentials. The existing Chrome path remains until the shell is separately accepted; future architecture is not limited to an external browser.
 
-Для Windows и Android предусматриваются свои платформенные оболочки; интерфейсы HTML/CSS/JavaScript и формат страниц общие. Разработка собственного браузерного движка **не требуется**. Выбор конкретного WebView, его версия, обновления безопасности и возможности полноэкранного режима подтверждаются отдельно. Текущий Launcher/Chrome не считается уже заменённым WebView.
+Windows and Android have platform-specific shells; HTML/CSS/JavaScript interfaces and the page format are shared. Developing a browser engine is **not required**. Confirm the selected WebView, its version, security updates and fullscreen capabilities separately. The current Launcher/Chrome is not considered already replaced by WebView.
 
-## 4.4. Feature Modules и экземпляры блоков
+## 4.4. Feature Modules and Block Instances
 
-Функциональный модуль обеспечивает бизнес-функцию и редактор её данных. **Экземпляр блока** — размещение на странице, ссылка на выбранный набор данных и собственные настройки отображения. Один набор данных допускается использовать в нескольких блоках. Подключаемый функциональный модуль не должен изменять данные других модулей напрямую. Подробности — разделы 9 и 14.
+A feature module provides a business function and an editor for its data. A **block instance** is a page placement that references a selected dataset and has its own display settings. One dataset may be used by multiple blocks. A plug-in feature module must not directly modify another module's data. See §§9 and 14.
 
 ## 4.5. Storage/Sync, Updater/Recovery
 
-Хранение разделяет серверную рабочую БД, переносимый экспорт и **клиентские проверенные снимки публикаций**. Updater/Recovery — отдельно запускаемый компонент обслуживания, способный проверять, устанавливать и восстанавливать исполняемые компоненты, даже когда обновляемое ядро не запускается.
+Storage separates the server working database, portable export and **verified client publication snapshots**. Updater/Recovery is a separately launched maintenance component able to verify, install and restore executable components even when the updated Core cannot start.
 
-## 4.6. Совмещение режимов Windows
+## 4.6. Combined Windows Modes
 
-Локальная автономная установка использует тот же серверный движок и формат данных, что и сетевой сервер, но не обслуживает удалённые подключения. Переключение из локального в сетевой режим и обратно — административная процедура с проверкой конфигурации, сессий, привязки устройств и права записи. Она не создаёт новую базу и не меняет идентичность установки без явного отдельного переноса. Подключение самостоятельной установки к другой независимой группе требует контролируемого импорта; автоматическое слияние баз не выполняется.
+The standalone local installation uses the same server engine and data format as the network server but serves no remote connections. Switching local-to-network or back is an administrative procedure that checks configuration, sessions, device binding and write authority. It creates no new database and changes installation identity only through explicit separate transfer. Joining a standalone installation to another independent group requires controlled import; databases are never merged automatically.
 
-# 5. Установка и первоначальный запуск
+# 5. Installation and First Run
 
-## 5.1. Четыре варианта в мастере
+## 5.1. Four Wizard Choices
 
-При первом запуске пользователь выбирает:
+On first run the user selects:
 
-1. **Найти сервер в LAN.** Отобразить обнаруженные установки и разрешить выбрать одну; отсутствие результата приводит к предложению ручного адреса.
-2. **Ввести адрес сервера.** Проверить соединение и подлинность. При неуспехе предложить возврат к поиску либо запуск в допустимом автономном или серверном режиме.
-3. **Создать автономную установку (только Windows).** Инициализировать новую рабочую базу либо выполнить проверенный импорт. Тот же серверный движок ограничен локальными подключениями.
-4. **Создать сервер (только Windows).** Создать локальную установку для сетевого обслуживания и первоначального администратора, подготовить защищённый транспорт и явно разрешённый доступ.
+1. **Find a server on the LAN.** Show discovered installations and allow one to be selected; no result leads to a manual-address option.
+2. **Enter a server address.** Verify connection and authenticity. On failure, offer return to discovery or startup in an allowed offline or server mode.
+3. **Create a standalone installation (Windows only).** Initialize a new working database or perform a verified import. The same server engine is limited to local connections.
+4. **Create a server (Windows only).** Create a local installation for network service and the initial administrator, prepare protected transport and explicitly allowed access.
 
-На Android варианты 3 и 4 отображаются как недоступные с объяснением причин либо не предлагаются. На каждом этапе допускаются возврат и изменение выбора без потери созданных данных. После первичной настройки последняя проверенная роль восстанавливается автоматически; мастер не требуется показывать при каждом запуске.
+On Android, choices 3 and 4 are unavailable with an explanation or are not offered. Every wizard step permits going back and changing the choice without losing created data. After initial setup, the last verified role is restored automatically; the wizard need not appear on every launch.
 
-В мастер входят: название устройства; уникальный ID; выбор группы, допустимой роли, TV/киоск, ориентации и макета; автозапуск; первичное сопряжение; серверная первичная учётная запись администратора; доступные дополнительные настройки. Новое устройство **не добавляется в группу автоматически** по факту обнаружения.
+The wizard covers device name; unique ID; group and allowed role; TV/kiosk; orientation and layout; autostart; initial pairing; the server's initial administrator account; and available additional settings. A discovered device is **not added to a group automatically**.
 
-## 5.2. Сопряжение и обнаружение
+## 5.2. Pairing and Discovery
 
-Клиент ищет установки в LAN (механизм обнаружения определяется и проверяется на обеих ОС); ручной адрес всегда доступен. Новое устройство показывает ограниченный по времени одноразовый код. Уточнение владельца (2026-11-08): сопряжение доступно администратору со смартфона через доверенную адаптивную веб-панель, с ручным вводом кода или сканированием QR. QR не устанавливает доверие серверу и не разрешает подключение автоматически; после входа администратор сверяет устройство, группу и профиль и явно подтверждает действие. Администратор через **уже доверенную** панель сверяет подлинность сервера, вводит код, разрешает группу/устройство и назначает профиль. Код привязан к конкретному запросу, проверяется с ограничением попыток и **не подменяет криптографическую аутентификацию** сервера. Первоначальная установка доверия для первого сервера выполняется локально на серверном Windows-ПК. Подключённое устройство получает только необходимые полномочия и материалы для проверки серверов своей группы.
+The client discovers installations on the LAN; the discovery mechanism is selected and tested on both OSes, and manual address entry is always available. A new device displays a time-limited one-time code. Owner clarification (2026-11-08): an administrator may pair from a smartphone through a trusted adaptive web panel by manually entering the code or scanning a QR code. A QR code neither establishes server trust nor authorizes connection automatically; after login, the administrator verifies the device, group and profile and explicitly confirms. Through an **already trusted** panel, the administrator verifies server authenticity, enters the code, authorizes the group/device and assigns a profile. The code is bound to one request, checked with limited attempts, and **does not replace cryptographic server authentication**. Initial trust for the first server is established locally on the server Windows PC. A connected device receives only the authority and material needed to verify servers in its group.
 
-Устройство принадлежит одной группе одновременно. Отозвать доверие на полностью отключённом устройстве немедленно невозможно; порядок сроков действия доверенных списков и восстановления устаревших клиентов определяется отдельно. Перевод в другую группу требует административной процедуры: отзыв старого доверия, запрет показа старого содержимого, безопасная очистка локальных данных прежней группы и новое сопряжение. Удаление локальной копии не удаляет данные прежнего сервера. Отключённое устройство нельзя принудительно очистить удалённо; при переносе без окончательной очистки переход считается незавершённым.
+A device belongs to one group at a time. Trust cannot be revoked immediately on a fully disconnected device; validity periods for trusted lists and recovery of stale clients are decided separately. Moving to another group requires an administrative procedure: revoke old trust, prohibit display of old content, securely erase local data from the former group, then pair again. Deleting a local copy does not delete data on the former server. A disconnected device cannot be force-wiped remotely; transfer without final erasure is incomplete.
 
-Уточнение владельца (2026-11-08): доступ к существующей веб-админке должен быть доступен также внутри приложения Windows/Android; доступ через браузер сохраняется. Вход администратора и проверка прав на сервере обязательны в обоих вариантах. Приложение проверяет подлинность сервера через безопасно установленное доверие; обход ошибок TLS запрещён. Браузерные режимы TV/киоск этим решением не добавляются.
+Owner clarification (2026-11-08): the existing web administration interface must also be accessible inside the Windows/Android application; browser access remains. Administrator login and server-side rights checks are mandatory in both paths. The application verifies server authenticity through securely established trust; bypassing TLS errors is prohibited. This decision does not add browser-based TV/kiosk modes.
 
-## 5.3. Главное окно Launcher
+## 5.3. Launcher Main Window
 
-Показывать название/ID устройства, роль и группу, режим TV/киоск, версии продукта/ядра/модулей, локальный и сетевые адреса, состояние сервера, синхронизации, репликации, обновлений, восстановления, свободного места и доступность других устройств с временем последнего сообщения. Действия: запуск, корректная остановка, выбор настроек, открытие экрана/админки, экспорт разрешённой диагностики, вход в восстановление. Опасная остановка сервера сопровождается предупреждением и предложением безопасной передачи роли, если она доступна.
+Show device name/ID, role and group, TV/kiosk mode, product/Core/module versions, local and network addresses, server state, synchronization, replication, updates, recovery, free space, and availability of other devices with last-message time. Actions: start, orderly stop, settings, open screen/admin panel, export permitted diagnostics, and enter recovery. A dangerous server stop includes a warning and the option of a safe role transfer when available.
 
-## 5.4. Автозапуск и хранение
+## 5.4. Autostart and Storage
 
-Существующий проверенный Windows-путь использует Google Chrome и сохраняется до приёмки собственного WebView-клиента. Microsoft Edge исключён владельцем из обязательной текущей приёмки; его работоспособность и поддержка не заявляются. Переход не должен нарушать действующий показ и требует регрессии и проверки реального оборудования.
+The existing verified Windows path uses Google Chrome and remains until the Kiosk WebView client is accepted. The owner excluded Microsoft Edge from mandatory current acceptance; its operation and support are not claimed. The transition must not disrupt active display and requires regression and real-hardware checks.
 
-Сохранять последнюю корректную конфигурацию и восстанавливать выбранный режим. На Windows различать службу до входа в ОС и открытие экранного клиента после входа; включение автоматического входа в ОС или системный lockdown только по отдельному разрешению. Для Android проверять ограничения платформы и конкретного оборудования. Полноэкранный режим не означает ограничение доступа к функциям ОС.
+Preserve the last valid configuration and restore the selected mode. On Windows, distinguish the service before OS login from opening the screen client after login; automatic OS login or system lockdown requires separate permission. On Android, test platform and device restrictions. Fullscreen does not restrict OS functions.
 
-Раздельно хранить исполняемые компоненты, рабочие данные, настройки, секреты, журналы, временные файлы и подготовленные обновления согласно правилам платформы. Переустановка по умолчанию сохраняет пользовательские данные. Удаление предоставляет явный выбор; разрушительные действия не выполняются без предупреждения и разрешения.
+Separate executable components, working data, settings, secrets, logs, temporary files and prepared updates according to platform rules. Reinstallation preserves user data by default. Removal offers an explicit choice; destructive actions require warning and permission.
 
-# 6. Группы, профили и обнаружение устройств
+# 6. Groups, Profiles and Device Discovery
 
-Каждая установка, группа, сервер и устройство имеют постоянные ID, не зависящие от IP-адреса или имени. Группы разделяют данные, настройки, полномочия, активный сервер и состояние синхронизации. Устройство состоит ровно в **одной** группе в данный момент; исключения и перенос — только по специальной процедуре раздела 5.
+Every installation, group, server and device has a permanent ID independent of IP address or name. Groups partition data, settings, authority, active server and synchronization state. A device is in exactly **one** group at a time; exclusion or transfer uses the special procedure in §5.
 
-Система должна обнаруживать группы в LAN, показывать их состояние, поддерживать ручной адрес, авторизованное присоединение и безопасное восстановление связи. Подмена ранее сохранённой информации устаревшими копиями не допускается.
+The system discovers LAN groups, shows their state, supports manual addressing, authorized joining and safe reconnection. Previously stored information must not be replaced by stale copies.
 
-**Библиотека страниц** общая для группы; профили и индивидуальные назначения определены в §9.6. Удаление страницы из профиля не удаляет её из библиотеки.
+The **page library** is shared by the group; profiles and individual assignments are defined in §9.6. Removing a page from a profile does not remove it from the library.
 
-Каждая группа имеет проверяемую криптографическую идентичность и авторизованный список серверов с отдельными серверными ключами. Клиент доверяет только текущему проверенному списку своей группы; отзыв/смена сертификатов и защита от возврата к старому списку обязательны. Смена IP не является причиной нового сопряжения. Само нахождение сервера в LAN не является доказательством подлинности.
+Each group has a verifiable cryptographic identity and an authorized server list with separate server keys. A client trusts only its group's current verified list; revocation/certificate change and protection against rollback to an old list are mandatory. An IP change does not require re-pairing. Mere presence on the LAN is not proof of authenticity.
 
-# 7. Роли устройств и серверов
+# 7. Device and Server Roles
 
-- **Активный сервер (Windows):** единственный подтверждённый источник записи внутри группы.
-- **Назначенный резервный сервер (Windows):** хранит проверенную реплику и может получить право записи только по безопасной процедуре.
-- **Клиент Windows/Android:** получает необходимую опубликованную информацию и показывает её автономно после подготовки.
-- **Административная сессия:** управляет доступными функциями при подтверждённой роли пользователя и праве записи сервера.
-- **Локальная автономная установка Windows:** та же серверная реализация, ограниченная собственным устройством; редактирование локальной базы разрешено при наличии прав.
+- **Active server (Windows):** the only confirmed writer within a group.
+- **Designated backup server (Windows):** stores a verified replica and may gain write authority only through the safe procedure.
+- **Windows/Android client:** receives required published information and displays it offline after preparation.
+- **Administrative session:** manages available functions with a confirmed user role and server write authority.
+- **Standalone Windows installation:** the same server implementation limited to its own device; local database editing is allowed with permission.
 
-Физическое устройство может сочетать совместимые роли при достаточных ресурсах; вид TV/киоск не определяет право быть сервером. На Android серверные роли не реализуются и не входят в обязательную систему.
+A physical device may combine compatible roles when resources suffice; TV/kiosk type does not determine eligibility to be a server. Android server roles are neither implemented nor part of the mandatory system.
 
-В одной группе **не допускаются два независимых сервера записи**. Активный сервер сохраняет право записи при недоступности резерва, только если его собственные полномочия достоверны; интерфейс показывает снижение защиты. При потере подтверждённых полномочий запись останавливается. Подробности — раздел 13.
+A group **must not have two independent writer servers**. The active server retains write authority while the backup is unavailable only if its own authority is trustworthy; the interface displays reduced protection. Write access stops when confirmed authority is lost. See §13.
 
-# 8. Учётные записи и права доступа
+# 8. Accounts and Access Rights
 
-Предусмотреть **две роли продукта**: Администратор и Пользователь. Права роли проверяются на сервере при каждой защищённой операции, включая вызовы API. Права администратора Windows для локального обслуживания — отдельный механизм, не подменяющий роль продукта.
+There are **two product roles**: Administrator and User. The server checks role rights on every protected operation, including API calls. Windows administrator rights for local maintenance are a separate mechanism and do not replace a product role.
 
-| Операция | Администратор | Пользователь |
+| Operation | Administrator | User |
 | --- | :---: | :---: |
-| Просмотр разрешённого содержимого | Да | Да |
-| Создание/редактирование страниц, макетов, наборов данных | Да | Да |
-| Черновики, предварительный просмотр и публикация | Да | Да |
-| Восстановление удалённого содержимого | Да | Да |
-| Просмотр доступного статуса и своих действий | Да | Да |
-| Создание/изменение/удаление учётных записей и ролей | Да | Нет |
-| Присоединение/исключение/перенос устройств | Да | Нет |
-| Управление серверами, репликацией и передачей роли | Да | Нет |
-| Изменение безопасности, расписаний системных обновлений и системных модулей | Да | Нет |
-| Создание/настройка системных резервных копий и восстановление всей установки | Да | Нет |
+| View permitted content | Yes | Yes |
+| Create/edit pages, layouts and datasets | Yes | Yes |
+| Drafts, preview and publication | Yes | Yes |
+| Restore deleted content | Yes | Yes |
+| View permitted status and own actions | Yes | Yes |
+| Create/change/delete accounts and roles | Yes | No |
+| Join/exclude/transfer devices | Yes | No |
+| Manage servers, replication and role transfer | Yes | No |
+| Change security, system-update schedules and system modules | Yes | No |
+| Create/configure system backups and restore the whole installation | Yes | No |
 
-Права редактирования и публикации у обеих ролей равны; операции с критической инфраструктурой — исключительно у администратора. Последнего работоспособного администратора нельзя удалить или понизить. Одновременные сессии допустимы; конфликт устаревших редакций при сохранении запрещено молча перезаписывать. Объекты имеют версии; при конфликте пользователь получает сообщение и сохраняет локально введённый материал для ручного сравнения/переноса. Совместного слияния правок в реальном времени не требуется.
+Both roles have equal editing and publication rights; critical-infrastructure operations are Administrator-only. The last working administrator cannot be deleted or demoted. Concurrent sessions are allowed; an outdated revision conflict during save must never be silently overwritten. Objects have versions; on conflict the user is notified and locally preserves entered material for manual comparison/transfer. Real-time collaborative merging is not required.
 
-### 8.1. Пароли и восстановление
+## 8.1. Passwords and Recovery
 
-Первоначальный главный администратор создаётся на серверной Windows-установке; повторно используемых заводских паролей нет. При настройке выдаётся комплект одноразовых резервных кодов восстановления, которые показываются для защищённого сохранения/печати. Сервер хранит только проверочные представления кодов, не исходные значения. Каждый код используется однажды, попытки ограничены. Сброс главного администратора возможен **только локально на серверном Windows-компьютере** через независимый компонент обслуживания с правами администратора ОС и действительным резервным кодом. После сброса старые сессии аннулируются, событие протоколируется; пользовательские данные не изменяются. Удалённого сетевого маршрута для сброса главного пароля и скрытого универсального пароля нет. Потеря всех кодов и пароля требует отдельного утверждённого аварийного сценария.
+The initial chief administrator is created on the server Windows installation; there are no reusable factory passwords. Setup issues a set of one-time recovery codes shown for secure storage/printing. The server stores only verification representations, never the source values. Each code is single-use and attempts are limited. Resetting the chief administrator is possible **only locally on the server Windows computer**, through an independent maintenance component with OS administrator rights and a valid recovery code. After reset, old sessions are revoked and the event is logged; user data is unchanged. There is no remote network route for resetting the chief password and no hidden universal password. Loss of all codes and the password requires a separately approved emergency procedure.
 
-Смена собственного пароля **разрешена каждому аутентифицированному Администратору и Пользователю** после подтверждения действующего пароля, с отзывом прежних сессий согласно общей политике безопасности. Это ранее утверждённая политика (D09 в историческом `TZ_PROGRESS.md`), а не новый открытый вопрос. Управление чужими учётными записями остаётся только у администратора.
+Every authenticated Administrator and User **may change their own password** after confirming the current password, with prior sessions revoked under the common security policy. This is previously approved policy (D09 in the historical `TZ_PROGRESS.md`), not a new open question. Managing other accounts remains Administrator-only.
 
-### 8.2. Доступ к панели
+## 8.2. Panel Access
 
-Штатный интерфейс администрирования открывается **из приложения** после аутентификации. Само отсутствие публичной ссылки не является защитой: все серверные маршруты администрирования требуют проверки сессий и полномочий. Администрирование с Android/Windows-клиента без доступного и уполномоченного сервера записи не разрешается; ранее опубликованный показ при этом продолжается.
+The standard administration interface opens **inside the application** after authentication. Lack of a public link is not protection: every server administration route checks session and authority. Administration from an Android/Windows client without an available authorized writer server is not allowed; previously published display continues.
 
-# 9. Содержимое и публикации
+# 9. Content and Publications
 
-## 9.1. Типы содержимого
+## 9.1. Content Types
 
-Обязательно поддерживать существующие данные событий, тегов и изображений, а также видео.
+Existing event, tag and image data, plus video, are mandatory.
 
-Для изображений и видео предусмотреть:
+For images and video provide:
 
-- Постоянные идентификаторы.
-- Хранение файлов отдельно от записей базы данных.
-- Контрольные суммы.
-- Проверку доступности.
-- Локальное воспроизведение.
-- Ограничения загрузки и хранения.
-- Подбор совместимых профилей для устройств.
+- Permanent identifiers.
+- File storage separate from database records.
+- Checksums.
+- Availability checks.
+- Local playback.
+- Upload and storage limits.
+- Selection of compatible device profiles.
 
-Конкретные кодеки, разрешения, битрейты, продолжительность видео, ограничения размера файлов и требования к звуку определяются испытаниями.
+Specific codecs, resolutions, bitrates, video duration, file-size limits and audio requirements are determined by testing.
 
-Не требовать от маломощных Android TV самостоятельного перекодирования тяжёлых видео.
+Do not require low-power Android TV devices to transcode heavy video themselves.
 
-## 9.2. Черновики
+## 9.2. Drafts
 
-Редактирование создаёт черновик в общем рабочем пространстве группы, а не немедленное изменение публичных данных.
+Editing creates a draft in the group's shared workspace, not an immediate change to public data.
 
-Черновик не должен автоматически изменять содержимое публичных экранов.
+A draft must not automatically alter public screens.
 
-Предусмотреть предварительный просмотр с учётом режима целевого устройства.
+Provide preview reflecting the target device mode.
 
-Интерфейс обязан отличать черновик от опубликованной версии. Для каждого изменяемого объекта предусмотрены состояния **«В работе»** и **«Готово к публикации»**. Любое новое изменение готового объекта переводит его обратно «В работу». Все редакторы группы видят допустимые общие черновики и авторов. Для сохранения используются версии объектов и контроль конфликтов; несогласованные правки не объединяются автоматически.
+The interface must distinguish draft from published version. Every editable object has **Working** and **Ready for publication** states. Any new change to a ready object returns it to Working. All group editors see permitted shared drafts and authors. Saving uses object versions and conflict checks; inconsistent edits are not merged automatically.
 
-## 9.3. Публикация
+## 9.3. Publication
 
-Публикация выполняется отдельным явным действием. Одна публикация в пределах группы создаёт согласованную неизменяемую ревизию **готовых** связанных изменений. Незавершённые черновики остаются для будущей публикации. Перед подтверждением показываются затронутые объекты, изменения и авторы. Публикуемый снимок фиксируется так, что последующие сохранения черновиков в него не попадают.
+Publication is a separate explicit action. One publication within a group creates a consistent immutable revision of **ready** related changes. Incomplete drafts remain for future publication. Before confirmation, show affected objects, changes and authors. The published snapshot is fixed so later draft saves cannot enter it.
 
-Готовность фиксирует версию объекта и версии необходимых зависимостей. Изменение готового объекта снимает его готовность; изменение необходимой зависимости инвалидирует готовность зависимых объектов. Объект с неготовыми, отсутствующими или несовместимыми необходимыми зависимостями не публикуется. Неизменённая опубликованная зависимость допустима только при точном совпадении зафиксированной версии. Проверка выполняется для связанных наборов: независимые готовые изменения не блокируются без причины. Незавершённые данные не включаются неявно; прежний опубликованный контент продолжает отображаться. Перед подтверждением показываются включённые и исключённые объекты с причинами; при фиксации версии повторно проверяются в транзакции, изменение плана требует нового подтверждения.
+Readiness fixes the object version and required dependency versions. Changing a ready object removes readiness; changing a required dependency invalidates dependants' readiness. An object with unready, missing or incompatible required dependencies is not published. An unchanged published dependency is allowed only if the fixed version matches exactly. Checks cover related sets: independent ready changes are not blocked without cause. Incomplete data is not included implicitly; prior published content remains visible. Before confirmation, show included and excluded objects with reasons; when fixing versions, recheck transactionally, and require new confirmation if the plan changes.
 
-Алгоритм:
+Algorithm:
 
-1. Проверить данные и обязательные файлы.
-2. Создать согласованную опубликованную ревизию.
-3. Зафиксировать целевой набор устройств.
-4. Начать распространение.
-5. Отследить загрузку и проверку.
-6. Получить подтверждения активации клиентов.
+1. Validate data and mandatory files.
+2. Create a consistent published revision.
+3. Fix the target device set.
+4. Start distribution.
+5. Track download and verification.
+6. Obtain client activation confirmations.
 
-Неполная публикация не должна подменять ранее работоспособный набор данных на экране. **Единая** ревизия группы не означает одновременного переключения всех клиентов: каждый клиент активирует собственный целиком проверенный пакет. Отключённый или несовместимый клиент показывает прежнюю пригодную ревизию.
+An incomplete publication must not replace a previously working screen dataset. A **single** group revision does not mean simultaneous switching: each client activates its own fully verified package. An offline or incompatible client shows its prior usable revision.
 
-## 9.4. Контроль распространения
+## 9.4. Distribution Control
 
-Отображать прогресс вида:
+Display progress such as:
 
-**Обновлено 87 из 100 устройств.**
+**Updated 87 of 100 devices.**
 
-Отдельно показывать состояния:
+Show states separately:
 
-- Ожидает.
-- Получает данные.
-- Загружено.
-- Проверено.
-- Версия активирована клиентом.
-- Устройство не в сети.
-- Ошибка.
-- Несовместимая версия.
+- Pending.
+- Receiving data.
+- Downloaded.
+- Verified.
+- Version activated by client.
+- Device offline.
+- Error.
+- Incompatible version.
 
-**Статус «Версия отображается» означает исключительно подтверждение клиентского приложения об успешной активации опубликованной версии содержимого.**
+**Status "Version is displayed" means exclusively that the client application confirmed successful activation of the published content revision.**
 
-Это не доказывает, что физический телевизор включён, исправен или действительно показывает изображение пользователям.
+It does not prove the physical television is on, working, or actually showing the image to users.
 
-Без дополнительных подтверждённых средств мониторинга физического оборудования такую гарантию предоставлять нельзя.
+Do not provide that guarantee without additional confirmed physical-device monitoring.
 
-Подсчёт обновлённых устройств выполнять по подтверждениям активации, а не по факту отправки команды, получения метаданных или окончания загрузки.
+Count updated devices by activation confirmations, not by command sent, metadata received or download completed.
 
-При подключении или исключении устройств после начала публикации сохранять корректный учёт исходного целевого набора.
+When devices join or are excluded after publication begins, retain correct accounting of the original target set.
 
-## 9.5. Страницы, макеты и блоки (новое обязательное требование)
+## 9.5. Pages, Layouts and Blocks (New Mandatory Requirement)
 
-Страницы (от одной до N) создаются в общей библиотеке группы. Для каждой страницы хранятся постоянный ID, название, порядок/навигация, ссылки на экземпляры блоков и необходимые метаданные. Отдельные макеты поддерживаются для **TV и сенсорного киоска**, а также горизонтальной и вертикальной ориентации. Общие данные не дублируются между макетами. Если индивидуальный макет отсутствует, применяется проверенный совместимый макет по умолчанию, а не пустой экран.
+Create pages (one to N) in the group's shared library. Each page stores a permanent ID, name, order/navigation, block-instance links and required metadata. Separate layouts are supported for **TV and touch kiosk**, and for landscape and portrait orientation. Shared data is not duplicated across layouts. If an individual layout is absent, use a verified compatible default layout, not a blank screen.
 
-Редактор предоставляет **адаптивную сетку**: добавление, перетаскивание мышью/пальцем, изменение размеров и упорядочивание без случайных перекрытий. Позиции сохраняются в единицах сетки, а не только абсолютных пикселях. Свободное перекрытие произвольных HTML/JavaScript-компонентов не требуется. Визуальные блоки должны адаптироваться к реальным размерам экрана в пределах проверенного профиля.
+The editor provides an **adaptive grid**: add, mouse/finger drag, resize and order without accidental overlap. Positions are stored in grid units, not only absolute pixels. Free overlap of arbitrary HTML/JavaScript components is not required. Visual blocks adapt to actual screen size within the tested profile.
 
-**Функциональный модуль**, **набор его данных** и **экземпляр блока на странице** — разные сущности с независимыми стабильными ID и версионированными форматами. Экземпляр блока ссылается на набор данных и содержит собственные фильтры, внешний вид и параметры. Несколько блоков могут ссылаться на одни данные. Удаление блока или его макета не удаляет набор данных. Перед удалением набора показываются зависимости, выполняется проверка ссылок и используется корзина.
+A **feature module**, its **dataset**, and a **block instance on a page** are distinct entities with independent stable IDs and versioned formats. A block instance references a dataset and has its own filters, appearance and parameters. Multiple blocks may reference the same data. Deleting a block or its layout does not delete the dataset. Before deleting a dataset, show dependencies, check references and use the recycle bin.
 
-## 9.6. Назначения устройств и профили отображения
+## 9.6. Device Assignments and Display Profiles
 
-Администратор назначает устройству общий профиль (список страниц, порядок, стартовая, переходы) либо индивидуальный набор страниц. Один профиль может обслуживать много устройств. Изменение профиля и индивидуального набора проходит через общую публикацию группы. Устройство получает и сохраняет только необходимые ему защищённые опубликованные данные и файлы. В обычной редакции профиля не допускается неочевидная многоуровневая цепочка переопределений.
+An administrator assigns a shared profile (page list, order, start page, transitions) or an individual page set to a device. One profile may serve many devices. Profile and individual-set changes pass through group publication. A device receives and stores only the protected published data and files it needs. Normal profile editing does not allow a non-obvious multi-level override chain.
 
-## 9.7. Разделение черновиков и состояния распространения
+## 9.7. Draft and Distribution State Separation
 
-Статусы **«В работе»/«Готово»** относятся к редактированию. Статусы **«Загружено»/«Проверено»/«Активировано»** относятся к клиентскому распространению. Эти состояния не заменяют друг друга. Отключение или ошибка функционального модуля не удаляет блоки; опубликованный статический контент сохраняется, если может быть отображён без исполнения неисправного кода; иначе отображается безопасная заглушка.
+**Working/Ready** concern editing. **Downloaded/Verified/Activated** concern client distribution. These states do not substitute for each other. Disabling or failing a feature module does not delete blocks; published static content remains if it can render without failed code; otherwise show a safe placeholder.
 
-# 10. Синхронизация
+# 10. Synchronization
 
-## 10.1. Первоначальная передача
+## 10.1. Initial Transfer
 
-При присоединении клиент получает согласованный снимок необходимых данных, номер ревизии и связанные файлы.
+On join, the client receives a consistent snapshot of required data, the revision number and related files.
 
-После завершения первоначальной передачи применяются последующие изменения, начиная с соответствующей ревизии.
+After initial transfer, later changes apply from the corresponding revision.
 
-Запрещается:
+Prohibited:
 
-- Использовать один файл SQLite через сетевое хранилище одновременно несколькими клиентами.
-- Выполнять произвольное копирование рабочей SQLite-базы при активной записи без механизма согласованного снимка.
+- Concurrent use of one SQLite file by multiple clients through network storage.
+- Arbitrary copying of a working SQLite database during active writes without a consistent-snapshot mechanism.
 
-## 10.2. Инкрементальная передача
+## 10.2. Incremental Transfer
 
-После первоначальной синхронизации передавать только необходимые изменения и недостающие либо изменённые файлы.
+After initial synchronization, transfer only required changes and missing or changed files.
 
-Предусмотреть:
+Provide:
 
-- Постоянные идентификаторы.
-- Ревизии.
-- Подтверждения операций.
-- Проверку целостности.
-- Повторяемые безопасные операции без дублирования.
-- Возобновляемые загрузки.
-- Повторную полную синхронизацию при необходимости.
+- Permanent identifiers.
+- Revisions.
+- Operation acknowledgments.
+- Integrity checks.
+- Repeatable safe operations without duplication.
+- Resumable downloads.
+- Repeat full synchronization when necessary.
 
-Не определять актуальность исключительно по системным часам устройств.
+Do not determine freshness solely from device clocks.
 
-Различать ревизии полученные, загруженные, проверенные и активированные.
+Distinguish received, downloaded, verified and activated revisions.
 
-## 10.3. Управление нагрузкой
+## 10.3. Load Management
 
-Ограничивать:
+Limit:
 
-- Одновременные загрузки.
-- Использование пропускной способности.
-- Размер очередей.
-- Повторные попытки.
-- Объём временных файлов.
+- Concurrent downloads.
+- Bandwidth utilization.
+- Queue sizes.
+- Retries.
+- Temporary-file volume.
 
-Использовать контролируемую параллельную передачу.
+Use controlled parallel transfer.
 
-Приоритет отдавать интерактивным операциям и необходимым метаданным.
+Prioritize interactive operations and required metadata.
 
-Передачу неизменяемых проверенных файлов непосредственно между клиентами рассматривать только как отдельную будущую оптимизацию.
+Consider direct transfer of immutable verified files between clients only as a separate future optimization.
 
-## 10.4. Безопасное переключение содержимого
+## 10.4. Safe Content Switching
 
-Новую ревизию сначала загрузить во временную область.
+Download a new revision to temporary storage first.
 
-Затем проверить все необходимые данные и контрольные суммы.
+Then verify all required data and checksums.
 
-После успешной проверки активировать её целиком.
+After successful verification, activate it atomically.
 
-При любой ошибке сохранять предыдущую полностью пригодную версию.
+On any error, retain the previous fully usable version.
 
-Не удалять файлы, необходимые активной публикации, сохранённым точкам восстановления или незавершённым операциям.
+Do not delete files needed by the active publication, saved recovery points or incomplete operations.
 
-Ограничивать использование временного пространства, кеша и постоянного хранилища.
+Limit temporary, cache and persistent storage use.
 
-## 10.5. Совместимость и клиентские данные
+## 10.5. Compatibility and Client Data
 
-Клиент получает данные только назначенных страниц, блоков и разрешённых файлов; полная копия серверной рабочей БД и серверные учётные секреты ему не предоставляются. Локально должен храниться полный, проверенный **пакет активной публикации**, пригодный для запуска после перезагрузки без сети. Загрузка новой публикации не удаляет активный пакет до успешной проверки и переключения. При недостатке места новая публикация откладывается.
+A client receives only assigned pages, blocks and permitted files; it does not receive a full copy of the server working database or server credential secrets. Store locally the full verified **active-publication package** able to start after reboot without network. Downloading a new publication does not delete the active package before successful verification and switching. With insufficient space, defer the new publication.
 
-Протокол согласует диапазоны версий Core, модулей, форматов и возможностей устройств. Несовместимый клиент остаётся на последней пригодной публикации и сообщает состояние «Требуется обновление». Сервер временно обслуживает утверждённые совместимые клиентские версии; бесконечная совместимость исторических исполняемых версий не обещается. Список серверов группы и разрешённые полномочия проверяются отдельно от версии содержимого.
+The protocol negotiates supported ranges for Core, module, format and device-capability versions. An incompatible client remains on its last usable publication and reports **Update required**. The server temporarily serves approved compatible client versions; indefinite compatibility of historical executables is not promised. The group's server list and permitted authority are checked separately from content version.
 
-# 11. Автономная работа экранов
+# 11. Screen Offline Operation
 
-При отсутствии связи с сервером подготовленный клиент Windows/Android обязан:
+Without server connectivity, a prepared Windows/Android client must:
 
-1. Показывать последнюю **полностью проверенную** опубликованную версию назначенных страниц и блоков.
-2. Сохранять локальную навигацию (для киоска) и смену страниц/слайдов (для TV), если данные имеются в пакете.
-3. Воспроизводить локально сохранённые изображения и видео на подтверждённом оборудовании.
-4. Не подменять рабочий контент страницей сетевой ошибки.
-5. Запускаться после перезагрузки устройства без доступного сервера и Интернета.
-6. При восстановлении связи проверять сервер/полномочия и автоматически синхронизироваться, не ломая текущий показ.
+1. Display the last **fully verified** published version of assigned pages and blocks.
+2. Preserve local kiosk navigation and TV page/slide changes when the package contains the data.
+3. Play locally stored images and video on confirmed hardware.
+4. Not replace working content with a network-error page.
+5. Start after device reboot without an available server or Internet.
+6. On reconnection, verify server/authority and synchronize automatically without disrupting current display.
 
-Устройство, не получившее полный первый пакет, показывает понятное состояние настройки и не делает вид, что имеет рабочий опубликованный контент.
+A device without the complete first package shows a clear setup state and does not pretend to have working published content.
 
-**Автономное редактирование на сетевых клиентах запрещено.** Пользователь Windows или Android редактирует сервер только при наличии сети и проверенного права записи. **Отдельно созданная автономная установка Windows** редактирует собственную локальную БД без Интернета. Объединение конкурентных правок независимых баз автоматически не выполняется; разрешён проверяемый переносимый импорт.
+**Offline editing on network clients is prohibited.** A Windows or Android user edits the server only with connectivity and verified write authority. **A separately created standalone Windows installation** edits its own local database without Internet. Conflicting edits from independent databases are not merged automatically; verified portable import is allowed.
 
-При недоступности сервера или неопределённых полномочиях на запись клиент не может локально публиковать изменения. Локально сохранённые доверенные серверные сведения используются для безопасного поиска связи, но не дают права произвольного изменения конфигурации группы.
+When the server is unavailable or write authority is uncertain, a client cannot publish changes locally. Locally stored trusted server information may support safe reconnection but grants no right to arbitrarily change group configuration.
 
-# 12. Сохранность данных и восстановление
+# 12. Data Durability and Recovery
 
-## 12.1. Уровни сохранности
+## 12.1. Durability Levels
 
-Использовать транзакции, устойчивые идентификаторы операций и ревизии.
+Use transactions, durable operation identifiers and revisions.
 
-Чётко различать состояния:
+Distinguish these states:
 
-**«Сохраняется»** — операция ещё не зафиксирована.
+**Saving** - operation is not yet committed.
 
-**«Сохранено на основном сервере»** — операция надёжно зафиксирована на основном устройстве, но может быть потеряна при его физической утрате.
+**Saved on primary server** - operation is reliably committed on the primary device but can be lost if that device is physically destroyed.
 
-**«Защищено от потери основного сервера»** — резервный сервер подтвердил надёжную фиксацию соответствующего изменения на независимом устройстве.
+**Protected against loss of primary server** - the backup server confirmed reliable commitment of the change on an independent device.
 
-**«Ожидает распространения»** — опубликованное изменение ещё не активировано всеми целевыми клиентами.
+**Pending distribution** - a published change is not yet activated by all target clients.
 
-**«Версия отображается»** — клиент подтвердил активацию содержимого, без подтверждения физического состояния экрана.
+**Version is displayed** - a client confirmed content activation, without confirmation of physical screen state.
 
-Запрещено объявлять изменение защищённым от потери основного сервера, если подтверждение надёжного сохранения на резервном устройстве не получено.
+Never declare a change protected against primary-server loss without confirmation of reliable backup storage.
 
-При недоступном резервном сервере интерфейс обязан показывать уровень защиты фактического сохранения.
+If the backup server is unavailable, the interface must show the actual durability protection level.
 
-Конкретная политика подтверждения записи требует согласования. Гарантия сохранности реплицированных данных относится к утверждённому сценарию потери основного устройства, а не к одновременной утрате всех копий.
+The concrete write-acknowledgment policy requires agreement. The durability guarantee for replicated data covers the approved primary-device-loss scenario, not simultaneous loss of every copy.
 
-## 12.2. История операций
+## 12.2. Operation History
 
-Фиксировать необходимые сведения:
+Record:
 
-- Идентификатор изменения.
-- Ревизию.
-- Автора.
-- Тип операции.
-- Состояние фиксации.
-- Существенные сведения для диагностики и восстановления.
+- Change identifier.
+- Revision.
+- Author.
+- Operation type.
+- Commit state.
+- Material diagnostic and recovery information.
 
-История должна позволять анализировать ошибочные изменения и выполнять предусмотренное восстановление.
+History must allow analysis of erroneous changes and execution of approved recovery.
 
-## 12.3. Удаление и восстановление отдельных записей
+## 12.3. Deleting and Restoring Individual Records
 
-Удаление и восстановление выполняются через корзину (§12.7), без отката остальных актуальных записей. При восстановлении проверять конфликты ID и зависимостей; связанные медиа сохранять весь установленный срок восстановления. Ручное окончательное удаление — отдельная явная операция с предупреждением и проверкой ссылок. Автоматическая очистка разрешается только включённой администратором политикой по §12.7, без подтверждения каждой операции. Сроки и ограничения объёма согласовываются отдельно.
+Deletion and restoration use the recycle bin (§12.7), without rolling back other current records. On restore, check ID and dependency conflicts; retain related media for the full recovery period. Manual final deletion is a separate explicit operation with warning and reference checks. Automatic cleanup is permitted only under an Administrator-enabled policy in §12.7, without confirmation per operation. Time limits and volume limits are agreed separately.
 
-## 12.4. Резервные копии
+## 12.4. Backups
 
-Требуются версионированные согласованные копии БД и медиа, несколько точек восстановления, контроль целостности, отдельное устройство/съёмный носитель, пробное восстановление во временную область и безопасное применение (§12.6). Реплика не заменяет резервную копию: ошибочные изменения распространяются на неё. Защита от утраты площадки требует копии вне площадки; второй компьютер на той же площадке этого не обеспечивает.
+Require versioned consistent copies of the database and media, multiple recovery points, integrity checks, a separate device/removable medium, trial restoration to a temporary area, and safe application (§12.6). A replica is not a backup: erroneous changes propagate to it. Protection against site loss requires an off-site copy; a second computer at the same site does not provide it.
 
-## 12.5. Ошибки модулей и данных
+## 12.5. Module and Data Errors
 
-При выявлении длительно существовавшего программного дефекта:
+When a long-standing software defect is found:
 
-1. Сохранить текущую базу и историю.
-2. Определить повреждённые или ошибочные записи.
-3. Подготовить проверенное исправление.
-4. Применить исправление с контролем результатов.
+1. Preserve the current database and history.
+2. Identify damaged or erroneous records.
+3. Prepare a verified fix.
+4. Apply it with result checks.
 
-Не выполнять автоматический возврат к старой базе с уничтожением последующих корректных изменений.
+Do not automatically revert to an old database and destroy later valid changes.
 
-## 12.6. Автоматическое/ручное резервирование и переносимый экспорт
+## 12.6. Automatic/Manual Backup and Portable Export
 
-Сервер создаёт согласованные резервные копии по настраиваемому расписанию и вручную; до опасных миграций требуется проверенная точка восстановления. Копия включает согласованную БД, необходимые медиафайлы, настройки и историю операций. Проверять контрольные суммы, полноту ссылок и возможность тестового восстановления в отдельную область; одно создание файла архива недостаточно для отметки «Проверено».
+The server creates consistent backups on a configurable schedule and manually; a verified recovery point is required before dangerous migrations. A copy includes the consistent database, required media, settings and operation history. Check checksums, reference completeness and test-restore capability in a separate area; creating an archive file is insufficient to mark it **Verified**.
 
-Локальные копии разрешены по умолчанию. Администратор может добавить независимое устройство, сетевую папку или внешний носитель. Недоступность внешнего хранилища не останавливает локальные копии, но отображается как **сниженный уровень защиты**. Расписание, число точек, срок хранения и объём настраиваются; запрещено автоматически удалять последнюю пригодную копию. Отдельно показывать дату последних успешных **локальной** и **внешней** копий. Для защиты от общей аварии площадки рекомендовать копию за её пределами; копия внутри той же площадки этого не гарантирует.
+Local copies are permitted by default. The Administrator may add an independent device, network folder or external medium. Unavailable external storage does not stop local copies but is shown as **reduced protection level**. Configure schedule, point count, retention and volume; automatic deletion of the last usable copy is prohibited. Show the last successful **local** and **external** copy dates separately. Recommend an off-site copy against site-wide disaster; a same-site copy does not guarantee it.
 
-**Переносимый экспорт содержимого** — отдельный версионированный пакет страниц, профилей отображения, макетов, экземпляров модулей, ссылок и данных, включая необходимые медиа и сведения о совместимости. Он не должен содержать учётные пароли, серверные закрытые ключи или идентичность исходного устройства. Импорт в независимую установку проверяет идентификаторы, версии и ссылки и **не выполняет автоматического слияния конфликтующих баз**.
+**Portable content export** is a separate versioned package of pages, display profiles, layouts, module instances, references and data, including required media and compatibility information. It must contain no account passwords, server private keys or source-device identity. Import into an independent installation checks identifiers, versions and references and **never automatically merges conflicting databases**.
 
-**Полная копия установки** и переносимый экспорт имеют разные границы доверия. Секреты/ключи восстанавливаются по специально защищённой процедуре, с отдельным разрешением и журналированием. Восстановление на другом физическом сервере не должно создавать двух действующих узлов с одинаковой криптографической идентичностью. Повторный запуск прежнего и новый сервер из копии — разные сценарии.
+**A full installation copy** and portable export have different trust boundaries. Secrets/keys are restored only through a specially protected procedure with separate permission and logging. Restoring to another physical server must not create two active nodes with the same cryptographic identity. Restarting the old server and starting a new server from a copy are different scenarios.
 
-## 12.7. Корзина и контролируемая очистка
+## 12.7. Recycle Bin and Controlled Cleanup
 
-Удаление объекта сначала помещает его в корзину; восстановление отдельной записи не откатывает остальные изменения. Срок хранения настраивается. По его окончании автоматическая очистка разрешена только по явно включённой администратором политике хранения и после проверки всех ссылок: действующие публикации, черновики, блоки, общие наборы данных, текущие точки восстановления и незавершённые операции. Необходимые файлы старых самостоятельных архивных копий должны содержаться в этих архивах либо иметь проверяемые доступные зависимости. Файлы с общими ссылками не удалять. При отсутствии безопасного доказательства ненужности очистку отложить. Удаления и ошибки протоколируются.
+Deletion first moves an object to the recycle bin; restoring one record does not roll back other changes. Retention is configurable. After expiry, automatic cleanup is allowed only under an explicitly enabled Administrator retention policy and after checking every reference: active publications, drafts, blocks, shared datasets, current recovery points and incomplete operations. Files required by old standalone archives must be contained in those archives or have verified available dependencies. Never delete files with shared references. If safe proof of disuse is absent, defer cleanup. Log deletions and errors.
 
-## 12.8. Контроль диска и режим защиты
+## 12.8. Disk Control and Protective Mode
 
-Устанавливаются измеренные пороги предупреждения и критического недостатка места для сервера и клиентов. После предупреждения выполняется только разрешённая очистка. В критическом состоянии прекращать тяжёлые загрузки, подготовку обновлений и операции записи, для которых нельзя обеспечить сохранность; показывать последнюю проверенную публикацию, пока доступны её файлы. **Не удалять** единственную пригодную публикацию или последнюю резервную копию ради освобождения места. После освобождения пространства проверить целостность хранения до возобновления записи; прерванные операции не повторять вслепую. Пороги, квоты и допустимые сценарии очистки требуют испытаний.
+Set measured warning and critical free-space thresholds for server and clients. After a warning, only permitted cleanup occurs. In a critical state, stop heavy downloads, update preparation and writes whose durability cannot be ensured; display the last verified publication while its files remain. **Never delete** the only usable publication or last backup merely to free space. After space is recovered, verify storage integrity before resuming writes; do not blindly repeat interrupted operations. Thresholds, quotas and permitted cleanup scenarios require tests.
 
-# 13. Отказоустойчивость серверов
+# 13. Server Fault Tolerance
 
-## 13.1. Первое резервирование
+## 13.1. Initial Replication
 
-Первоначальный сценарий: Windows-компьютер A — активный сервер, Windows-компьютер B — назначенный резервный. Каждый имеет отдельный идентификатор и собственные ключи. B получает и проверяет реплику базы и необходимые файлы; его фоновая служба не зависит от открытого экрана. Список разрешённых резервов и их приоритеты может быть известен устройствам, но **порядок приоритетов не наделяет сервер правом записи**.
+Initial scenario: Windows computer A is active server; Windows computer B is designated backup. Each has a separate identifier and own keys. B receives and verifies a database replica and required files; its background service is independent of an open screen. Devices may know the allowed backup list and priorities, but **priority order grants no write authority**.
 
-## 13.2. Отказ резервного сервера
+## 13.2. Backup Server Failure
 
-Если B недоступен, A продолжает редактирование и публикации только при сохранении собственного подтверждённого права записи. Каждое новое изменение честно помечается «Сохранено на основном сервере, резервная защита не подтверждена». После возвращения B выполняются проверка актуальности, безопасная синхронизация пропущенных изменений и подтверждение надёжной фиксации; только затем разрешён статус «Защищено от потери основного сервера». Отказ B и разделение сети с неопределённым правом записи не считаются одной ситуацией.
+If B is unavailable, A continues editing and publication only while retaining its own confirmed write authority. Mark every new change truthfully as "Saved on primary server; backup protection not confirmed." After B returns, check freshness, safely synchronize missed changes and confirm reliable commitment; only then may status become "Protected against loss of primary server." Backup failure and a network partition with uncertain write authority are not the same situation.
 
-## 13.3. Отказ активного сервера и контролируемая передача роли
+## 13.3. Active Server Failure and Controlled Role Transfer
 
-При недоступности A клиенты показывают локально опубликованные данные, а редактирование останавливается до подтверждения полномочий. Администратор на резервном Windows-компьютере через Launcher инициирует процедуру. Система проверяет целостность и пригодность реплики B, наличие необходимых зафиксированных данных, поколение полномочий и **проверяемое исключение A из записи** (fencing/другой подтверждённый способ). Голое отсутствие сетевого ответа и обычное заявление оператора без проверяемого исключения недостаточны.
+When A is unavailable, clients display local published data and editing stops until authority is confirmed. An administrator on the backup Windows computer starts the procedure through the Launcher. The system verifies B's replica integrity and usability, required committed data, authority generation, and **verifiable exclusion of A from writing** (fencing or another confirmed method). A bare lack of network response and an operator statement without verifiable exclusion are insufficient.
 
-Новая роль записи выдаётся лишь по безопасному протоколу и фиксируется в журнале. При отсутствии технической возможности надёжно исключить A доступ к редактированию остаётся заблокирован. Клиенты проверяют криптографическую подлинность B **и** его право обслуживать группу; повторного сопряжения всех клиентов не требуется. Потерянные между репликациями изменения не объявляются защищёнными задним числом.
+New write authority is issued only through the safe protocol and logged. If A cannot be reliably excluded from editing, remain blocked. Clients verify B's cryptographic authenticity **and** authority to serve the group; re-pairing every client is not required. Changes lost between replicas are not declared protected retroactively.
 
-## 13.4. Возвращение A
+## 13.4. Return of A
 
-Восстановивший связь A стартует в неавторитетной роли; проходит проверку поколения полномочий, целостности и синхронизацию прежде, чем ему можно будет вновь доверить запись. Его устаревшая копия не должна подменять новые данные.
+A rejoining A starts unauthorized and must pass authority-generation, integrity and synchronization checks before write trust can return. Its stale copy must not overwrite new data.
 
-## 13.5. Автоматический выбор сервера — будущее расширение
+## 13.5. Automatic Server Selection - Future Extension
 
-**Не является обязательной функцией первоначального продукта.** Возможен только после отдельного утверждения и испытаний механизма полномочий: кворум/участник голосования или эквивалент, защита от старого лидера, разделение сети, отложенные пакеты, полный отказ и возврат узлов. Пара Windows-серверов без дополнительного безопасного механизма не может гарантировать одновременно автоматический failover и отсутствие двух писателей во всех разделениях сети. При неопределённости безопаснее приостановить запись.
+**Not a mandatory function of the initial product.** It is possible only after separate approval and testing of an authority mechanism: quorum/voting participant or equivalent, old-leader protection, network partition, delayed packets, total failure and node return. Two Windows servers without an additional safe mechanism cannot guarantee both automatic failover and the absence of two writers in every partition. When uncertain, stop writes.
 
-# 14. Модульная система
+# 14. Modular System
 
-## 14.1. Область применения и доставка
+## 14.1. Scope and Delivery
 
-Первоначально поддерживать только модули, поставляемые разработчиком. Они входят в **единый подписанный комплект приложения Kiosk**; отдельный пользовательский магазин и произвольная установка стороннего кода не входят в продукт. Администратор включает/отключает доступные модули; новые модули доставляются проверенными обновлениями Kiosk. Для каждого модуля фиксируются идентификатор, версия, допустимый диапазон API Core, зависимости, собственная версия данных, разрешения, ресурсы и проверка состояния.
+Initially support only developer-supplied modules. They are part of **one signed Kiosk application bundle**; a separate user store and arbitrary third-party installation are outside the product. The Administrator enables/disables available modules; new modules arrive through verified Kiosk updates. Record each module's ID, version, allowed Core API range, dependencies, own data version, permissions, resources and health check.
 
-## 14.2. Административные расширения
+## 14.2. Administrative Extensions
 
-Единая панель предоставляет авторизацию, права, страницы, публикации, пользователей, устройства, журналы и системные операции. Функциональный модуль может объявлять свой раздел, редактор, настройки и типы визуальных блоков, не изменяя основные разделы напрямую. Один универсальный редактор всех возможных данных **не требуется**. Любое действие модуля проверяется общими серверными правами и протоколируется в пределах политики аудита.
+One panel provides authorization, rights, pages, publications, users, devices, logs and system operations. A feature module may declare its section, editor, settings and visual-block types without directly changing core sections. One universal editor for all possible data is **not required**. Every module action is checked against common server rights and logged within audit policy.
 
-## 14.3. Изоляция
+## 14.3. Isolation
 
-Логически разделять все модули: документированный версионированный контракт, контролируемый доступ к данным и явные зависимости. Доверенные простые серверные функции могут выполняться в общем процессе, но это **не является полной изоляцией от его аварии**. Модули, для которых доказана необходимость защиты от зависания, отказов или тяжёлых операций, запускать в отдельных контролируемых процессах; предусмотреть тайм-ауты, очереди, ограничения ресурсов, перезапуск и диагностику. Изоляция процессов не защищает автоматически общие память/диск и не делает вредоносный код безопасным.
+Separate all modules logically: documented versioned contract, controlled data access and explicit dependencies. Trusted simple server functions may run in a shared process, but that is **not full isolation from its crash**. Run modules with proven need for hang, failure or heavy-operation protection in separate controlled processes; provide timeouts, queues, resource limits, restart and diagnostics. Process isolation does not make shared memory/disk safe automatically and does not make malicious code safe.
 
-## 14.4. Отключение, аварии и автоматическое восстановление
+## 14.4. Disable, Failure and Automatic Recovery
 
-Штатное отключение прекращает новые операции модуля, но пригодное **статическое** опубликованное содержимое сохраняется на экранах, если может отображаться без неисправного кода. Скрытие блоков выполняется новой публикацией. При аварии выполняется безопасная остановка неисправного компонента; при невозможности безопасного отображения вместо него используется нейтральная заглушка. Другие независимые блоки страницы продолжают работу в установленных пределах.
+Orderly disable stops new module operations, but usable **static** published content remains on screens if it can render without the failed code. Hiding blocks occurs through a new publication. On failure, stop the faulty component safely; if safe rendering is impossible, use a neutral placeholder. Other independent page blocks continue within established limits.
 
-Для отдельного процесса возможен ограниченный автоматический перезапуск и проверка работоспособности. В общем процессе разрешён лишь предусмотренный безопасный способ восстановления, без обещаний изоляции аварии Core. Повторные неудачи увеличивают задержки и приводят к состоянию «Неисправен — требуется вмешательство». Бесконечные попытки запрещены. Модуль, отключённый администратором вручную, автоматически не включать. Восстановление не публикует черновики и не удаляет данные.
+A separate process may receive limited automatic restart and health checks. In the shared process only the approved safe recovery method is allowed, with no promise of isolation from a Core crash. Repeated failures increase backoff and lead to **Faulted - intervention required**. Infinite retries are prohibited. Do not automatically re-enable a manually disabled module. Recovery neither publishes drafts nor deletes data.
 
-## 14.5. Хранение и эталонный модуль
+## 14.5. Storage and Reference Module
 
-При отключении или обновлении сохранять данные модулей, схемы, настройки и ссылки с страниц. Удаление данных — только отдельная явная операция с проверкой зависимостей. Модулям запрещено бесконтрольно менять схемы и данные других модулей. Механизм изоляции схем/БД выбирается по проверяемым контрактам.
+On disable or update, preserve module data, schemas, settings and page references. Data deletion is only a separate explicit operation with dependency checks. Modules must not make uncontrolled changes to other modules' schemas or data. Schema/database isolation is selected through verifiable contracts.
 
-**Events** — первый эталонный функциональный модуль. При вводе черновиков и публикаций существующие активные данные Events необходимо перенести в исходную проверенную опубликованную ревизию, исключив случайное изменение текущего публичного контента. Его текущие записи, теги, изображения, маршруты и работающие сценарии должны сохраняться либо корректно мигрировать; отделение кода проводится поэтапно, без сплошной переписи. Испытать принудительное завершение, зависание, неправильный ответ, недоступное хранилище и восстановление.
+**Events** is the first reference feature module. When drafts and publications are introduced, migrate existing active Events data into the initial verified published revision while preventing accidental change to current public content. Preserve or correctly migrate current records, tags, images, routes and working scenarios; separate code incrementally, without a wholesale rewrite. Test forced termination, hang, invalid response, unavailable storage and recovery.
 
-# 15. Обновления
+# 15. Updates
 
-## 15.1. Общие принципы
+## 15.1. Common Principles
 
-Интернет не обязателен: доверенный пакет может доставляться администратором на сервер, после чего распространяется по локальной сети. Различать обновления **содержимого**, **модулей**, **ядра** и **приложения**; публикация содержимого обычно не требует перезапуска клиента. Для Windows и Android используются свои подписанные исполняемые пакеты. Изменение содержимого не зависит от расписания установки приложения.
+Internet access is not mandatory: an administrator may deliver a trusted package to the server, which distributes it on the LAN. Distinguish **content**, **module**, **Core** and **application** updates; content publication normally needs no client restart. Windows and Android use their own signed executable packages. Content changes are independent of application-install schedules.
 
-## 15.2. Управление установкой
+## 15.2. Installation Control
 
-Поддерживать «Сейчас», «Запланировать», «Отложить». Расписание задаётся для группы и профилей устройств; отдельное устройство допускает явное исключение. **Политика обновлений хранится отдельно от профиля оформления экрана**, хотя назначение устройств может использовать общие группировки. Перезапуск модуля, приложения и устройства — разные операции. На Android установка APK и перезапуски выполняются только в рамках реально доступных прав ОС; автоматическое бесшумное обновление не обещается без подтверждённого управляемого режима.
+Support **Now**, **Schedule** and **Defer**. A schedule applies to a group and device profiles; an individual device may have an explicit exception. **Update policy is stored separately from display-appearance profiles**, although device assignment may reuse group structures. Module, application and device restarts are different operations. On Android, APK installation and restarts occur only within actually available OS rights; silent automatic updates are not promised without a confirmed managed mode.
 
-## 15.3. Подлинность и совместимость
+## 15.3. Authenticity and Compatibility
 
-Пакеты содержат версии, условия совместимости, хеши всех полезных файлов и криптографическую подпись доверенным ключом; предусмотреть смену ключей и отзыв доверия. Простая проверка списка хешей без доверенной подписи пакета недостаточна. Запрещено исполнять неподписанные найденные в LAN файлы. Заранее проверять версии Core, модулей, схем и платформу устройства.
+Packages contain versions, compatibility conditions, hashes of all payload files and a cryptographic signature by a trusted key; support key change and trust revocation. A hash-list check without a trusted package signature is insufficient. Never execute unsigned files found on the LAN. Precheck Core, module, schema and device-platform versions.
 
-## 15.4. Процедура обновления
+## 15.4. Update Procedure
 
-1. Получить или возобновить пакет.
-2. Проверить подпись, хеши, свободное место и совместимость.
-3. Создать и проверить пригодную точку восстановления.
-4. Подготовить новую версию отдельно от работающей.
-5. Проверить миграции данных в копии/временной области.
-6. Корректно приостановить затронутые операции.
-7. Активировать с помощью независимого компонента обслуживания.
-8. Проверить работоспособность и совместимость данных.
-9. Зафиксировать результат, иначе перейти в безопасный режим и применить **только совместимый** вариант восстановления.
+1. Obtain or resume the package.
+2. Verify signature, hashes, free space and compatibility.
+3. Create and verify a usable recovery point.
+4. Prepare the new version separately from the running one.
+5. Check data migrations on a copy/temporary area.
+6. Safely pause affected operations.
+7. Activate through the independent maintenance component.
+8. Verify operation and data compatibility.
+9. Record the result; otherwise enter safe mode and apply **only a compatible** recovery option.
 
-Откат исполняемого кода разрешён лишь при совместимости с уже изменёнными данными. Не удалять последний пригодный набор содержимого ради обновления. Фиксировать диагностику прерываний питания, зависаний и отказов обновления.
+Rolling back executable code is allowed only if it is compatible with data already changed. Do not delete the last usable content set for an update. Log power interruptions, hangs and update failures.
 
-## 15.5. Постепенное распространение
+## 15.5. Staged Rollout
 
-Сначала пилотное устройство и проверка результата, затем ограниченные волны обновлений. Основной и резервный серверы не должны одновременно становиться недоступными из-за обновлений. Отключённые клиенты обновляются после восстановления связи, проверки совместимости и в своё разрешённое окно. Сервер временно поддерживает утверждённые старые клиентские версии; если клиент не понимает новые данные, он сохраняет последнюю пригодную публикацию и показывает статус «Требуется обновление».
+Start with a pilot device and result check, then limited waves. Primary and backup servers must not become unavailable simultaneously because of updates. Offline clients update after reconnection, compatibility checks and within their permitted window. The server temporarily supports approved old client versions; if a client cannot understand new data, it keeps the last usable publication and shows **Update required**.
 
-# 16. Совместимость версий и миграции
+# 16. Version Compatibility and Migrations
 
-Главная гарантия — сохранность страниц, данных, макетов, профилей, настроек и содержимого модулей на **утверждённом пути обновления**, а не бессрочная работоспособность каждого старого EXE/APK.
+The main guarantee is durability of pages, data, layouts, profiles, settings and module content on the **approved update path**, not indefinite operation of every old EXE/APK.
 
-Требования:
+Requirements:
 
-1. Постоянные ID страниц, экземпляров блоков, наборов данных, групп и устройств.
-2. Версионированные форматы экспорта, страниц, макетов, настроек и модулей.
-3. Преимущественно расширяющие изменения схем, известные зависимости и перенос неизвестных полей там, где это безопасно.
-4. Документированные последовательные миграции без молчаливой потери данных.
-5. Проверяемая совместимость Core ↔ модулей ↔ клиентов ↔ публикациям.
-6. Испытания с реальными тестовыми проектами поддерживаемых предыдущих версий.
-7. Безопасный отказ либо доступный режим чтения, когда старый клиент не поддерживает формат.
-8. Сохранение данных отключённого/пока отсутствующего модуля и его ссылок на страницах.
-9. Разделение версии рабочей базы, версии исполняемого пакета и опубликованной ревизии содержимого.
+1. Permanent IDs for pages, block instances, datasets, groups and devices.
+2. Versioned export, page, layout, settings and module formats.
+3. Predominantly additive schema changes, known dependencies, and preservation of unknown fields where safe.
+4. Documented sequential migrations without silent data loss.
+5. Verifiable compatibility of Core <-> modules <-> clients <-> publications.
+6. Tests with real test projects from supported previous versions.
+7. Safe refusal or available read-only mode when an old client cannot handle a format.
+8. Preservation of data and page references for a disabled/currently absent module.
+9. Separation of working-database version, executable-package version and published content revision.
 
-Старое приложение не обязано редактировать данные нового формата. При невозможности миграции пользователь получает диагностируемый отказ и доступный путь восстановления. Нельзя обещать совместимость с любыми историческими сборками, не включёнными в утверждённую матрицу.
+An old application need not edit new-format data. If migration is impossible, the user receives a diagnosable refusal and an available recovery path. Do not promise compatibility with arbitrary historical builds outside the approved matrix.
 
-# 17. Интерфейс отображения
+# 17. Display Interface
 
-Разработать и проверить отдельные адаптированные варианты для:
+Develop and test distinct adapted variants for:
 
-- Горизонтальных экранов.
-- Вертикальных экранов.
-- Сенсорного управления.
-- Несенсорного управления.
+- Landscape screens.
+- Portrait screens.
+- Touch control.
+- Non-touch control.
 
-Требования:
+Requirements:
 
-- Читаемая типографика.
-- Достаточный контраст.
-- Удобные элементы взаимодействия.
-- Предсказуемая навигация.
-- Соответствие расстоянию просмотра.
-- Корректная адаптация изображений.
-- Работа с длинными заголовками и описаниями.
-- Поддержка переводов.
-- Резервное отображение отсутствующих переводов.
+- Readable typography.
+- Sufficient contrast.
+- Usable interaction controls.
+- Predictable navigation.
+- Suitability for viewing distance.
+- Correct image adaptation.
+- Handling of long titles and descriptions.
+- Translation support.
+- Fallback display for missing translations.
 
-Проверять пустые состояния, повреждённые изображения, пропавшие файлы, большие шрифты и прерванную синхронизацию.
+Test empty states, damaged images, missing files, large fonts and interrupted synchronization.
 
-Фоновые операции не должны надолго блокировать навигацию.
+Background operations must not block navigation for long periods.
 
-Полноэкранный режим приложения не означает полного ограничения функций ОС.
+Application fullscreen does not fully restrict OS functions.
 
-Уточнение владельца (2026-11-01) для автономного Events: в TV не помещающийся на экране текст карточки автоматически показывается последовательными частями без потери выбранного для показа текста. Следующее событие показывается после последней части; единственная длинная карточка повторяется с первой части. В kiosk сохраняется ручная прокрутка. Существующий приоритет краткого описания перед полным не меняется. Это уточнение не закрывает D17 для будущего конструктора макетов.
+Owner clarification (2026-11-01) for offline Events: on TV, card text that does not fit is automatically shown in successive parts without losing the display text. The next event appears after the last part; one long card repeats from the first part. Kiosk retains manual scrolling. The existing priority of short description over full description is unchanged. This clarification does not close D17 for a future layout builder.
 
-## 17.1. Профили макетов и WebView
+## 17.1. Layout Profiles and WebView
 
-Визуальная компоновка определяется адаптивной сеткой с отдельными макетами для TV/киоска и ориентаций. Поддерживать предпросмотр целевого профиля и предупреждения о блоках, не помещающихся в допустимые границы. Навигация TV по расписанию/циклу и сенсорная навигация задаются профилем. Не выполнять произвольный вводимый пользователем JavaScript/HTML как код страницы без отдельной утверждённой изолированной системы безопасности.
+Visual composition uses an adaptive grid with separate layouts for TV/kiosk and orientation. Support target-profile preview and warnings for blocks outside permitted boundaries. TV schedule/cycle navigation and touch navigation are set by profile. Do not execute arbitrary user-entered JavaScript/HTML as page code without a separately approved isolated security system.
 
-WebView — управляемая платформенная оболочка вокруг поддерживаемого движка, а **не собственная реализация движка браузера**. Запретить произвольные внешние адреса и небезопасные мосты WebView ↔ ОС; проверять происхождение контента. Конкретный Windows/Android движок, видеокодеки и доступность режима полного экрана утверждаются испытаниями. До подтверждения новая оболочка не заменяет работающий браузерный путь принудительно.
+WebView is a managed platform shell around a supported engine, **not an own browser-engine implementation**. Prohibit arbitrary external addresses and unsafe WebView-to-OS bridges; verify content origin. The specific Windows/Android engine, video codecs and fullscreen availability are approved by testing. Until confirmed, the new shell does not forcibly replace the working browser path.
 
-# 18. Безопасность
+# 18. Security
 
-Основные меры: уникальные секреты каждой установки; отсутствие общих заводских паролей; стойкое хранение паролей; защищённые сеансы; контроль CSRF/других операций изменения; проверка прав на сервере; ограничение попыток входа и размеров загрузок; защита служебных маршрутов, журналов, файлов и обновлений. LAN нельзя считать доверенной сетью. Экранный полноэкранный режим не является механизмом защиты ОС.
+Primary measures: unique secrets for each installation; no shared factory passwords; strong password storage; protected sessions; CSRF and other mutation-operation control; server-side rights checks; login-attempt and upload-size limits; protection of service routes, logs, files and updates. The LAN is not a trusted network. Fullscreen display mode is not an OS security mechanism.
 
-## 18.1. Первоначальное доверие и сопряжение
+## 18.1. Initial Trust and Pairing
 
-При создании установки локально формируется её проверяемая криптографическая идентичность. Проектируемая автоматизация регистрации **не заменяет автоматически действующую проверенную схему HTTPS**: отдельный административный Windows-компьютер хранит зашифрованный ключ удостоверяющего центра (CA), а закрытые ключи серверов остаются на их машинах. Передаются только публичные запросы сертификатов (CSR) и сертификаты. Изменение этой схемы или включение новой групповой иерархии доверия требует отдельного проекта миграции и испытаний; недопустимы несанкционированное добавление корневых сертификатов в хранилище ОС, обход предупреждений TLS и тихая замена потерянного CA. Сопряжение нового устройства по временному коду (см. раздел 5) обязательно связывается с проверкой подлинности сервера через доверенный административный интерфейс; одной демонстрации кода и простого успешного TLS-сеанса с неизвестным сертификатом недостаточно. Клиент не принимает неподтверждённую идентичность, даже если сервер найден автоматически. Предусмотреть безопасный отзыв и повторное сопряжение потерянного устройства.
+When an installation is created, its verifiable cryptographic identity is formed locally. Planned registration automation **does not replace the currently active verified HTTPS scheme**: a separate administrative Windows computer stores an encrypted certificate-authority (CA) key, while server private keys remain on their machines. Only public certificate requests (CSRs) and certificates are transferred. Changing this scheme or adding a new group trust hierarchy requires a separate migration project and tests; unauthorized addition of root certificates to the OS store, TLS-warning bypass and silent replacement of a lost CA are prohibited. Pairing a new device by temporary code (see §5) must be tied to server-authenticity verification through a trusted administrative interface; showing a code and a simple successful TLS session with an unknown certificate are insufficient. A client does not accept unconfirmed identity even if discovery was automatic. Provide safe revocation and re-pairing for a lost device.
 
-## 18.2. Доверие к группе и серверам
+## 18.2. Group and Server Trust
 
-Каждая группа имеет постоянную идентичность и защищённую от подмены и отката версию **списка авторизованных серверов**. Каждый сервер имеет собственный ключ/сертификат и ID; закрытые ключи нельзя копировать между активными узлами. Клиент проверяет, что сервер включён в актуальный доверенный список группы, а также что его **право записи подтверждено отдельно**. Передача роли, отзыв старого сервера, ротация/потеря ключей и аварийная переустановка требуют определённых процедур. Смена IP не меняет идентичности. При невозможности достоверной проверки связи клиент работает со своей проверенной локальной публикацией без отправки паролей и управляющих запросов подозрительному узлу.
+Each group has a permanent identity and a tamper- and rollback-protected version of the **authorized-server list**. Each server has its own key/certificate and ID; private keys must not be copied between active nodes. A client verifies that the server is in the group's current trusted list and that its **write authority is separately confirmed**. Role transfer, old-server revocation, key rotation/loss and emergency reinstall require defined procedures. An IP change does not change identity. If connectivity cannot be verified reliably, the client uses its verified local publication without sending passwords or control requests to the suspect node.
 
-## 18.3. Платформы и журналы
+## 18.3. Platforms and Logs
 
-Защищённое сетевое развёртывание использует проверяемый HTTPS без перехода к незашифрованному HTTP при ошибке TLS. Исторический `serve.py` с HTTP-доступом ко всем интерфейсам сохраняется исключительно как отдельно документированный совместимый путь и не является рекомендуемой защищённой настройкой LAN.
+Protected network deployment uses verifiable HTTPS and does not fall back to unencrypted HTTP on TLS error. The historical `serve.py` with HTTP access to all interfaces is retained only as a separately documented compatibility path and is not a recommended secure LAN configuration.
 
-Секреты, резервные коды, токены, сеансовые cookie и закрытые ключи запрещено писать в пользовательские и технические журналы или обычные переносимые архивы. Встроенный WebView ограничивается доверенными источниками, а нативные функции ОС доступны только через минимальный проверяемый интерфейс. Windows-служба и функции обслуживания работают с минимально необходимыми системными правами. Административные действия требуют прав продукта, а системные локальные операции — соответствующих прав ОС.
+Secrets, recovery codes, tokens, session cookies and private keys must not be written to user or technical logs or ordinary portable archives. Embedded WebView is limited to trusted origins, and native OS functions are exposed only through a minimal verifiable interface. The Windows service and maintenance functions use minimum required system rights. Administrative actions require product rights; system-local operations require corresponding OS rights.
 
-**Нерешённые детали, не подлежащие домысливанию при реализации:** формальная модель первого доверия, способ подтверждения полномочий и fencing при failover, ротация ключей и сертификатов на отключённых клиентах, порядок восстановления при утрате всех резервных кодов. До утверждения этих протоколов соответствующие гарантии не считаются реализованными.
+**Unresolved details that implementation must not invent:** the formal first-trust model, the method for confirming authority and fencing during failover, key/certificate rotation on disconnected clients, and recovery after loss of all recovery codes. Until these protocols are approved, the corresponding guarantees are not considered implemented.
 
-# 19. Диагностика и обслуживание
+# 19. Diagnostics and Maintenance
 
-Предусмотреть три режима:
+Provide three modes:
 
-- **Обычный:** полный разрешённый набор функций.
-- **Безопасный:** неисправные необязательные компоненты отключены; доступные ядро, опубликованный локальный показ и диагностика продолжают работу в пределах реально доступных ресурсов.
-- **Восстановление:** независимый от основного приложения компонент обеспечивает проверку конфигурации, БД, копий, экспорт диагностики и контролируемые восстановительные операции.
+- **Normal:** full permitted function set.
+- **Safe:** faulty optional components disabled; available Core, published local display and diagnostics continue within actual resources.
+- **Recovery:** a component independent of the main application provides configuration, database, backup and diagnostic-export checks and controlled recovery operations.
 
-## 19.1. Автоматическое восстановление
+## 19.1. Automatic Recovery
 
-При серьёзном отказе независимый компонент обслуживания выполняет ограниченное число безопасных попыток перезапуска и проверки работоспособности. При повторных ошибках прекращает цикл, фиксирует причину, переводит систему в доступный безопасный или восстановительный режим. **Не выполняет автоматическое восстановление старой рабочей БД поверх новой**: восстановление из копии после проверки и подтверждения администратора. После ошибки хранения повторная запись допускается только после проверки целостности; журнал аварий не должен приводить к заполнению диска.
+On serious failure, the independent maintenance component performs a limited number of safe restart and health checks. On repeated errors it stops the cycle, records the cause, and moves the system into an available safe or recovery mode. **It never automatically restores an old working database over a new one**: recovery from backup occurs after verification and Administrator confirmation. After a storage error, writing resumes only after integrity checks; the failure log must not fill the disk.
 
-## 19.2. Локальные и центральные технические журналы
+## 19.2. Local and Central Technical Logs
 
-Каждое устройство ведёт локальные журналы ограниченного объёма: жизненный цикл, ошибки, ресурсы, версии, состояние модулей, последние проверенные/активированные ревизии, сеть, резервирование, обновления и восстановление. При наличии связи в группу передаются только необходимые диагностические события/состояния; при отсутствии связи они накапливаются локально до лимита и безопасно передаются после восстановления. Сервер показывает доступность, **время последнего сообщения**, версии и ошибки, не заявляя исправность долго молчащего устройства.
+Every device keeps size-limited local logs: lifecycle, errors, resources, versions, module state, last verified/activated revisions, network, replication, updates and recovery. With connectivity, send only required diagnostic events/states to the group; without connectivity, accumulate locally to a limit and transfer safely after recovery. The server shows availability, **last-message time**, versions and errors, without claiming that a long-silent device is healthy.
 
-## 19.3. Журнал действий пользователей
+## 19.3. User-Action Audit Log
 
-Отдельно вести защищённый атрибутированный журнал: кто и когда изменил, опубликовал, удалил, восстановил данные или выполнил системную операцию, с указанием объекта, ID операции и результата. Для него устанавливаются отдельные сроки хранения и контроль доступа; ротация технического журнала не должна стирать обязательные сведения об ответственности. Загрузка диагностических архивов допускает только разрешённые данные, без секретов, полных БД или закрытых ключей. Локальное обслуживание возможно без работоспособной веб-админки и обнаружения сети.
+Maintain a separate protected attributed log: who changed, published, deleted, restored data or performed a system operation, and when, with object, operation ID and result. Set separate retention and access control; technical-log rotation must not erase mandatory accountability information. Diagnostic archives may contain only permitted data, without secrets, full databases or private keys. Local maintenance works without a functioning web admin panel or network discovery.
 
-# 20. Производительность
+# 20. Performance
 
-Показатели являются **предлагаемыми целями**, подлежащими утверждению после испытаний оборудования.
+Metrics are **proposed targets**, subject to approval after equipment testing.
 
-| Показатель | Предварительная цель |
+| Metric | Preliminary target |
 |---|---|
-| Масштаб | 100 зарегистрированных устройств суммарно |
-| Автономное отображение | При отказе сервера/сети сохраняется корректный локальный контент |
-| Реакция интерфейса | 95-й процентиль не более 200 мс |
-| Небольшое текстовое изменение | Подтверждение активации от 95% доступных клиентов за 5 секунд |
-| Передача медиаданных | Отдельные измерения по размерам файлов и пропускной способности |
-| Безопасная передача роли | Ориентир 30 секунд при выполнении условий |
-| Подтверждённая репликация | Без потери надёжно подтверждённых резервным сервером изменений при потере основного устройства |
-| Массовое переподключение | 100 устройств без неконтролируемого роста ресурсов и повреждения данных |
-| Длительный тест | 72 часа смешанной нагрузки без неограниченного роста памяти/диска и потери зафиксированных тестовых данных |
-| Прерванное обновление | Сохранение пригодных данных и совместимого сценария восстановления |
+| Scale | 100 registered devices in total |
+| Offline display | Correct local content remains during server/network failure |
+| Interface response | 95th percentile no more than 200 ms |
+| Small text change | Activation confirmation from 95% of available clients within 5 seconds |
+| Media transfer | Separate measurements by file size and bandwidth |
+| Safe role transfer | 30-second target when conditions are met |
+| Confirmed replication | No loss of changes reliably confirmed by the backup server when the primary device is lost |
+| Mass reconnection | 100 devices without uncontrolled resource growth or data corruption |
+| Long-duration test | 72 hours of mixed load without unbounded memory/disk growth or loss of recorded test data |
+| Interrupted update | Preserve usable data and a compatible recovery path |
 
-**Правило измерения публикации:** время распространения определяется до получения подтверждения активации от клиентского приложения. Физическое включение телевизора и фактическая видимость изображения этим испытанием не подтверждаются.
+**Publication measurement rule:** propagation time ends when the client application confirms activation. This test does not confirm television power state or actual image visibility.
 
-**Правило измерения сохранности:** отсутствие потери данных проверяется только для изменений, надёжное сохранение которых подтвердил резервный сервер, в рамках согласованного сценария отказа основного устройства.
+**Durability measurement rule:** absence of data loss is checked only for changes whose reliable storage the backup server confirmed, within the approved primary-device-failure scenario.
 
-Показатели не считать гарантированными до согласования нагрузки и успешного прохождения испытаний.
+Do not treat metrics as guaranteed until load is agreed and tests pass.
 
-Дополнительно проверять производительность построения адаптивных страниц, загрузки локальных макетов, отклика редактора при конкурентной работе и расход диска клиентскими снимками. Заявленные 200 мс, 5 секунд для 95% клиентов и 30 секунд переключения остаются **предварительными ориентирами**, а не гарантией, пока не определены методика измерения, точная нагрузка и матрица физического оборудования. Единовременное применение ревизии на всех 100 устройствах не требуется; фиксируется активация каждого клиента отдельно.
+Also test adaptive-page construction, local-layout loading, editor responsiveness under concurrent work and client-snapshot disk use. The 200 ms, 5-second-for-95%-of-clients and 30-second-transfer figures remain **preliminary targets**, not guarantees, until measurement method, exact load and physical-equipment matrix are defined. Simultaneous revision application on all 100 devices is not required; record each client's activation separately.
 
-# 21. Испытания
+# 21. Testing
 
-## 21.1. Функциональные проверки
+## 21.1. Functional Checks
 
-Проверить:
+Check:
 
-- Первоначальную установку.
-- Запуск и перезапуск.
-- Обнаружение групп.
-- Авторизованное присоединение.
-- Права доступа.
-- Редактирование.
-- Черновики.
-- Предварительный просмотр.
-- Публикацию.
-- Синхронизацию.
-- Автономное отображение.
-- Удаление и восстановление отдельных записей.
-- Обновление и восстановление.
-- Работу и отказ модулей.
+- Initial installation.
+- Startup and restart.
+- Group discovery.
+- Authorized joining.
+- Access rights.
+- Editing.
+- Drafts.
+- Preview.
+- Publication.
+- Synchronization.
+- Offline display.
+- Deletion and restoration of individual records.
+- Update and recovery.
+- Module operation and failure.
 
-## 21.2. Два отдельных компьютера
+## 21.2. Two Separate Computers
 
-Испытания A/B:
+A/B tests:
 
-1. Изменить данные на A, проверить реплику B и активацию клиентами.
-2. Корректно остановить A, проверить автономную работу клиентов и управляемую передачу роли.
-3. Аварийно остановить A, проверить отсутствие частичных публикаций и потерянных подтверждённых реплицированных изменений.
-4. Разделить сеть между A и B, проверить отсутствие двух независимых серверов записи.
-5. После разрешённой передачи роли B вернуть A, проверить невозможность перезаписать новые данные старой копией.
-6. Остановить B при работающем A, проверить корректную индикацию локального сохранения без резервной защиты.
-7. Перезапустить клиентов без доступа к A, проверить автономный запуск.
-8. Прервать передачу видео и обновление, проверить восстановление прежней рабочей версии.
+1. Change data on A; verify replica B and client activation.
+2. Stop A correctly; verify client offline operation and controlled role transfer.
+3. Crash-stop A; verify no partial publications and no loss of confirmed replicated changes.
+4. Partition the network between A and B; verify no two independent writer servers.
+5. After approved role transfer to B, return A and verify the old copy cannot overwrite new data.
+6. Stop B while A runs; verify correct indication of local storage without backup protection.
+7. Restart clients without access to A; verify offline startup.
+8. Interrupt video transfer and update; verify restoration of the prior working version.
 
-Для потенциально разрушительных испытаний использовать только изолированные тестовые данные.
+Use only isolated test data for potentially destructive tests.
 
-## 21.3. Дополнительные отказы
+## 21.3. Additional Failures
 
-Проверить:
+Check:
 
-- Недостаток места.
-- Хранилище только для чтения.
-- Повреждённые файлы.
-- Отключение питания.
-- Принудительное завершение процесса.
-- Различие системных часов.
-- Повторные сетевые запросы.
-- Конкурентные изменения.
-- Отложенные сетевые сообщения.
-- Одновременный запуск серверов.
-- Устаревшую реплику.
-- Возвращение бывшего сервера.
-- Несовместимые версии.
-- Прерванную миграцию.
-- Восстановление из резервной копии.
+- Insufficient space.
+- Read-only storage.
+- Corrupted files.
+- Power loss.
+- Forced process termination.
+- Clock differences.
+- Repeated network requests.
+- Concurrent changes.
+- Delayed network messages.
+- Simultaneous server startup.
+- Stale replica.
+- Return of a former server.
+- Incompatible versions.
+- Interrupted migration.
+- Restore from backup.
 
-## 21.4. Физические испытания
+## 21.4. Physical Tests
 
-Проверить на согласованных реальных устройствах:
+Check on agreed real devices:
 
-- Windows-клиент.
-- Сенсорное управление.
-- Несенсорное управление.
+- Windows client.
+- Touch control.
+- Non-touch control.
 - Android TV.
-- Поддерживаемые ориентации и разрешения.
-- Видео и изображения.
-- Автозапуск.
-- Продолжительную работу.
-- Установку на чистую систему.
+- Supported orientations and resolutions.
+- Video and images.
+- Autostart.
+- Long-duration operation.
+- Clean-system installation.
 
-Отдельно провести нагрузочные испытания для целевых 100 устройств.
+Separately load-test the target 100 devices.
 
-## 21.5. Новые обязательные сценарии приёмки
+## 21.5. New Mandatory Acceptance Scenarios
 
-- Оба Windows-режима одного серверного движка с переходом локальный ↔ сетевой без дублирования базы, безопасной проверкой внешнего доступа и сохранением данных.
-- Первый запуск на Windows и Android, LAN-поиск/ручной адрес, неуспех обоих путей и возврат в мастер.
-- Сопряжение по коду с настоящим сервером, подмена сервера, ограничение попыток, отзыв устройства, смена IP и перенос в другую группу с проверяемой очисткой локальных данных.
-- Один набор данных на нескольких страницах, макеты TV/киоск и портрет/ландшафт, адаптивная сетка и назначение профиля группе/устройству без дублирования набора данных.
-- Два редактора одной страницы: сохранение первым и отклонение устаревшей попытки второго без потери несохранённого материала.
-- Общие черновики «В работе»/«Готово», изменение готового объекта, зависимость от незавершённого объекта, публикация только готового согласованного снимка.
-- Группа из онлайн/офлайн/несовместимых клиентов: частичные загрузки, проверка файлов и локальный перезапуск клиента без сервера; ни одна незавершённая ревизия не отображается как активная.
-- Удаление блока, общих данных и страницы, восстановление по корзине, безопасная очистка и защита связанных файлов/архивных копий.
-- Сбой модуля в отдельном процессе и общего безопасного модуля; заглушка/сохранённый контент, ограниченное восстановление и запрет самовключения вручную отключённого модуля.
-- Авария Core и независимый Recovery, критически мало места, неудачная миграция, отсутствие сети, невозможность доступа к базе и сохранение предыдущей публикации.
-- Проверка локальной и внешней резервной копии, тестовое восстановление, переносимый архив без секретов, создание нового сервера из архива без дублирования идентичности узлов.
-- Неполная реплика, отказ резерва при работающем активном сервере, ручное безопасное исключение старого сервера из записи, возвращение прежнего сервера и отказ в переводе роли при неопределённых полномочиях.
-- Пилотное/волновое обновление Windows/Android по расписаниям профилей и индивидуальным исключениям, несовместимый старый клиент и сохранение его рабочего содержимого.
-- Централизованная диагностика с отставшим/offline устройством, ограниченное накопление/догрузка журнала, защита событий аудита и исключение секретов.
+- Both Windows modes of one server engine, switching local <-> network without database duplication, with safe external-access checks and data preservation.
+- First run on Windows and Android, LAN discovery/manual address, failure of both paths, and return to the wizard.
+- Code pairing with the real server, server impersonation, attempt limiting, device revocation, IP change, and transfer to another group with verified local-data cleanup.
+- One dataset on multiple pages, TV/kiosk and portrait/landscape layouts, adaptive grid, and profile assignment to group/device without dataset duplication.
+- Two editors on one page: first saves, stale second attempt is rejected without losing unsaved material.
+- Shared Working/Ready drafts, change to a ready object, dependency on an incomplete object, and publication of only a ready consistent snapshot.
+- A group of online/offline/incompatible clients: partial downloads, file checks, local client restart without server; no incomplete revision appears active.
+- Delete a block, shared data and page; restore from recycle bin; safe cleanup and protection of related files/archive copies.
+- Failure of a module in a separate process and of a shared safe module; placeholder/saved content, limited recovery, and no self-enable of a manually disabled module.
+- Core crash and independent Recovery, critically low space, failed migration, no network, inaccessible database, and preservation of the prior publication.
+- Local and external backup verification, test restore, portable archive without secrets, and creation of a new server from the archive without duplicating node identity.
+- Incomplete replica, backup failure while the primary runs, manual safe exclusion of the old server from writing, return of the former server, and refusal of role transfer under uncertain authority.
+- Pilot/wave Windows/Android updates by profile schedules and individual exceptions, an incompatible old client, and preservation of its working content.
+- Central diagnostics with a lagging/offline device, limited log accumulation/upload, audit-event protection and secret exclusion.
 
-Все проверки исполняются на синтетических или копиях данных, не на рабочей пользовательской установке. Конкретные критерии измерений утверждаются перед испытаниями.
+All checks use synthetic data or copies, never a production user installation. Specific measurement criteria are approved before tests.
 
-# 22. Порядок разработки и границы этапов
+# 22. Development Order and Stage Boundaries
 
-Ранее принятые результаты и Git-теги остаются неизменными. Уточнённый план **не объявляет этапы завершёнными** и не является разрешением одновременно реализовать все пункты. Дата аудита фактического состояния — 2026-10-26.
+Previously accepted results and Git tags remain unchanged. This plan **does not declare stages complete** and does not authorize implementing all items at once. The audit date for actual state is 2026-10-26.
 
-| Этап | Объём и приёмка |
+| Stage | Scope and acceptance |
 | --- | --- |
-| 1 | Сохранение MVP, инвентаризация оборудования и архитектурный фундамент: прежний подтверждённый результат сохраняется |
-| 2 | Исправление базовых проблем безопасности/устойчивости и измерения: в текущем журнале отмечен завершённым в утверждённых границах |
-| 3 | Windows Launcher, служба, пути хранения, HTTPS, мастер/установочная основа; фактическая приёмка и ограничения — в текущем журнале, не в историческом аудите |
-| 4 | Полный проверенный автономный пакет **существующего Events-отображения**, офлайн-перезапуск Windows и физические испытания Android; определить версионированный манифест снимка, допускающий дальнейшее расширение страницами без ломки офлайн-хранилища |
-| 5 | Идентичность группы, защищённое обнаружение/сопряжение, минимальные профили устройств, **базовый протокол ревизий/доставки/подтверждений на Events-данных**; заранее определить расширяемый формат публикации, но не требовать уже законченный конструктор страниц |
-| 6 | Предметная модель страниц и макетов, адаптивная сетка, общие данные/экземпляры блоков, **общие черновики/готовность, контроль конфликтов и применение публикационного протокола этапа 5 к страницам**; выделение Events как первого функционального модуля с проверкой отказов |
-| 7 | Корзина/очистка, резервные копии/экспорт/восстановление, подписанные поэтапные обновления и проверяемая совместимость миграций |
-| 8 | Репликация A → B, честные гарантии фиксации, защищённые полномочия и **контролируемая** передача роли; без обязательного авто-выбора |
-| 9 | Полная диагностика, безопасный режим, независимое восстановление, защита при нехватке пространства, эксплуатационные доработки и матрица совместимости |
-| 10 | Комплексные испытания Windows/Android, 100 устройств, 72-часовая смешанная нагрузка, чистые установки и выпуск подтверждённых сборок |
+| 1 | Preserve the MVP, inventory equipment and establish the architecture foundation: retain the prior confirmed result |
+| 2 | Baseline security and resilience fixes and measurements. The prior approved completion remains bounded by the recorded evidence. |
+| 3 | Windows Launcher, service, storage paths, HTTPS and wizard/install foundation; actual acceptance and limits are in the current ledger, not the historical audit |
+| 4 | Full verified offline package for **existing Events display**, Windows offline restart and physical Android tests; define a versioned snapshot manifest extensible to pages without breaking offline storage |
+| 5 | Group identity, protected discovery/pairing, minimum device profiles, and the **baseline revision/delivery/confirmation protocol over Events data**; define an extensible publication format in advance without requiring a finished page builder |
+| 6 | Page/layout domain model, adaptive grid, shared data/block instances, **shared drafts/readiness, conflict control and application of the stage 5 publication protocol to pages**; extract Events as the first feature module with failure tests |
+| 7 | Recycle bin/cleanup, backup/export/restore, signed staged updates and verified migration compatibility |
+| 8 | A -> B replication, truthful commit guarantees, protected authority and **controlled** role transfer; no mandatory auto-selection |
+| 9 | Full diagnostics, safe mode, independent recovery, low-space protection, operational refinements and compatibility matrix |
+| 10 | Comprehensive Windows/Android tests, 100 devices, 72-hour mixed load, clean installs and release of confirmed builds |
 
-**Зависимость этапов 4–6:** этап 4 создаёт независимый от конкретного экрана формат полной проверенной локальной публикации; этап 5 проверяет ревизии, перенос и подтверждения на данных существующего Events; этап 6 расширяет этот формат страницами/наборами данных и вводит редактор черновиков. До ввода черновиков MVP по-прежнему публикует правки активного Events немедленно — не объявлять такой период поддержкой явной публикации. Переход к черновикам требует миграции текущего публичного состояния Events в исходную опубликованную ревизию и проверки совместимости старых клиентов. Гарантии «явная публикация» применяются к этапам, где новый интерфейс и модель реально реализованы.
+**Dependency of stages 4-6:** stage 4 creates a complete verified local-publication format independent of a specific screen; stage 5 tests revisions, transfer and confirmations on existing Events data; stage 6 extends the format with pages/datasets and introduces the draft editor. Before drafts, the MVP still publishes active Events changes immediately; do not describe that period as explicit-publication support. Moving to drafts requires migration of current public Events state into an initial published revision and testing old-client compatibility. Explicit-publication guarantees apply only to stages where the new interface and model exist.
 
-**Поперечные меры безопасности:** полномочия, журналирование, ограничение диска и обработка сбоев должны сопровождать каждый этап, где появляются соответствующие возможности; этап 9 завершает общесистемные сценарии восстановления, но не разрешает откладывать безопасность функций этапов 4–8 до него. Для приёмки этапов отдельно фиксировать реализацию в исходниках, проверенную сборку, физическую среду и остающиеся ограничения.
+**Cross-cutting security:** authority, logging, disk limits and failure handling accompany every stage that introduces relevant capability; stage 9 finishes system-wide recovery scenarios but does not permit deferring security for stages 4-8 functions until then. For stage acceptance, separately record source implementation, verified build, physical environment and remaining limits.
 
-**Открытые замечания аудита A01–A15:** владелец выбрал исправление A01 сейчас, до постоянного офлайн-пакета: первоначальная ошибка kiosk-events должна восстанавливаться автоматически без reload. Исправление признаётся только по регрессиям и практическим проверкам, записанным в журнале. Обязательный Edge-gate снят, прежние отказы сохранены. Остальные применимые условия этапа 3 сохраняются; неизменённые действительные проверки не повторять без технического основания.
+**Open audit findings A01-A15:** the owner selected the A01 fix now, before the persistent offline package: the initial kiosk-events error must self-recover without reload. Acceptance requires regressions and practical checks recorded in the ledger. The mandatory Edge gate is removed; prior failures are retained. Other applicable stage 3 conditions remain; do not repeat unchanged valid checks without technical reason.
 
-Перераспределение работ между 5–9 допускается лишь после оценки зависимостей и отдельного согласования, без ложной отметки приёмки. Старый этап 9 «Автоматический выбор сервера» **переведён в отдельное необязательное будущее расширение** (см. 13.5). Утверждение документа не означает автоматического согласования новых этапов исполнения.
+Reallocation between stages 5-9 is allowed only after dependency assessment and separate approval, without falsely marking acceptance. Former stage 9 "automatic server selection" is **moved to a separate optional future extension** (see §13.5). Document approval does not automatically authorize new execution stages.
 
-Для каждого этапа обязательны: ограниченный объём, явные зависимости и результаты, исходные тесты, значимые испытания отказов, актуальная документация, проверенные Git-контрольные точки и перечень непройденных проверок. Владелец выбрал последовательную ограниченную реализацию этапов 3–6; независимая работа продолжается при открытых аппаратных проверках без ложного закрытия этапа. Этапы 7–10 не разрешены. Работающие установки, данные и доверие не изменяются без отдельного разрешения.
+Every stage requires bounded scope, explicit dependencies and results, source tests, meaningful failure tests, current documentation, verified Git checkpoints and a list of unpassed checks. The owner selected sequential bounded implementation of stages 3-6; independent work continues while hardware checks remain open, without falsely closing a stage. Stages 7-10 are not authorized. Running installations, data and trust are not changed without separate permission.
 
-# 23. Критерии приёмки
+# 23. Acceptance Criteria
 
-Для принятия соответствующего этапа или всей системы необходимо подтвердить применимые требования.
+To accept the relevant stage or the whole system, applicable requirements must be confirmed.
 
-Общие критерии:
+General criteria:
 
-1. Исходные функции MVP сохранены.
-2. Поддерживаемые старые данные открываются или корректно мигрируют.
-3. Система работает в LAN без Интернета.
-4. Подготовленные клиенты продолжают автономный показ после отказа сервера и перезапуска.
-5. Черновики не появляются на публичных экранах без публикации.
-6. Новое содержимое активируется только после полной проверки.
-7. Прогресс публикации основан на подтверждениях активации клиентов.
-8. Интерфейс не утверждает, что физический экран работает, только на основании клиентского подтверждения.
-9. Удалённые записи можно восстанавливать отдельно, вместе с сохранёнными связанными материалами.
-10. Группа не допускает двух независимых серверов записи.
-11. Данные, отмеченные как защищённые от потери основного сервера, действительно подтверждены резервным устройством.
-12. Отказ отдельного модуля не вызывает необоснованный отказ независимых компонентов.
-13. Неудачное обновление оставляет совместимый путь восстановления и сохранённые данные.
-14. Проверены установочные пакеты на чистых устройствах.
-15. Поддержка конкретных платформ подтверждена физическими испытаниями.
-16. Утверждённые показатели нагрузки и производительности подтверждены измерениями.
-17. Документация соответствует реализованной версии.
+1. MVP source functions are preserved.
+2. Supported old data opens or migrates correctly.
+3. The system operates on the LAN without Internet.
+4. Prepared clients continue offline display after server failure and restart.
+5. Drafts do not appear on public screens without publication.
+6. New content is activated only after full verification.
+7. Publication progress is based on client activation confirmations.
+8. The interface does not claim a physical screen works solely because of client confirmation.
+9. Deleted records can be restored separately with retained related material.
+10. A group cannot have two independent writer servers.
+11. Data marked protected against primary-server loss is actually confirmed by a backup device.
+12. Failure of one module does not unjustifiably fail independent components.
+13. A failed update leaves a compatible recovery path and preserved data.
+14. Installer packages are tested on clean devices.
+15. Support for specific platforms is confirmed by physical tests.
+16. Approved load and performance metrics are confirmed by measurements.
+17. Documentation matches the implemented version.
 
-Дополнительная приёмка в отношении решений №1–32:
+Additional acceptance for decisions 1-32:
 
-18. Один серверный движок Windows сохраняет одну установку и данные при разрешённом переключении локального/сетевого режима.
-19. Android не исполняет серверную роль, но способен подтвердить автономный показ после перезапуска на поддерживаемых устройствах.
-20. Адаптивные страницы, макеты и профили назначений воспроизводимы, включая общий набор данных для нескольких блоков.
-21. Общие черновики и статусы готовности изолированы от опубликованных версий, старые правки не перезаписывают новые.
-22. Разные клиенты активируют проверенный снимок атомарно и продолжают показ в случае недоступности сервера/новой версии.
-23. Сопряжение основано на подлинности сервера и ограниченном коде, а не на факте LAN-обнаружения.
-24. Доверенные серверы имеют отдельные ключи, переключение роли не создаёт двух писателей, после отказа резерва честно показан фактический уровень защиты.
-25. Восстановление, очистка, обновления и отмена ошибочных операций не уничтожают последнюю пригодную публикацию и пользовательские данные.
-26. Локальные и централизованные журналы ограничены, диагностическая выгрузка исключает секреты, журнал действий пользователей атрибутирован.
-27. Сохранённые данные старого поддерживаемого выпуска мигрируют и открываются после обновления либо предоставляется проверенный безопасный путь восстановления.
+18. One Windows server engine retains one installation and data through an approved local/network mode switch.
+19. Android does not execute the server role but confirms offline display after restart on supported devices.
+20. Adaptive pages, layouts and assignment profiles are reproducible, including one dataset shared by multiple blocks.
+21. Shared drafts and readiness states are isolated from published versions; old edits do not overwrite new ones.
+22. Different clients activate a verified snapshot atomically and continue display when the server/new version is unavailable.
+23. Pairing relies on server authenticity and a limited code, not on LAN discovery.
+24. Trusted servers have separate keys; role switching creates no two writers; after backup failure the actual protection level is shown truthfully.
+25. Recovery, cleanup, updates and cancellation of erroneous operations do not destroy the last usable publication or user data.
+26. Local and central logs are limited, diagnostic export excludes secrets, and the user-action log is attributed.
+27. Data saved by an old supported release migrates and opens after update, or a verified safe recovery path is provided.
 
-**Источниковый тест, сборка и проверка на физическом устройстве имеют разные статусы приёмки**; отсутствие испытаний нельзя заменять утверждением о готовности.
+**Source test, build and physical-device verification have distinct acceptance statuses**; missing tests cannot be replaced by a readiness claim.
 
-# 24. Решённые политики и открытые вопросы
+# 24. Decided Policies and Open Questions
 
-## 24.1. Политики, утверждённые владельцем в решениях №1–32
+## 24.1. Owner-Approved Policies in Decisions 1-32
 
-Полный реестр утверждённых политик и ссылки на требования приведены в приложении А. Нормативные определения находятся в соответствующих разделах 3–19; этот раздел не вводит второй набор правил. Реестр не заменяет открытые технические решения §24.2 и не подтверждает реализацию.
+The full register of approved policies and requirement references is in Appendix A. Normative definitions are in §§3-19; this section does not introduce a second rule set. The register neither replaces the open technical decisions in §24.2 nor confirms implementation.
 
-## 24.2. Решения, которые нельзя додумывать без утверждения или испытаний
+## 24.2. Decisions That Must Not Be Invented Without Approval or Testing
 
-| ID | Вопрос | Требуемое подтверждение |
+| ID | Question | Required confirmation |
 | --- | --- | --- |
-| D04 | Конкретные сборки Windows 10, версии/модели Android и WebView, разрешения, ресурсы, политика поддержки ОС | Матрица поддерживаемого оборудования и безопасности |
-| D05 | Видео/аудио: кодеки, размер/битрейт/продолжительность и профиль потоков | Физические испытания, ограничения контента |
-| D07 | Периодичность/сроки хранения/квоты для копий, корзины и журналов; места внешних копий | Эксплуатационная политика и измерения |
-| D10 | Набор поддерживаемых исторических форматов и диапазоны совместимости Core/модулей/клиентов | Матрица миграций и совместимости |
-| D11 | Предельные задержки, доступная полоса, нагрузка, пороги защитного режима и восстановление | Методика и результаты испытаний |
-| D12 | Автовход в Windows/Android, поведение после включения питания, экранный lockdown | Отдельные утверждения и физические испытания |
-| D13 | Формальный протокол группового доверия и сопряжения, ротация/отзыв ключей, сроки действия доверенных списков на долго отключённых клиентах, замена сервера при утрате ключа | Отдельный проект этапа 5: модель угроз, синтетический межплатформенный прототип и отдельное утверждение до реального сопряжения; действующая CA/HTTPS не заменяется |
-| D14 | Проверяемое исключение старого сервера из записи (fencing), полномочия и поколения роли | Двухмашинные испытания, в том числе разделение сети |
-| D15 | Порядок безопасного восстановления при утрате и пароля, и всех резервных кодов | Утверждённая локальная процедура |
-| D16 | Строгие зафиксированные зависимости, снятие готовности при их изменении; независимые готовые наборы не блокируются | Политика утверждена владельцем 2026-10-28; реализация и тесты R§9.3 остаются обязательными |
-| D17 | Поведение устройства с неподходящим макетом; настройка ограничений сетки, перелистывания TV и навигации киоска | UX-прототип и физические испытания |
-| D18 | Формат целостного экспорта/импорта, обработка конфликтующих ID и сценарии восстановления новой серверной идентичности | Формат и тестовые архивации |
-| D19 | Неподтверждённые особенности Android-установки обновлений и фоновой работы | Испытания выбранных моделей/режимов управления |
+| D04 | Specific Windows 10 builds, Android versions/models and WebView versions, resolutions, resources, OS-support policy | Supported-hardware and security matrix |
+| D05 | Video/audio: codecs, size/bitrate/duration and streaming profile | Physical tests, content limits |
+| D07 | Backup, recycle-bin and log periods/retention/quotas; external-copy locations | Operations policy and measurements |
+| D10 | Supported historical formats and Core/module/client compatibility ranges | Migration and compatibility matrix |
+| D11 | Latency limits, available bandwidth, load, protective-mode thresholds and recovery | Test method and results |
+| D12 | Windows/Android automatic login, post-power-on behavior, screen lockdown | Separate approvals and physical tests |
+| D13 | Formal group-trust/pairing protocol, key rotation/revocation, trusted-list validity for long-disconnected clients, server replacement after key loss | Separate stage 5 project: threat model, synthetic cross-platform prototype and separate approval before real pairing; the active CA/HTTPS scheme is not replaced |
+| D14 | Verifiable old-server write exclusion (fencing), authority and role generations | Two-machine tests, including network partition |
+| D15 | Safe recovery procedure when both the password and all recovery codes are lost | Approved local procedure |
+| D16 | Strict fixed dependencies, readiness removal when they change; independent ready sets are not blocked | Policy approved by the owner on 2026-10-28; implementation and R§9.3 tests remain mandatory |
+| D17 | Device behavior with an unsuitable layout; grid-limit settings, TV paging and kiosk navigation | UX prototype and physical tests |
+| D18 | Full export/import format, conflicting-ID handling and new-server-identity recovery scenarios | Format and test archives |
+| D19 | Unconfirmed Android update-installation and background-operation behavior | Tests of selected models/management modes |
 
-Вопросы D03 (Android-сервер), D06 (работа при отсутствии резерва), D08 (расписания обновлений) и D09 (самостоятельная смена собственного пароля) определены уже принятыми решениями владельца; их нельзя продолжать трактовать как неразрешённые требования. Если реализация потребует дополнительной технической политики, оформлять её отдельно до начала затрагивающего этапа.
+D03 (Android server), D06 (operation without a backup), D08 (update schedules) and D09 (changing one's own password) are already decided by the owner; they must not continue to be treated as unresolved requirements. If implementation needs an additional technical policy, approve it separately before the affected stage begins.
 
-# 25. Функции вне обязательного объёма
+# 25. Out of Mandatory Scope
 
-Без отдельного решения не включать погодные/новостные модули, QR, дополнительные самостоятельные галереи, аналитику посетителей, сторонние пользовательские плагины, независимое офлайн-редактирование сетевых клиентов с объединением правок, произвольный откат любого исторического содержимого, P2P-раздачу медиа и бессрочную поддержку всех старых исполняемых версий.
+Without separate approval, do not include weather/news modules, QR, additional standalone galleries, visitor analytics, third-party user plug-ins, independent offline editing of network clients with edit merging, arbitrary rollback of any historical content, P2P media distribution, or indefinite support of all old executable versions.
 
-Также **не входят в обязательный выпуск**: Android как активный/резервный сервер, автоматический выбор нового главного сервера при разделении сети, независимая установка функциональных модулей без обновления единого комплекта и произвольное выполнение пользовательского HTML/JavaScript в качестве модуля.
+Also **outside the mandatory release**: Android as active/backup server, automatic selection of a new chief server during network partition, independent installation of feature modules without updating the single bundle, and arbitrary execution of user HTML/JavaScript as a module.
 
-Допускаются как отдельные потенциальные улучшения: экспорт содержимого только для чтения, дополнительный арбитр полномочий, P2P-раздача проверенных неизменяемых файлов, независимая установка проверенных модулей и расширенные профили совместимости. Их отсутствие не считается невыполнением настоящего обязательного ТЗ.
+The following are permitted as separate potential improvements: read-only content export, an additional authority arbiter, P2P distribution of verified immutable files, independent installation of verified modules, and extended compatibility profiles. Their absence is not non-compliance with this mandatory specification.
 
-# 26. Правила выполнения разработки
+# 26. Development Execution Rules
 
-Следовать [AGENTS](../AGENTS.md), согласованному этапу и текущему журналу: перед изменениями проверить Git и относящиеся к задаче код/зависимости; сохранять чужие изменения, данные и принятые функции; переиспользовать пригодные компоненты; выполнить применимые автоматические/практические проверки и испытания отказов; обновить необходимые документы. Отчёт содержит результат, изменения, реальные проверки/ошибки, непройденные проверки, риски и следующий шаг.
+Follow [AGENTS](../AGENTS.md), the approved stage and the current ledger: before changes inspect Git and task-related code/dependencies; preserve others' changes, data and accepted functions; reuse suitable components; run applicable automated/practical checks and failure tests; update required documentation. Report result, changes, actual checks/errors, unpassed checks, risks and next step.
 
-Разрушительные операции, потеря данных, публикация, развёртывание и существенное расширение объёма требуют отдельного разрешения. При противоречии объяснить проблему и предложить безопасное решение, не меняя гарантий самостоятельно. Не подменять работающие браузер/HTTPS/БД одной переписью приложения.
+Destructive operations, data loss, publication, deployment and material scope expansion require separate permission. On conflict, explain the problem and offer a safe solution without changing guarantees unilaterally. Do not replace a working browser/HTTPS/database with an application rewrite.
 
-При изменении требований сохранять соответствие прежней и новой редакций; без согласования не снижать достигнутые гарантии, включая запрет частичных публикаций, сохранность подтверждённых реплицированных изменений и защиту сессий. План, исходники, сборка и приёмка нужной платформы имеют разные статусы.
+When requirements change, preserve correspondence between old and new revisions; do not reduce achieved guarantees without approval, including prohibition of partial publications, durability of confirmed replicated changes and session protection. Plan, source, build and platform acceptance have distinct statuses.
 
-Готовые библиотеки и приложения оцениваются до новой существенной реализации: совместимость с ТЗ и текущим кодом, лицензия, сопровождение и стоимость интеграции. Проверенные кандидаты и границы применения приведены в [архитектуре](ARCHITECTURE.md#reuse-candidates--reviewed-2026-11-07); это рекомендации, не обязательные зависимости и не разрешение переписывать принятые функции или начинать новые этапы.
+Assess ready-made libraries and applications before substantial new implementation: specification/current-code compatibility, license, maintenance and integration cost. Verified candidates and usage boundaries are in [the architecture](ARCHITECTURE.md#reuse-candidates--reviewed-2026-11-07); these are recommendations, not mandatory dependencies and not permission to rewrite accepted functions or start new stages.
 
-# 27. Итоговый результат
+# 27. Final Outcome
 
-Единый модульный продукт для групп информационных экранов в LAN: отдельные сборки Windows/Android, работа без обязательного Интернета, автономный показ подготовленных клиентов, совместимые данные и контролируемые переходы ролей. Независимая локальная редакция — только Windows. Требования к показу, публикациям и сохранности — §§9–13; к модулям, обновлениям и совместимости — §§14–16; к наблюдаемости и проверяемости — §§19–23.
+One modular product for groups of LAN information screens: separate Windows/Android builds, operation without mandatory Internet, offline display by prepared clients, compatible data and controlled role transitions. Independent local editing is Windows-only. Display, publication and durability requirements are in §§9-13; module, update and compatibility requirements in §§14-16; observability and verifiability in §§19-23.
 
-Редакция требований 1.2.2 остаётся основным ТЗ. Открытые вопросы §24.2 и предварительные показатели требуют решений/испытаний; документ не принимает этапы и не разрешает менять рабочую установку. Все целевые гарантии, включая независимость модулей и безопасное восстановление, действуют как подтверждённые возможности только после соответствующей технической и физической приёмки.
+Requirement revision 1.2.2 remains the primary specification. Open questions in §24.2 and preliminary metrics require decisions/tests; this document neither accepts stages nor authorizes changes to a working installation. All target guarantees, including module independence and safe recovery, become confirmed capabilities only after technical and physical acceptance.
 
-# Приложение А. Реестр 32 архитектурных решений
+# Appendix A. Register of 32 Architecture Decisions
 
-Реестр предназначен для трассировки требований при ревизии, а не заменяет разделы 1–27 и указанный выше статус утверждения документа.
+This register traces requirements during revision; it does not replace §§1-27 or the document-approval status above. This appendix uses the original decision numbers 1–32. The technical policy identifiers in §24.2 refer to a separate set of decisions.
 
-| № | Утверждённое решение | Разделы |
+| No. | Approved decision | Sections |
 | --- | --- | --- |
-| 1 | Клиенты автономно показывают, но не редактируют; отдельная Windows-установка редактирует локально | 3, 11 |
-| 2 | Windows — клиент/локальная установка/сервер; Android — клиент и сетевой редактор | 3–5 |
-| 3 | Общие страницы/данные, макеты TV/киоск и ориентаций | 9, 17 |
-| 4 | Адаптивная сетка с переносом/размером блоков | 9, 17 |
-| 5 | Библиотека страниц, профили и индивидуальные назначения устройств | 6, 9 |
-| 6 | Данные модулей отдельно от страниц, общие наборы, локальные настройки блоков | 4, 9, 14 |
-| 7 | Единая согласованная публикация группы, проверяемая клиентами | 9–10 |
-| 8 | Параллельное редактирование с контролем версий без молчаливой перезаписи | 8–9 |
-| 9 | Общее рабочее пространство черновиков | 9 |
-| 10 | «В работе»/«Готово», публикация только готовых согласованных изменений | 9 |
-| 11 | Код на новом устройстве, подтверждение администратором | 5, 18 |
-| 12 | Одно устройство — одна группа, контролируемый перенос и очистка | 5–6 |
-| 13 | Локальное восстановление главного администратора по резервным кодам и правам ОС | 8 |
-| 14 | Автоматические и ручные копии, проверка, несколько точек, переносимый экспорт | 12 |
-| 15 | Локальные копии по умолчанию, внешние — дополнительно | 12 |
-| 16 | Один Windows-серверный движок в автономном и сетевом режимах | 4–5, 7 |
-| 17 | При отказе резерва активный продолжает запись при достоверных полномочиях | 12–13 |
-| 18 | Контролируемый failover, автоматический выбор — отдельное будущее расширение | 13 |
-| 19 | Постепенные обновления и сохранение пригодной публикации на несовместимом клиенте | 10, 15–16 |
-| 20 | Расписание обновлений группы/профилей и индивидуальные исключения | 15 |
-| 21 | Единая панель с расширениями модулей и общими правами | 8, 14 |
-| 22 | Логическая модульность, отдельный процесс при доказанной необходимости | 4, 14 |
-| 23 | Модули в едином подписанном комплекте Kiosk | 14–15 |
-| 24 | Штатное/аварийное отключение с сохранением данных и безопасным показом | 9, 14 |
-| 25 | Ограниченное автоматическое восстановление модулей | 14, 19 |
-| 26 | Корзина и контролируемая очистка после срока и проверок ссылок | 12 |
-| 27 | Защитный режим при критической нехватке места | 12, 19 |
-| 28 | Локальные и централизованные технические журналы, отдельный аудит действий | 19 |
-| 29 | Независимое безопасное восстановление, без автоматического отката БД | 12, 19 |
-| 30 | Пользователь управляет контентом, системные функции только у администратора | 8 |
-| 31 | Автоматическая идентичность сервера, защищённое первичное сопряжение | 5, 18 |
-| 32 | Доверие к группе и уполномоченным серверам с собственными ключами | 6–7, 13, 18 |
+| 1 | Clients display offline but do not edit; a separate Windows installation edits locally | 3, 11 |
+| 2 | Windows is client/local installation/server; Android is client and network editor | 3-5 |
+| 3 | Shared pages/data, TV/kiosk and orientation layouts | 9, 17 |
+| 4 | Adaptive grid with block dragging/resizing | 9, 17 |
+| 5 | Page library, profiles and individual device assignments | 6, 9 |
+| 6 | Module data separate from pages, shared datasets, local block settings | 4, 9, 14 |
+| 7 | One consistent group publication verified by clients | 9-10 |
+| 8 | Concurrent editing with version control and no silent overwrite | 8-9 |
+| 9 | Shared draft workspace | 9 |
+| 10 | Working/Ready states; publish only ready consistent changes | 9 |
+| 11 | Code on a new device with administrator confirmation | 5, 18 |
+| 12 | One device, one group; controlled transfer and cleanup | 5-6 |
+| 13 | Local chief-administrator recovery by recovery codes and OS rights | 8 |
+| 14 | Automatic and manual backups, verification, multiple points, portable export | 12 |
+| 15 | Local backups by default; external copies additional | 12 |
+| 16 | One Windows server engine in standalone and network modes | 4-5, 7 |
+| 17 | On backup failure, the active server continues writing only with trustworthy authority | 12-13 |
+| 18 | Controlled failover; automatic selection is a separate future extension | 13 |
+| 19 | Staged updates and preservation of usable publication on an incompatible client | 10, 15-16 |
+| 20 | Group/profile update schedules and individual exceptions | 15 |
+| 21 | One panel with module extensions and common rights | 8, 14 |
+| 22 | Logical modularity; separate process when proven necessary | 4, 14 |
+| 23 | Modules in one signed Kiosk bundle | 14-15 |
+| 24 | Orderly/emergency disable with data preservation and safe display | 9, 14 |
+| 25 | Limited automatic module recovery | 14, 19 |
+| 26 | Recycle bin and controlled cleanup after expiry and reference checks | 12 |
+| 27 | Protective mode under critical low space | 12, 19 |
+| 28 | Local and central technical logs; separate action audit | 19 |
+| 29 | Independent safe recovery, without automatic database rollback | 12, 19 |
+| 30 | Users manage content; system functions are Administrator-only | 8 |
+| 31 | Automatic server identity and protected initial pairing | 5, 18 |
+| 32 | Group and authorized-server trust with separate keys | 6-7, 13, 18 |
 
-# Приложение Б. Главные отличия от редакции 1.0 и ограничения аудита
+# Appendix B. Main Differences from Revision 1.0 and Audit Limits
 
-Историческое сравнение редакций сохранено в [техническом аудите ТЗ](archive/TZ_TECHNICAL_AUDIT.md) и Git-истории. Действующие изменения полностью отражены в разделах 3–24 и реестре 32 решений; старое сравнение не является дополнительным набором требований. Аудит 2026-10-26 не подтверждает последующую реализацию; актуальная приёмка — в текущем журнале. Согласование ТЗ не разрешает менять рабочую установку; нерешённые протоколы утверждаются до затрагивающей реализации.
+The historical revision comparison is preserved in the technical specification audit indexed under [Design and benchmarks](archive/README.md#design-and-benchmarks) and Git history. Current changes are fully reflected in §§3-24 and the 32-decision register; the old comparison is not an additional requirement set. The 2026-10-26 audit does not confirm later implementation; current acceptance is in the current ledger. Specification approval does not authorize changing a working installation; unresolved protocols are approved before affected implementation.

@@ -1,22 +1,14 @@
 # Android offline Events client
 
-The Nov22 Stage5 candidate accepts bounded104-day publisher policy/grants while
-keeping publication-plan validity bounded at90 days. Both the104-day boundary
-and legacy nullable-date/image mapping ran on physical moto g85 ZY22KDWDNH in
-the separate `org.kiosk.harness.stage5life` application (2 instrumentation tests).
-This is validator/mapping evidence, not a new signed-publication display receipt.
-`-PkioskCampaignSuffix=.stage5life` selects that disposable campaign identity;
-the default remains `.campaign`. Existing debug/sandbox/campaign data are retained.
-
-Experimental Android display/client implementation integrated into the current PC1 project from the PC2 `android/events-conformance-design` working tree. The primary PC1 executor owns Windows/server/Android implementation; PC2 retains its source/toolchain as a recovery copy and hosts test VMs. No server or offline editor. Current product acceptance belongs to the coordinator's PC1 [ledger](../docs/TZ_PROGRESS.md); this README describes Android interfaces and local build prerequisites, not another status journal.
+This notebook checkout owns the Android source alongside server and Windows. Use the [ledger](../docs/TZ_PROGRESS.md#current-checkpoint) for accepted devices, builds and scope.
 
 ## Current boundary
 
-Native LAN discovery, exact-origin enrollment/trust, resumable capture, verified package storage, shared Events rendering, offline reopening and real-ready outbox are implemented for the bounded phone profile. Discovery/select/cancel and wrong-origin refusal passed on moto g85 5G, Android16/API36. Additive manual same-anchor bootstrap renewal now validates a locally delivered public input without changing group/server/key/CA identity, preserves registration/trust/outbox/accepted content atomically, and stays separate from uncertain-boot time confirmation. The authenticated LAN journey was completed on the retained phone pending coordinator review; stage5 remains PARTIAL. Preserve existing registration,154 publication files and Events Version7. No forced migration/re-enrollment.
+Native LAN discovery, exact-origin enrollment/trust, resumable capture, verified package storage, shared Events rendering, offline reopening and real-ready outbox are implemented for the bounded phone profile. Discovery/select/cancel and wrong-origin refusal passed on moto g85 5G, Android16/API36. Additive manual same-anchor bootstrap renewal now validates a locally delivered public input without changing group/server/key/CA identity, preserves registration/trust/outbox/accepted content atomically, and stays separate from uncertain-boot time confirmation. Preserve retained registration and accepted content. No forced migration/re-enrollment.
 
 Pending enrollment now has a normal operator screen: the exact 8-character user code plus a locally generated QR for `https://origin/admin/devices/pair#v=1&code=CODE`. The QR carries no device secret, credential, key, bootstrap or CA payload, and displaying it never approves anything; an authenticated administrator still reviews and decides through the server's guarded route. The disposable pairing journey uses a debug-derived `sandbox` application id, never the retained phone registration.
 
-[Continuation proposal](../docs/ANDROID_LAN_CONTINUATION.md) is NOT execution permission. Coordinator reviews PC1 prerequisites and SAME-ANCHOR renewal contract before dependent Android work. Discovery label parity follows Python `str.isprintable` common semantics: ASCII space allowed, other Unicode C/Z categories rejected (including U+E000/U+00A0). Do not repeat closed renderer/resume/reboot scenarios merely because documentation changed.
+Discovery labels follow Python `str.isprintable` parity: ASCII space is allowed; other Unicode C/Z categories are rejected, including U+E000 and U+00A0.
 
 ## Code map
 
@@ -57,7 +49,7 @@ Sign-out opens `/admin` and submits the server's existing CSRF-protected `/admin
 
 ## Build prerequisites and commands
 
-Run from an ordinary PowerShell terminal at the repository root; neither IDE is required. Supply an external JSON through `-Config` with `buildJdk`, `androidSdk`, `debugKeystore`, and optionally `gradleUserHome`, `readOnlyDependencyCache`, `device`, `package`, `resultsDir`, `javaToolOptions`. Explicit arguments override config, then defaults apply. Keep that JSON and the existing signer outside Git. Use a short external `gradleUserHome` on Windows to avoid deeply nested cache paths. On PC1 the measured Java dual-stack loopback failure requires `javaToolOptions` set to `-Djava.net.preferIPv4Stack=true`; this affects build JVMs only, without changing Windows networking or trust.
+Run from an ordinary PowerShell terminal at the repository root; neither IDE is required. Supply an external JSON through `-Config` with `buildJdk`, `androidSdk`, `debugKeystore`, and optionally `gradleUserHome`, `readOnlyDependencyCache`, `device`, `package`, `resultsDir`, `javaToolOptions`. Explicit arguments override config, then defaults apply. Keep that JSON and the existing signer outside Git. Use a short external `gradleUserHome` on Windows to avoid deeply nested cache paths. If the recorded Java dual-stack loopback failure occurs, the build-only setting `javaToolOptions=-Djava.net.preferIPv4Stack=true` leaves Windows networking and trust unchanged.
 
 ```powershell
 $androidConfig = '<external-local-config.json>'
@@ -97,9 +89,7 @@ Existing phone updates require the ORIGINAL signer; `tools/build.ps1` refuses a 
 
 ## Evidence and history
 
-Current checkpoint is44519a51261b2aa57d28e5207fe0438934cc6dd9 / `checkpoint-2026-11-07`; publication verification did not run builds/hardware tests or change stage acceptance. Reports remain under ignored logs: `pc2-lan-discovery-20261106`, `pc2-resumable-delivery-20261104`, `android-lan-continuation-20261108`, `android-pairing-journey-20261108`, and the paths in [preserved Android history](docs/archive/README_2026-11-07.md). Coordinator reviews are recorded in the PC1 ledger.
-
-The former long README is archived intact apart from navigation repairs; old proposed tools, commands and next steps there are historical. Consult only for a specific evidence question. New work follows [AGENTS](../AGENTS.md), current owner prompt and coordinated contracts, not archived dispatches.
+Use the [dated ledger](../docs/TZ_PROGRESS.md#dated-evidence) for current acceptance. Preserve the original installed app, its data and signer. For an unresolved device or build-provenance question, use the [archive index](../docs/archive/README.md#retired-tasks-and-lab-records).
 
 ## Lifecycle refusal reasons and trust renewal
 

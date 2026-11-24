@@ -304,20 +304,13 @@ or full stage5 acceptance.
 
 Run the same tool without `--prepare-only` for loopback Waitress port8765 and2s Events version polling. Run existing Caddy with the generated Caddyfile for isolated HTTPS port8443. This lab process, not ordinary application startup, automatically prepares and assigns each changed active Events revision. Invalid candidates retain the old assignment. `python -m tools.check_device_delivery_lab --root logs/NEW_LAB --report logs/NEW_LAB/network-report.json` performs real TLS/admin/native API tests and edits/restores ONLY that synthetic Events installation. `--probe-only` needs only public bootstrap/CA and makes no changes. It reports API fixture receipts explicitly, never physical readiness.
 
-Limits and support: one experimental single-frame JPEG/PNG phone profile, optional byte-range resumption per [transfer contract](../../contracts/device-delivery-v1/TRANSFER_RESUME.md), max100 device identities/128 live enrollment rows/4096 receipts per device,192MiB candidate/512MiB retained artifact catalog. Source/runtime safety checks are not hardware power-loss, hostile same-UID/root, universal decode deadline/RSS or Android TV guarantees. New renderer bytes with the same canonical package identity are refused, not silently replaced. Wider capacity/maintenance/key rotation/release work remains separate. Bounded native admission, interrupted/resumable capture, offline reopen and Windows discovery have recorded evidence in the ledger; Android discovery is partial and authenticated continuation remains blocked. Do not equate this server foundation with a finished product.
+Limits and support: one experimental single-frame JPEG/PNG phone profile, optional byte-range resumption per [transfer contract](../../contracts/device-delivery-v1/TRANSFER_RESUME.md), max100 device identities/128 live enrollment rows/4096 receipts per device,192MiB candidate/512MiB retained artifact catalog. Source/runtime safety checks are not hardware power-loss, hostile same-UID/root, universal decode deadline/RSS or Android TV guarantees. New renderer bytes with the same canonical package identity are refused, not silently replaced. Wider capacity/maintenance/key rotation/release work remains separate. Use the [dated ledger](../../docs/TZ_PROGRESS.md#dated-evidence) for measured platform acceptance.
 
 Checks: `python -m unittest tests.test_device_delivery`; use disposable roots only. Actual identities/results and active test processes are recorded once in [the sole ledger](../../docs/TZ_PROGRESS.md).
 
 ## LAN trust lifecycle: public contract `lan-trust-lifecycle-v2`
 
-The isolated opt-in pilot is specified in [the trust module contract](../trust/README.md).
-The frozen device-delivery-v1 enrollment/API stays unchanged. Issuer-pinned signed
-trust explicitly uses envelope/payload version2 and GroupTrust/v2 NUL domain;
-legacy v1 remains leaf-pinned. Bootstrap contains one root trust anchor; TLS serves
-leaf+intermediate. Automatic supervisor renewal, verified activation/recovery and
-protected online-only custody are described in that single contract. Exact runtime,
-public bundle and demonstrated platform limits remain in the existing pilot report.
-No retained-group migration or production D13 acceptance is implied.
+The [trust module contract](../trust/README.md#explicit-signed-format-version) owns the trust envelope, version separation, renewal and custody. This opt-in path preserves the frozen [device-delivery-v1 enrollment API](../../contracts/device-delivery-v1/README.md#enrollment). See the ledger for qualification scope and the active assignment for any migration permission.
 
 ## Minimum Events display profiles — `display-profile-v1`
 

@@ -1,6 +1,6 @@
 # Managed HTTPS Transport
 
-Current acceptance: selected physical Windows/Chrome LAN/CSR scenarios and VM installed network HTTPS, explicit browser trust and same-CA renewal passed within their recorded scopes. Stage 2 is complete; stage 3 remains incomplete, with prepared Edge reserve-browser acceptance pending. The source/prototype checkpoints below retain their historical scope and do not override the [current checklist](../../docs/archive/TZ_PROGRESS_2026-11-07.md#current-stage-3-closure-gates). Installed package provisioning is documented in the [Launcher README](../launcher/README.md).
+Use the [current checkpoint](../../docs/TZ_PROGRESS.md#current-checkpoint) for platform acceptance and the [Launcher](../launcher/README.md#supported-packaged-installation-migration-and-https) for installed provisioning.
 
 ## Purpose
 
@@ -85,7 +85,7 @@ The [two-PC LAN procedure](../../docs/LAN_TRANSPORT.md#two-pc-lan-verification) 
 
 For the easier guided path, double-click `LAN_Server.cmd` in the project directory, transfer/extract its `Kiosk-LAN-Client.zip`, then double-click `LAN_Client.cmd` there. The operator compares the displayed fingerprint groups and answers Russian prompts. Restart, source-budget timing, report transfer, browser launch, and ordinary cleanup are coordinated automatically. Optional firewall creation requires explicit consent and Windows elevation; it applies only to the selected local/remote IPv4 and TCP port, across network profiles without changing their category. Certificate trust requires separate client consent. Both CMD launchers retain the console on exit; the client uses a process-only script execution policy, never a persistent policy change. No root, firewall rule, or Chrome instance is created by running automated regression tests.
 
-The 2026-10-23 physical run completed all eleven client groups and four actual Chrome observations between 192.168.1.165 and 192.168.1.117. Windows-MCP operated the owner's RustDesk connection. The kiosk event list and TV displayed LAN updated/version 3 without manual refresh for the update check; temporary trust removal restored NET::ERR_CERT_AUTHORITY_INVALID. Independent client/server cleanup checks passed. The first fullscreen form-token failure recovered through normal reload and authenticated retry; concurrent fresh-tab staleness remains an unproven hypothesis for a separate follow-up. See [TZ Progress](../../docs/archive/TZ_PROGRESS_2026-11-07.md#physical-two-pc-https-verification---2026-10-23) for exact scope, reports, VPN configuration, cleanup and remaining acceptance work. No production route/API, database table or content-version rule changed during this verification.
+For exact historical two-PC outcomes, see [Design and benchmarks](../../docs/archive/README.md#design-and-benchmarks).
 
 ## Bounded Display Endurance Check
 
@@ -113,7 +113,7 @@ Password prompts state the 16–1024-character limit and validate length before 
 
 Without --activate-profile, a successful import prepares a verified private generation with active_profile_changed=false. The optional activation mode below can switch an existing profile; neither mode enrolls trust. Renewal uses a fresh server key and existing authority; CA loss never triggers silent replacement. Partial new directories can remain after interruption; preserve pending keys/authority and diagnose rather than automatically deleting/reinitializing them. The selected physical source fixture passed separate-PC signing, enrollment, renewal and USB-restored-authority signing on 2026-10-24; production service identity/provisioning and broader deployment acceptance remain pending. Existing temporary certificate generators are still test-only. No route, API, table, content version, kiosk/TV behavior or admin-panel action changes.
 
-The physical client observed a new served certificate after same-CA activation and retained its authenticated session and exact content version. Explicit trust removal restored fresh Chrome rejection; the owned activation runtime, incognito windows and signer console were stopped. Original encrypted CA/USB backup were intentionally retained. Automatic review blocked removal of the retired server fixture, so full artifact cleanup is not claimed. TV was checked after explicit navigation following a Version unavailable observation; uninterrupted polling recovery is not established. See the [progress ledger](../../docs/TZ_PROGRESS.md) and [historical lab context](../../docs/archive/LAB_CONTEXT.md) for evidence and retained paths; historical live-state wording does not establish current machine health or authorization.
+For the dated certificate-activation observations and retained paths, use [Retired tasks and lab records](../../docs/archive/README.md#retired-tasks-and-lab-records) when those historical details are needed.
 
 ## Controlled Certificate Activation
 

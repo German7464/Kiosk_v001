@@ -1,47 +1,6 @@
-# Standalone LAN Transport Protection
+# LAN transport operations
 
-Documentation role: existing source/Windows HTTPS procedures and dated verification, not a competing product specification. [Approved security targets](TZ_RECONCILED.md#18-безопасность), [current stage-3 gates](archive/TZ_PROGRESS_2026-11-07.md#current-stage-3-closure-gates), [architecture](ARCHITECTURE.md) and the [documentation index](README.md) define current scope. Pending statements in source/prototype checkpoints below retain their original date/scope and do not reopen accepted stage 2 or erase later installed-package evidence. Commands are retained, not freshly executed in this integration.
-
-Current stage note (2026-10-27): stage 2 baseline acceptance is complete within TZ_PROGRESS.md's bounded scope. Stage 3 Launcher/installed provisioning is in progress. Selected second-PC packaged service/CSR checks and VM installed network HTTPS, explicit browser trust and same-CA renewal passed. Prepared Edge reserve-browser acceptance remains pending. See the [current checklist](archive/TZ_PROGRESS_2026-11-07.md#current-stage-3-closure-gates) for exact evidence and limits and [Launcher](../kiosk/launcher/README.md) for installed commands. The source/prototype checkpoints below retain their historical scope; their pending wording does not override the current checklist. A source-only limitation, such as no packaged signer, does not describe the separate installed package.
-
-Historical source checkpoint (2026-10-23): approved design with a verified isolated prototype, opt-in managed HTTPS source startup, bounded Windows Chrome trust lifecycle and a completed physical two-PC Windows/Chrome HTTPS run. Other browser/platform trust, production certificate operations and packaged deployment were pending at that checkpoint. Requirement: TZ 18.11, with related session and write protection under 18.4 and 18.8. This document defines bounded stage 2 transport work; later installed acceptance is recorded in the current checklist above. It does not complete security or authorize later network stages.
-
-## Current Application
-
-Existing HTTP commands retain their compatibility behavior and can expose credentials, sessions, content, and media when used over LAN. The separate `--https-config` mode now supervises Caddy and loopback Waitress with explicit certificates and CA trust. CSRF and password hashing alone do not protect HTTP transport. Existing installations are not silently converted to HTTPS.
-
-## Threats and Trust Boundaries
-
-Treat LAN peers, address discovery, DNS responses, and forwarded headers as untrusted. Protect against passive credential/session interception and active server impersonation or content modification between clients and the server. TLS does not prevent endpoint compromise, denial of service, malicious authorized edits, or theft of files by an account with operating-system access.
-
-The operator establishes initial trust through a controlled local procedure. The server operating-system account, TLS proxy, and application on the same computer form the server trust boundary. The local certificate authority is a separate, more privileged trust boundary. No trust is established merely by discovering an address or accepting a browser warning.
-
-## Connection Architecture
-
-```text
-Browser / display client
-    -> HTTPS over LAN, validated server identity
-    -> TLS reverse proxy on the server computer
-    -> HTTP over loopback only
-    -> single-process Waitress -> Flask -> local storage
-```
-
-- All routes, APIs, optimized media, and static assets use one HTTPS origin. Protect public display content as well as administrative credentials. Avoid mixed content and absolute HTTP links in the protected profile.
-- Waitress binds exclusively to loopback in this profile; no LAN-accessible backend listener exists. The proxy is the only network entry point. Local processes remain inside the stated operating-system trust boundary.
-- The protected LAN profile exposes no plaintext HTTP service and has no automatic downgrade when TLS fails. Users open the HTTPS address directly; an HTTP redirect is not a security boundary.
-- Keep local HTTP development as a separate explicit profile. Do not enable it as an automatic recovery path for a protected deployment. Existing deployments are not silently reconfigured.
-- A separate TLS proxy is approved as a necessary deployment component. Caddy 2.11.7 Windows amd64 is pinned for the prototype and managed source startup below. Service installation and packaging remain pending. Waitress and Flask remain the application stack; no Python dependency is added.
-
-## Autonomous Certificate Trust
-
-Every installation uses its own local certificate authority; no shared product-wide private key is distributed. Routine startup and HTTPS operation must not require Internet services, public DNS, public certificate issuance, or corporate infrastructure.
-
-1. During controlled setup, create the installation authority and a distinct server key/certificate. The server certificate includes the exact operator-configured DNS names and/or IP addresses in its subject alternative names. A DNS name needs a working local resolution method; an IP address can be used without DNS when covered by the certificate.
-2. Export only the public root certificate for clients. Obtain its SHA-256 fingerprint directly from the trusted setup console or a controlled offline record, and compare it through an independent channel before installing trust. Downloading a root and its fingerprint from the same unauthenticated endpoint does not establish identity.
-3. The operator explicitly installs the verified root in the trust store actually used by each browser/client. Document and test platform-specific permissions and trust scope. Never install a root automatically from discovery or change an OS trust store without operator authorization.
-4. Connect to the configured HTTPS address and verify chain, identity, and validity. Never disable verification or use a permanent browser-warning exception. A client that cannot enforce this trust model is unsupported until a tested alternative is separately approved.
-
-Only the server leaf private key is needed for daily serving. Keep the authority private key outside the running application/proxy account in protected offline custody, with a protected independent recovery copy. Keep the server key restricted to the proxy service identity. Store secrets separately from executable resources and logs; never commit or include keys in diagnostics. No exact platform paths or certificate-generation implementation are introduced here.
+Use the [specification](TZ_RECONCILED.md#18-security) for security requirements, the [transport reference](../kiosk/transport/README.md#run-and-verify) for implementation, and the [lab boundaries](TEST_LAB_POLICY.md#boundaries) before any test. Installed deployment belongs to the [Launcher](../kiosk/launcher/README.md#supported-packaged-installation-migration-and-https); managed issuer lifecycle belongs to [Maintenance](../kiosk/maintenance/README.md#tls-lifecycle-and-offline-recovery). This page covers source HTTPS tooling and the isolated Windows verification paths.
 
 ## Selected Certificate Architecture: Separate Administrative PC
 
@@ -110,18 +69,6 @@ python -m tools.certificates request --installation <installation-uuid> --state 
 
 The utility checks pending metadata, locally retained key, certificate identity and exact names, leaf usage, current validity and offline CustomRootTrust chain to that exact public CA. Network certificate downloads are disabled. Revocation is not enforced; the compromise policy below remains mandatory. Wrong fingerprints/keys/CA, expired certificates and changed identities are rejected before adding received files. Successful verification writes server.pem, authority.pem and verified.json inside the private generation and reports active_profile_changed=false. Repeating the same verified import is safe; different existing import files are rejected. The verified.json marker is written last, but subsequent consumers must revalidate files rather than treating the marker as a signed authorization or active-deployment record.
 
-### Verified scope and pending acceptance
-
-Temporary-fixture tests cover encrypted authority round trips/wrong passwords, installation mismatch, CSR signature tampering and unsafe extensions, transfer allowlists, Windows directory ACLs, cancellation/noninteractive/overwrite refusal, invalid imports, idempotent validation, real offline TLS, and fresh-key renewal under the same root. A real terminal test verifies hidden password entry and full request/sign/validation without active-profile changes. This is not physical administrative-PC custody, independent human fingerprint comparison, recovery-copy restoration, client enrollment or active certificate rollout acceptance. See TZ_PROGRESS.md for exact test counts and current results.
-
-### Selected physical CSR fixture - 2026-10-24
-
-The owner-approved fixture used server 192.168.1.165 and separate signer/client 192.168.1.117, with Windows-MCP through RustDesk. Server-local leaf keys generated three CSRs. The signer initialized its encrypted CA, renewed using that same CA, and signed a third CSR using a protected copy restored from a separate approximately 2 GB NTFS USB device. All three public returns passed pending-key/profile/root verification on the server. The agent compared the full root fingerprint directly in the trusted signer console independently of the transfer payload; independent human witnessing is not claimed. CA key/password never reached the server and leaf keys never reached the signer.
-
-Generation 2 activation served the new verified leaf while retaining old files. A physical-client cookie authenticated /admin after activation and exact /api/version content remained unchanged. Chrome rejected the root before enrollment, loaded kiosk/TV after explicit trust, and rejected it again in a fresh incognito window after exact-root removal. The old TV tab showed Version unavailable before explicit navigation restored Version 1; seamless polling recovery is not verified. Activation used an isolated observer for stop-file supervision only; production validation/commit/cleanup stayed unchanged. Exit 0 and graceful proxy/backend/temp cleanup were recorded. No test-control endpoint, route, VPN, firewall or working-installation change was made.
-
-Original encrypted signer CA and protected USB backup remain labelled as test material. Client cookie/restore copy/transfer artifacts and owned incognito/console windows were removed. Automatic review rejected deletion of the retired server fixture with only blocked by policy; it remains stopped and untrusted, and no alternate deletion was attempted. At that checkpoint artifact cleanup remained incomplete. The owner subsequently removed the retired server folder; its absence was independently confirmed on 2026-10-24. Historical report flags are unchanged. Sanitized reports are under ignored logs/https/csr-20261024T101043; see TZ_PROGRESS.md and CHAT_HANDOFF.md for the exact retained paths and limitations. Production service identity/provisioning, packaging, power-loss/compromise recovery and other platform acceptance remain pending; this bounded physical result does not complete stage 2.
-
 ## Opt-in Same-CA Certificate Activation
 
 After a signed return bundle is verified, the request command can activate its separate private generation against an existing managed HTTPS profile. This is a Windows source workflow. The current server must first be stopped normally by its operator; the utility does not terminate unknown processes, remotely stop a service, install trust or change firewall/VPN settings. Active-profile creation, origin/port changes and root-authority rotation are outside this operation.
@@ -151,50 +98,6 @@ If startup, served-certificate verification or profile commit fails before the c
 After abrupt owner-process death, Windows Job Object ownership contains the candidate Caddy process. On the next ordinary protected startup or activation, acquire the lock and inspect any remaining journal before starting an application. If the current file equals the recorded old/candidate snapshot, restore the old bytes and clear the journal; otherwise, or if the journal is malformed/truncated, refuse automatic startup and require operator review. Existing old-generation files remain available. Do not delete an unexplained journal or reconstruct a CA as a routine retry.
 
 This verifies process-crash recovery on the tested local Windows filesystem, not power-loss durability, filesystem corruption recovery, remote-share locking, service installation or continuous health rollback after commit. Later ordinary runtime failures stop the owned components using the existing supervisor; they do not automatically reselect an older certificate. Abrupt death can leave nonsecret Caddy temporary configuration directories; exact owned test directories are cleaned when ownership is recorded, not by name-pattern deletion. Client trust, CA compromise handling and physical separate-PC deployment retain their explicit gates below.
-
-### Acceptance evidence
-
-Automated checks cover actual same-CA HTTPS replacement, preserved authenticated cookies/content version, old-generation retention, busy-listener rejection, invalid new material, injected readiness/commit failure, successful old-service rollback, failed rollback startup, DACL preservation, lock contention, interrupted-profile recovery and real owner-process death with Caddy containment followed by previous-service recovery. These use temporary installations and synthetic credentials; they do not switch working deployment certificates. Counts and limitations are recorded in TZ_PROGRESS.md.
-
-## Renewal and Recovery
-
-- Renew the server certificate before expiry using the same authority and validated address list. Stage and validate the certificate/key pair before switching; retain the last valid pair for rollback. Reject mismatched keys, invalid chains, and expired certificates without falling back to HTTP. Scheduling, cryptographic parameters, validity periods, and proxy reload mechanics must be specified with the selected implementation.
-- Changing an IP address or name outside the existing certificate requires a new valid server certificate and an explicit client URL update. Network discovery cannot override certificate identity checks.
-- Replacing a server key preserves root trust only when the authority remains trusted. If a server key is compromised, remove the compromised service from network access and replace the key/certificate. Do not claim that replacing a certificate revokes the old one on offline clients: until an enforced revocation mechanism exists, rotate the installation authority and remove old root trust from every admitted client before resuming protected service.
-- Authority compromise requires new authority and server keys, independent fingerprint verification, removal of old trust from clients, and explicit re-enrollment. Do not accept an automatic trust update authenticated solely by the compromised authority.
-- If the authority key is lost, an existing valid leaf may continue until expiry; renewal requires a new authority and client re-enrollment unless the protected recovery copy is restored. Loss of the server key requires controlled replacement. Wrong clocks can invalidate certificates: diagnose and correct time without disabling validation.
-- TLS/proxy failure makes network service unavailable. Existing MVP clients have no guaranteed persistent offline snapshot; this design does not add offline behavior or claim uninterrupted display.
-
-## Planned Application Integration Contract
-
-The managed profile below implements this contract for source startup. The earlier prototype remains an independent bounded developer check.
-
-- The protected profile requires an explicit external HTTPS origin and host allowlist, loopback backend binding, and Secure + HttpOnly + SameSite=Lax session cookies. All local launch URLs and readiness checks must respect the selected profile rather than reusing an unrelated HTTP server.
-- The proxy validates the public Host, rejects unknown hosts, and removes client-provided forwarded metadata before setting its own canonical host/scheme and single client address. Its request-body bound must preserve the application's existing 20 MiB default or configured lower deployment limit.
-- Waitress is the single forwarding-metadata interpreter: trust only the exact loopback proxy address, one proxy hop, and the necessary forwarded host/scheme/address metadata. Clear other forwarded metadata. Do not add a second ProxyFix layer or trust arbitrary proxies. Configure the proxy/backend address family explicitly so trust is not accidentally widened.
-- Authentication limits use the client address produced by this trusted chain. A client cannot choose its budget with X-Forwarded-For, Forwarded, or a supplied username on password change. Keep the documented single-process limiter limitation; shared NAT clients can still share a budget.
-- HTTP development retains its separate cookie/transport policy. The HTTPS profile fails startup on inconsistent transport settings instead of silently serving credentials over HTTP. Its versioned configuration and CLI are defined below.
-- No route, JSON schema, database migration, content-version change, or credential replacement is required by this design. Certificates authenticate the service, not users or group membership. Pairing, device authorization, replication, update signatures, and future client authentication remain separate work.
-
-## Verification and Acceptance Plan
-
-Use disposable data, test keys, a temporary authority, and isolated listeners. Never alter working credentials, trust stores, firewall rules, or user servers as an implicit test action.
-
-| Scenario | Required result before implementation acceptance |
-| --- | --- |
-| Trusted server; Internet unavailable | Public pages/APIs/media and authenticated admin work over HTTPS without external calls. |
-| Unknown authority, wrong address, expired certificate, invalid chain | Browser/client rejects the connection; no warning bypass or HTTP retry. |
-| Missing key, mismatched pair, invalid proxy/profile configuration | Clear sanitized failure; no plaintext fallback and no secret output. |
-| LAN connection to backend or plaintext service | Connection unavailable; verify listeners and test from another device. |
-| Client-supplied forwarded headers | Proxy replaces them; scheme/host/client address cannot be selected by the client. |
-| Multiple client addresses and repeated password checks | Correct independent per-source budgets; existing username/global-source limits and 429/Retry-After remain effective. |
-| HTTPS login/session/fullscreen/change operations | Secure cookie attributes; current CSRF, session revocation, restart behavior, and 403 responses preserved. |
-| Public navigation, refresh, previews, and image upload | No mixed content, working generated URLs, unchanged API formats, and preserved request/upload limits. |
-| Certificate renewal, name change, and invalid replacement | Valid replacement works; invalid replacement preserves a valid service or fails closed; documented client URL changes work. |
-| Authority replacement/compromise exercise | Old trust removed, independent verification repeated, old authority no longer accepted by admitted clients. |
-| Windows browser and each target Android TV | Actual trust-store behavior, validity checks, renewal, and HTTPS fullscreen tested on recorded OS/browser versions. |
-
-Automated checks should cover application/profile validation, trusted-header handling, cookie flags, route compatibility, and TLS failures using real HTTPS with a temporary authority. Browser checks must exercise actual trust behavior; Flask test-client HTTPS simulation alone cannot establish TLS correctness. Physical LAN and Android TV results must remain pending until performed. Record observed HTTP status codes only after successful TLS negotiation; certificate failures are not HTTP error responses.
 
 ## Reproducible HTTPS Prototype
 
@@ -236,50 +139,6 @@ Then run without downloading anything or opening a browser:
 
 Listener verification uses read-only `Get-NetTCPConnection`; the executing account/environment must permit this inspection. The tool fails rather than skipping it. It installs no service, changes no PATH/firewall/trust settings, and does not accept an external server, database, or certificate path.
 
-### Fixed Scenario and Cleanup
-
-- Create a temporary installation, random admin password/session key, and RSA-2048/SHA-256 CA/leaf fixtures. CA validity is now minus seven days through plus seven days; normal leaf validity is minus five minutes through plus one day, with SAN localhost/127.0.0.1 and Server Authentication usage. Additional leaf fixtures cover renewal, wrong identity, and expiry. These short-lived test values do not define a production certificate policy. The CA private key exists only in the generator process and is disposed before proxy startup; it is never exported.
-- Start four-thread Waitress and Caddy on separate free IPv4 loopback TCP ports. Inspect their actual listeners; disable Caddy administration, automated certificate issuance/trust installation, HTTP redirects, HTTP/3, and persistent configuration. TLS 1.2/1.3 use explicit leaf files. Load only the temporary CA into a Python SSLContext, keep hostname verification enabled, and ignore system HTTP proxy settings.
-- Remove incoming forwarded metadata in a separate request-header stage before setting canonical upstream headers. Caddy header deletion runs after setting within the same operation, so combining wildcard deletion and replacement would remove the replacements. Waitress is the only trusted-header interpreter. A private WSGI observer records only boolean metadata checks, without exposing a diagnostic endpoint.
-- Verify pages/APIs, secure cookie flags, CSRF, login, a multipart PNG event, three decoded derivatives, content-version advancement, fullscreen credentials, password replacement/session revocation, Host rejection, and account/source limits with spoofed forwarding headers. Verify early 413 for a declared body above 20 MiB: send a bounded prefix sufficient for HTTP-server draining, rather than completing the rejected upload. The proxy also configures a streamed-body bound. Unknown-length/chunked overflow status and large-upload transport behavior are not accepted by this particular check.
-- Reject plaintext on the TLS listener without issuing a session cookie. Reject unknown CA, wrong SAN, and expired leaf through actual TLS handshakes. With the backend stopped, require 502 without fallback. Restart the proxy with a renewed leaf and verify its exact certificate bytes through a trusted handshake; this is not an in-place reload or an application-availability test during renewal. Missing/mismatched private-key configurations must fail validation.
-- Limit the scenario to 180 seconds, individual requests to 10 seconds, and commands to at most 30 seconds; bounded process shutdown and data cleanup may add time after the deadline. Stop owned processes in finally paths. Waitress stops cooperatively; Windows Caddy processes are explicitly terminated and waited for, with forced termination and exit codes retained in the report. Graceful production proxy shutdown remains pending. Delete all temporary certificates, leaf keys, session keys, database, media, and configuration.
-
-The sanitized report under ignored `logs/https/` contains fixed check names, counts/status codes, TLS verification codes, tool version/digest, and cleanup results. It excludes HTTP bodies, cookies, passwords, keys, hostname, and runtime paths. Failed runs exit nonzero and retain a partial report with the phase and exception class, not raw exception/subprocess output. An initial archive-check command incorrectly compared the published SHA-512 against SHA-256; execution was stopped and the correct SHA-512 check completed before using the binary.
-
-Checkpoint: `logs/https/prototype-20261019T183356687195Z.json`, 14.999 seconds, all scenario checks passed. Responses: 62 x 200, 6 x 302, 2 x 400, 36 x 401, 1 x 403, 2 x 429, 1 x 413, and the expected backend-failure 502. All 107 observed application requests had correct metadata. TLS verification rejected unknown authority (20), wrong identity (64), and expiry (10). Waitress exited 0; four owned proxy processes were terminated and waited for; temporary data was removed. Raw reports and binaries are not committed.
-
-## Bounded Two-PC Display Endurance
-
-This opt-in check uses a fresh disposable Windows installation, synthetic events/images and a temporary public CA. It does not use working credentials or the retained separate-PC CA. It does not change network, VPN, firewall or OS trust settings automatically. Record the actual source revision, OS/browser, addresses, observations and cleanup before claiming a physical result.
-
-Prepare the pinned Caddy and PowerShell as above. On the server, choose an unused output directory:
-
-```powershell
-.\.venv\Scripts\python.exe -m tools.check_display_endurance server --server-ip <server-ipv4> --client-ip <client-ipv4> --caddy logs/https-tools/caddy/caddy.exe --pwsh (Get-Command pwsh).Source --output logs/https/<new-run>
-```
-
-The server prints the HTTPS origin, CA SHA-256 and client ZIP SHA-256 and waits up to 20 minutes. Transfer `client.zip` through the existing shared folder or RustDesk into a new client directory; compare its exact hash before extraction. Compare the CA digest separately with the trusted server console. The four files are the portable Python helper, `browser_trust.ps1`, `session.json` and public `authority.pem`. The manifest carries a temporary read-only fixture capability; do not publish the ZIP. No private key or application database is transferred.
-
-On the second PC, Python needs no application packages. Run this from the extracted directory; use a separate console/background process so Chrome remains usable:
-
-```powershell
-python check_display_endurance.py client --manifest session.json --ca-sha256 <independently-compared-sha256> --output client.json
-```
-
-The client verifies TLS using only that root and waits for the server start. For actual Chrome observations, inspect that the exact root is initially absent, then explicitly enroll the test root using `browser_trust.ps1` and confirm the Windows dialog. Pass an absolute certificate path because .NET file resolution can differ from PowerShell's current location. Open an isolated guest/incognito Chrome window through Windows-MCP at `/tv` and `/kiosk/events`; confirm three cards/images and TV rotation. Do not bypass certificate warnings. Write `start` to the server output directory's `control.txt` only when both screens and the independent client are ready.
-
-The 30-minute monotonic schedule changes titles/images at 300, 720 and 1500 seconds and gracefully stops its own HTTPS runtime at 600 seconds, restarting the same data/certificate at 660 seconds. Minute-level samples record only server Python/Caddy CPU time and memory. Watch the changed foreground tab within 60 seconds after each update; record both modes and the time bound, plus visible TV rotation during the outage and recovery without navigation/reload. Bring tabs forward without reloading them. Suspended/background browser scheduling is outside this timing claim. Preserve the VPN connection; if existing firewall/routing blocks the run, record the obstacle instead of altering it automatically.
-
-After 30 minutes, copy `client.json` back and complete observations within the server's additional 10-minute completion budget. Write `finish` to `control.txt` to stop the fixture, or `abort` at any earlier point. Preparation/runtime failures and interruption retain partial reports. The fixture cleans its temporary installation and managed processes in finally paths. Independently verify listener/process absence, close only test browser windows, explicitly remove the exact test root and inspect a zero matching count. Remove transferred archive/capability files by an owned exact allowlist. Do not retry a deletion rejected by automatic review through another mechanism.
-
-```powershell
-.\.venv\Scripts\python.exe -m tools.check_display_endurance summarize --server-report logs/https/<new-run>/server.json --client-report logs/https/<new-run>/client.json
-.\.venv\Scripts\python.exe -m unittest tests.test_display_endurance
-```
-
-Summary validation matches sessions, complete 30-minute coverage, all four content generations and actual server stop/readiness interval. Only overlapping connection failures/timeouts are expected outage samples; TLS, JSON, HTTP-status and outside-interval failures are unexpected. Reports contain codes, timing, fixed synthetic generation/version values and process counters, not credentials, cookies or response bodies. Automated success still leaves browser/trust cleanup Pending until separately observed. This is a bounded two-Windows-PC result, not 72-hour, memory-leak, Android TV, persistent offline, replication/failover, 100-device or stage 2 acceptance.
-
 ## Managed HTTPS Startup
 
 This opt-in Windows source profile uses prepared certificates; it is not an installer, certificate issuer, service, or EXE acceptance result. Existing HTTP startup remains separate. Related implementation and verification are listed in [the transport README](../kiosk/transport/README.md).
@@ -320,17 +179,6 @@ Local processes are trusted under the stated OS boundary: the administrative API
 The startup budget is 30 seconds, with bounded cleanup afterward. The foreground supervisor monitors its proxy and backend event loop every 100 ms and stops the other component after failure; no automatic restart or HTTP downgrade is attempted. On Ctrl+C, request graceful Caddy shutdown, allow its eight-second request drain within a ten-second stop budget, then shut down Waitress workers and sockets within a separate bounded budget. A stalled proxy is killed and the launcher returns failure instead of claiming graceful completion. Windows Job Object kill-on-close contains the owned proxy after abrupt owner termination; inability to assign the job aborts startup. Ordinary cleanup removes temporary generated configuration/storage, not operator certificates, session key, or user data. Abrupt owner death can leave nonsecret temporary configuration directories; it does not leave the proxy running. The verification harness removes its own crash fixture directory.
 
 Failures report the fixed lifecycle phase and exception class, without raw exception text, subprocess output, request bodies, cookies, or keys. This deliberately bounded diagnostic output does not establish the future section 19 diagnostic system. After startup, browser certificate enforcement remains essential; proactive certificate-expiry monitoring and in-place reload are not implemented. Renew certificates through controlled maintenance/restart with the validated pair and the recovery rules above.
-
-### Managed Integration Verification
-
-```powershell
-.\.venv\Scripts\python.exe -m tools.check_managed_https --caddy logs/https-tools/caddy/caddy.exe --pwsh (Get-Command pwsh).Source
-.\.venv\Scripts\python.exe -m unittest tests.test_managed_https
-```
-
-The fixed developer scenario creates disposable installations and certificate fixtures, checks actual listeners, real HTTPS administration/media, cookies/CSRF, password revocation, forwarding sanitization, throttling, early declared-body 413, rejection of plaintext and untrusted administrative Origin, graceful shutdown, and session continuity across managed restart. It rejects wrong-name/expired startup and missing/mismatched keys, rejects an occupied public port without reuse, runs the actual CLI from a temporary source copy, verifies CLI failure/cleanup after proxy exit, and confirms job containment after forcibly terminating a fixture owner. Windows read-only TCP/process inspection must be permitted; no check is silently skipped.
-
-Checkpoint: `logs/https/managed-20261019T190228594494Z.json`, 30.122 seconds, all 17 named checks passed. Application/TLS-port responses: 64 x 200, 6 x 302, 2 x 400, 36 x 401, 1 x 403, 2 x 429, and 1 x 413. The separate management-Origin rejection was 403. All 108 observed application requests had correct metadata. Unknown CA was rejected through TLS verification code 20; wrong-name and expired configurations did not reach readiness. All three recorded managed shutdowns had proxy exit 0, no forced kill, stopped backend, and removed temporary configuration. The real CLI returned 1 and cleaned up after its proxy was deliberately stopped. Temporary installations and crash-fixture directories were removed. A JSON-expression fixture initially omitted Caddy's required matcher `name`, causing a validator panic; the generator was corrected before the successful scenarios.
 
 ## Controlled Windows Chrome Verification
 
@@ -398,9 +246,7 @@ If the client console is interrupted, retain the extracted folder and run `LAN_C
 
 The server supervises the owned test proxy/backend while waiting (up to two hours), prints Russian stage progress and saves sanitized `logs/https/wizard-<timestamp>/result.json`. Physical acceptance requires all existing application/source checks, actual update/restart, all four operator browser observations, client cleanup, graceful managed cleanup and successful owned firewall removal when applicable. Local regression/simulated UI results do not satisfy physical acceptance. This is a simpler verification interface within stage 2, not authorization or implementation of the stage 3 product Launcher.
 
-The selected physical LAN run is **Verified** within the 2026-10-23 evidence in [TZ Progress](archive/TZ_PROGRESS_2026-11-07.md#physical-two-pc-https-verification---2026-10-23): server 192.168.1.165:8443 and client 192.168.1.117, Windows 10 Pro build 19045, Chrome 155.0.8059.85, PowerShell 7.6.8. Eleven client check groups, four actual browser observations and owned cleanup passed; the ignored report is logs/https/wizard-20261023T174700697975Z/result.json. Future runs still require their own current addresses, fresh bundle, independent fingerprint comparison, actual observations and cleanup. This bounded increment covers TZ 18.11, parts of 18.4/18.8 and Windows evidence under 21.4; it does not implement 21.2 replication/failover or complete stage 2.
-
-The successful run kept VPN connected after owner-configured Amnezia application exclusions and temporary ActiveStore host-route adjustments. Task-owned routes were restored; owner VPN exclusions remain. Separate SMB/file transfer failed, so the small ZIP was transferred through the existing RustDesk clipboard-keystroke channel in bounded blocks, with exact SHA-256 verification before extraction and no private keys. This was an operator workaround, not a product transfer mechanism. The first fullscreen unlock displayed an expired/unverifiable-form message; a normal kiosk reload and repeated authenticated unlock passed. Concurrent fresh-tab token/session staleness remains a hypothesis requiring targeted reproduction; no protection was disabled. These limitations belong to the recorded result.
+For dated results, see the [ledger](TZ_PROGRESS.md#dated-evidence) and the original LAN record indexed under [Design and benchmarks](archive/README.md#design-and-benchmarks). An assigned rerun requires current addresses, a fresh bundle, independent fingerprint comparison, actual observations and cleanup.
 
 ### Prepare the server
 
@@ -474,17 +320,3 @@ git status --short --branch
 ```
 
 Local tests cover address/report rejection, metadata, timed source comparison, browser evidence ordering, incomplete cleanup, isolated updates/media, LAN SAN generation, and actual .NET HTTPS acceptance/rejection against temporary loopback servers. They never enroll trust or change firewall rules. A Windows restricted token can prevent Schannel credential acquisition (`0x8009030E`) before any certificate callback; rerun this bounded test with permitted normal-token execution rather than weakening TLS or reporting it passed. Loopback regression results do not establish a physical LAN result.
-
-## Historical source-stage boundary and next-work notes
-
-Managed HTTPS source startup, local lifecycle validation, bounded Windows Chrome trust and the selected physical two-PC LAN/CSR lifecycle fixtures are verified within their stated scopes. Source same-CA activation and USB-restored-authority signing passed; production identity/provisioning and broader operator deployment acceptance still need a separately selected increment. The owner removed the retired server fixture and its absence was verified. A subsequent bounded local HTTP/Chrome check verifies TV API recovery without reload; this does not repeat the physical HTTPS renewal or establish the cause of its historical outage. Physical Android TV, other browsers/platforms, shared-NAT budgets, fully disconnected operation, clean installation, chunked/unknown-length upload overflow behavior, endurance and 100-device acceptance remain pending. Two distinct source addresses do not verify those cases. At that historical checkpoint, stage 2 and the full security requirement were incomplete and no product Launcher, packaging or replication/failover stage had been authorized by that acceptance. Stage 2 subsequently closed within its recorded scope and stage 3 was selected; use the current ledger for remaining gates. This dated source result does not establish complete product security or authorize future stages.
-
-References: [Waitress TLS limitation](https://docs.pylonsproject.org/projects/waitress/en/stable/), [Waitress reverse proxy handling](https://docs.pylonsproject.org/projects/waitress/en/stable/reverse-proxy.html), [Flask proxy trust](https://flask.palletsprojects.com/en/stable/deploying/proxy_fix/), and [Flask security guidance](https://flask.palletsprojects.com/en/stable/web-security/).
-
-## Explicit IPv4 Verification Connections
-
-The PowerShell LAN helper accepts numeric IPv4 origins, matching its existing manifest contract. Its HTTP/HTTPS handler now opens explicit IPv4 sockets through SocketsHttpHandler.ConnectCallback; the Host probe and internal-port probes also use IPv4 directly. The plaintext rejection probe shares the HTTP connection factory. Proxy use and redirects remain disabled. Cookies, request deadlines, explicit-CA chain/name/validity/server-authentication checks and the Host probe's configured TLS identity remain enforced. DNS/IPv6 inputs fail before connecting; no fallback changes the target or weakens validation.
-
-Connection cancellation disposes a failed socket; successful connections transfer socket ownership to the returned NetworkStream. Internal-port probing rejects accessible ports and accepts refusal or bounded timeout as inaccessibility evidence, not proof that no listener exists. Invalid addresses/ports and unexpected socket errors propagate instead of being recorded as closed ports.
-
-On 2026-10-23 the same PowerShell process could connect to a temporary IPv4 loopback listener using an explicit IPv4 socket while default/dual-stack sockets and the old HttpClient failed with AddressNotAvailable/10049. An explicit-IPv4 HTTP prototype returned 200. This isolates the connection-path difference without establishing the underlying Windows/VPN cause. No VPN, OS IPv6, route, firewall, trust-store or working-installation settings were changed. New local regressions cover HTTP, unsupported addresses, accessible/refused ports, cancellation, timeout and stream closure; existing real TLS tests retain certificate-rejection and managed Host/restart gates. This is not a repeated physical two-PC acceptance run. See TZ_PROGRESS.md for final verification results.

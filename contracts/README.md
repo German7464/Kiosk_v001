@@ -1,14 +1,19 @@
 # Shared client contracts
 
+## Wire protocols
+
 [Native device delivery v1](device-delivery-v1/README.md) defines the isolated server/Android pilot metadata, enrollment and receipt API beside the unchanged Events package format. Current implementation/acceptance is recorded only in the progress ledger.
 
 [Interrupted/incremental capture](device-delivery-v1/TRANSFER_RESUME.md) adds exact byte ranges and bounded transfer semantics without changing trust or the frozen lab protocol.
 
-[Events package v1](events-v1/README.md) documents the existing Python format,
-not a replacement protocol. Documentation edition 1 describes the compatibility
+[Events package v1](events-v1/README.md) documents the existing Python format. Documentation edition 1 describes the compatibility
 tuple `(1, events, events-v1, 1)`; changing this document does not negotiate a new
 wire version. Source validation remains authoritative for existing behavior;
-resolve discrepancies with PC1 before implementing a divergent client.
+resolve discrepancies with ChatGPT Work before implementing a divergent client.
+
+The [advisory discovery protocol](device-discovery-v1/README.md) defines the additive untrusted hint mechanism.
+
+## Contract fixtures
 
 Run from the repository root with the existing Python dependencies installed:
 
@@ -23,6 +28,4 @@ run. Package bytes depend on the checked-out resource files; use one agreed
 commit when comparing clients. Generated files belong outside tracked sources.
 
 Requirements/status remain in [the specification](../docs/TZ_RECONCILED.md) and
-[the single ledger](../docs/TZ_PROGRESS.md). See [two-PC workflow](../docs/TWO_PC_WORKFLOW.md).
-
-[Advisory LAN discovery v1](device-discovery-v1/README.md) defines the next additive untrusted-hint mechanism; implementation and platform acceptance remain in the sole ledger.
+[the single ledger](../docs/TZ_PROGRESS.md). See [workstation roles](../docs/TWO_PC_WORKFLOW.md#ownership-and-working-copy).

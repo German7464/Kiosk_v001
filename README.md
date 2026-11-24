@@ -2,47 +2,7 @@
 
 Kiosk_v001 is a diploma project for a local client-server kiosk system that displays event cards on kiosks, Smart TV screens, preview screens, and an admin panel.
 
-## Technology Stack
-
-- Python
-- Flask
-- SQLite
-- HTML
-- CSS
-- JavaScript
-- Pillow
-- Waitress
-- PyInstaller
-
-React is not used in the first version.
-
-## MVP Goal
-
-The MVP provides a local Flask application with event management, kiosk and TV display modes, preview mode, admin editing tools, image processing, translations, automatic client update checks, and an EXE build.
-
-The MVP remains the compatibility baseline. Version 2 follows [the specification](docs/TZ_RECONCILED.md) and the selected stage recorded in [progress](docs/TZ_PROGRESS.md).
-
-## Development Status
-
-The primary specification is the owner-approved revision 1.2.2 of [TZ_RECONCILED.md](docs/TZ_RECONCILED.md). Requirements, implemented source, tested candidates and installed releases have distinct authority; specification approval does not establish acceptance.
-
-Use [the current checkpoint](docs/TZ_PROGRESS.md#current-checkpoint) for actual stage status, evidence and next action. Stage 3 has an accepted bounded Windows baseline; stage 4 has accepted existing-Events evidence within its recorded device/media/resource profile. Stage 5 delivery remains partial; operator publication/accounting has its bounded practical Chrome evidence in the ledger. Stages 3–6 are selected sequentially; stages7–10 are not authorized except the bounded Nov12 manual Windows updater/build slice in the current ledger. These statements do not qualify a full release. Edge is excluded from mandatory acceptance and is not claimed tested or supported.
-
-The development bundle is built in `dist/KioskLauncher`; package checkpoints are documented in [Launcher documentation](kiosk/launcher/README.md). Extract the whole archive before opening `KioskLauncher.exe`; do not transfer only the executable. Its source UI can be inspected with `python launcher.py`; source/uninstalled configuration saving is deliberately rejected. Existing MVP commands remain available.
-
-The MVP baseline is preserved by the annotated Git tag `v1.0.0-mvp`. `v2` is the integration branch; current task branches and publication permissions are recorded in the ledger. Do not switch a dirty checkout merely to match that integration policy. Version 2 is not a completed release. See [the documentation index](docs/README.md), [current target stages](docs/TZ_RECONCILED.md#22-порядок-разработки-и-границы-этапов), [acceptance ledger](docs/TZ_PROGRESS.md) and [development recovery](docs/DEVELOPMENT_RECOVERY.md) for scope, validation limits and baseline inspection.
-
-The MVP Flask application is implemented with SQLite storage, admin management flows, public display routes, public API endpoints, image processing, translations, responsive layouts, and reusable developer smoke tests.
-
-## Working With This Project
-
-Before future tasks, read:
-
-1. [AGENTS.md](AGENTS.md)
-2. The relevant sections of [approved requirements](docs/TZ_RECONCILED.md), [current progress](docs/TZ_PROGRESS.md), and the [documentation index](docs/README.md); consult [historical MVP scope](docs/MVP_SCOPE.md) when compatibility is relevant
-3. The `README.md` inside the related major feature folder, when that feature exists
-
-Do not analyze the whole repository for every task. Make the smallest useful change, stay inside the selected stage, and update progress and [docs/CHANGELOG.md](docs/CHANGELOG.md) after every stage.
+Start with the [task index](docs/README.md) for requirements, module interfaces and operations. The [current checkpoint](docs/TZ_PROGRESS.md#current-checkpoint) records stage scope and acceptance.
 
 ## Verified Dependency Installation
 
@@ -110,7 +70,7 @@ python serve.py --host 0.0.0.0 --port 5000 --open-kiosk
 
 If a local server is already running on `http://127.0.0.1:<port>/api/version`, the launcher reuses it instead of starting a duplicate server.
 
-The HTTP commands below serve plaintext, including administrative credentials and sessions when used over LAN. Use loopback for local development. An opt-in [managed HTTPS profile](docs/LAN_TRANSPORT.md#managed-https-startup) starts Caddy and loopback Waitress with prepared certificates. Selected two-PC Windows/Chrome HTTPS, signing, renewal and USB CA recovery checks passed; production provisioning, other platforms and Android TV acceptance remain pending.
+The HTTP commands below serve plaintext, including administrative credentials and sessions when used over LAN. Use loopback for local development. An opt-in [managed HTTPS profile](docs/LAN_TRANSPORT.md#managed-https-startup) starts Caddy and loopback Waitress with prepared certificates. See the [ledger](docs/TZ_PROGRESS.md#dated-evidence) for measured acceptance.
 
 ```powershell
 .\.venv\Scripts\python.exe serve.py --https-config instance/https.json --no-client
@@ -185,7 +145,7 @@ The reset command requires a local interactive terminal, asks for a new password
 
 Existing `admin / admin` credentials are blocked for login, administrative actions, and kiosk fullscreen unlock until replaced locally. Startup does not replace existing hashes. Other existing credentials remain unchanged. Sessions from earlier releases require a new login; changing or resetting a password invalidates all previous sessions for that account. A valid session survives server restart when credentials and the installation key remain unchanged. Browser password changes return to login.
 
-These commands remain the local setup path for source/MVP operation; installed setup uses the [Launcher operator flow](kiosk/launcher/README.md#operator-flow-package-acceptance-pending). They require OS access to the installation and do not provide a web recovery endpoint. Administrative forms require a session CSRF token, and password checks share per-source limits (10 per username and 40 total in 60 seconds). Errors return 403 or 429; reload stale forms or wait for the Retry-After interval. Counters reset on restart and are scoped to one server process. See the admin feature README for limits. The [managed HTTPS profile](docs/LAN_TRANSPORT.md#managed-https-startup) adds opt-in protected startup. Selected physical Windows/Chrome LAN and VM browser-trust scenarios passed; broader platform acceptance remains pending. See the current acceptance checklist above.
+These commands remain the local setup path for source/MVP operation; installed setup uses the [Launcher operator flow](kiosk/launcher/README.md#operator-flow). They require OS access to the installation and do not provide a web recovery endpoint. Administrative forms require a session CSRF token, and password checks share per-source limits (10 per username and 40 total in 60 seconds). Errors return 403 or 429; reload stale forms or wait for the Retry-After interval. Counters reset on restart and are scoped to one server process. See the admin feature README for limits. The [managed HTTPS profile](docs/LAN_TRANSPORT.md#managed-https-startup) adds opt-in protected startup. See the [ledger](docs/TZ_PROGRESS.md#dated-evidence) for browser acceptance.
 
 To launch the packaged kiosk client automatically, place `ClientKiosk.exe` next to `Kiosk_v001.exe`. If it is not present, the launcher falls back to the default browser. If both launch attempts fail, the server still starts and prints the manual URLs.
 
@@ -241,7 +201,7 @@ git diff --check
 git status --short --branch
 ```
 
-The Node command is a standalone development check for kiosk request/error behavior; Node is not an application dependency. Automated Flask checks cover forms with rendered CSRF tokens and isolated runtime data. Use Chrome through Windows-MCP only when automated tests leave browser-specific behavior unresolved.
+The Node command is a standalone development check for kiosk request/error behavior; Node is not an application dependency. Automated Flask checks cover forms with rendered CSRF tokens and isolated runtime data. Use the [Windows GUI harness](docs/WINDOWS_GUI_HARNESS.md#setup-and-checks) and Chrome when the assigned acceptance needs Windows browser evidence.
 
 Image safety defaults: 20 MiB per request, 16 MiB per file, 25 million pixels; see the admin feature README for configuration and error behavior. Run `python -m unittest discover -s tests` to include upload boundary and isolated Waitress HTTP checks.
 
@@ -257,7 +217,7 @@ The fixed profile starts its own four-thread Waitress process on a free loopback
 
 JSON reports are stored under ignored `logs/measurements/`. Nonzero exit means a request, validation, sampling, timeout, or cleanup error; inspect the sanitized error records and any completed metrics. Requests have a ten-second timeout, and a 180-second watchdog terminates the temporary server if the scenario overruns; shutdown/cleanup can take additional time. Temporary data is removed after stopping the server. No working server or account is used. Windows process working memory is sampled every 100 ms throughout dataset preparation and measurements; its observed maximum is not a guaranteed peak. Reports contain no test passwords, cookies, installation secrets, hostnames, or server addresses.
 
-See [MVP Baseline](docs/MVP_BASELINE.md) for the measured checkpoint, metric definitions, and limitations. The command is an opt-in developer measurement, not part of normal application startup or a release acceptance threshold.
+See [historical baseline entry](docs/archive/README.md#design-and-benchmarks) for the measured checkpoint, metric definitions, and limitations. The command is an opt-in developer measurement, not part of normal application startup or a release acceptance threshold.
 
 
 ## Isolated HTTPS Prototype
