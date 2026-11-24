@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Generic APK: explicitly owner-approved guided user CA setup. Native transport
+  still pins the independently confirmed installation; administration restricts
+  every navigation/subresource to that exact origin and cancels all TLS errors.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

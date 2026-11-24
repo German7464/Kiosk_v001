@@ -39,7 +39,7 @@ public sealed class DisplayWindow : Form {
                 navigation_success = active != null && !StartupFailed, renderer_ready = active != null && !StartupFailed,
                 startup_failed = StartupFailed, view_key = active == null ? "" : active.View.Key,
                 package_sha256 = active == null ? "" : active.View.PackageIdentity,
-                mode = initial.Mode, switch_request_id = requestId, switch_state = switchState,
+                mode = active == null ? initial.Mode : active.View.Mode, switch_request_id = requestId, switch_state = switchState,
                 switches_completed = switchesCompleted, switches_failed = switchesFailed,
                 diagnostic_samples = diagnosticSamples, diagnostic_transitions = diagnosticTransitions,
                 diagnostic_failures = diagnosticFailures, diagnostic_counter = diagnosticCounter };
@@ -105,12 +105,12 @@ public sealed class DisplayWindow : Form {
                 !command.ContainsKey("package_sha256") || !command.ContainsKey("mode") ||
                 command["session_id"] != session || !Hex(command["request_id"], 32) ||
                 command["request_id"] == requestId || !Hex(command["view"], 64) ||
-                !Hex(command["package_sha256"], 64) || command["mode"] != initial.Mode) return;
+                !Hex(command["package_sha256"], 64) || (command["mode"] != "tv" && command["mode"] != "kiosk")) return;
             switching = true; requestId = command["request_id"]; switchState = "preparing"; Status();
             bool ready = false;
             try {
                 var view = new LocalView(Path.Combine(cacheRoot, command["view"]));
-                if (view.PackageIdentity != command["package_sha256"] || view.Mode != initial.Mode)
+                if (view.PackageIdentity != command["package_sha256"] || view.Mode != command["mode"])
                     throw new InvalidDataException("switch_identity_mismatch");
                 if (active.View.Key == view.Key && active.View.PackageIdentity == view.PackageIdentity) ready = true;
                 else ready = await Prepare(view);

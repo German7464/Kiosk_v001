@@ -49,3 +49,6 @@ android/**/*.pfx
 android/**/*.key
 android/**/.env
 android/**/.env.*
+
+# Local conversation exports are not project source.
+session-*.md

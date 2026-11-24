@@ -6,7 +6,7 @@ import tempfile
 
 from PIL import Image
 
-from kiosk.display.cache import renderer_identity
+from kiosk.display.cache import renderer_identity, renderer_compatible
 from kiosk.publication.exporter import _json, _plain_path, _references, _stream_stable, verify_package
 from kiosk.publication.renderer import ASSETS, build_view
 from kiosk.publication.store import _ExpectedFileWriter
@@ -47,7 +47,7 @@ def _publish(state, source, db):
         if previous and sha(payload) != previous['metadata_hash']:
             raise DeliveryError('publication_integrity', 503)
         metadata = decode(payload)
-        if metadata['package_id'] != identity or metadata['renderer']['build_id'] != renderer_identity():
+        if metadata['package_id'] != identity or not renderer_compatible(metadata['renderer']['build_id']):
             raise DeliveryError('publication_identity_conflict', 409)
         for group in ('package', 'kiosk', 'tv'):
             if inventory(target / group) != metadata[group]['files']:

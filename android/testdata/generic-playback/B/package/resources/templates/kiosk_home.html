@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ settings.kiosk_heading or t("kiosk.home_heading") }}{% endblock %}
+
+{% block content %}
+<section class="kiosk-home"
+    aria-labelledby="kiosk-title"
+    data-kiosk-home
+    data-version-poll-interval="5000"
+    data-update-delay-max="10000">
+    <div class="kiosk-brand">
+        {% if settings.site_icon %}
+        <img class="system-icon-image" src="{{ settings.site_icon }}" alt="{{ settings.site_title }}">
+        {% else %}
+        <img class="system-icon-image" src="{{ url_for('static', filename='img/site_icon.png') }}" alt="{{ settings.site_title }}">
+        {% endif %}
+        <p class="system-name">{{ settings.site_title }}</p>
+    </div>
+    <div class="kiosk-content">
+        <p class="label">{{ settings.kiosk_label or t("kiosk.home_label") }}</p>
+        <h1 id="kiosk-title">{{ settings.kiosk_heading or t("kiosk.home_heading") }}</h1>
+        <p class="kiosk-description">
+            {{ settings.kiosk_description or t("kiosk.home_description") }}
+        </p>
+        <a class="primary-action" href="/kiosk/events">{{ t("kiosk.open_events") }}</a>
+    </div>
+    <button
+        class="kiosk-fullscreen-button"
+        type="button"
+        data-kiosk-fullscreen
+        data-fullscreen-enter="{{ t('kiosk.fullscreen_enter') }}"
+        aria-label="{{ t('kiosk.fullscreen_enter') }}"
+        title="{{ t('kiosk.fullscreen_enter') }}">&#x26F6;</button>
+    <div class="kiosk-unlock-modal" data-kiosk-unlock-modal hidden>
+        <div class="kiosk-unlock-modal__panel" role="dialog" aria-modal="true" aria-labelledby="kiosk-unlock-title">
+            <p class="label">{{ t("kiosk.fullscreen_unlock_label") }}</p>
+            <h2 id="kiosk-unlock-title">{{ t("kiosk.fullscreen_unlock_title") }}</h2>
+            <p class="kiosk-unlock-modal__copy">{{ t("kiosk.fullscreen_unlock_description") }}</p>
+            <p class="form-error" data-kiosk-unlock-error data-invalid-message="{{ t('kiosk.fullscreen_unlock_error') }}" data-refreshed-message="{{ t('kiosk.fullscreen_form_refreshed') }}" data-refresh-failed-message="{{ t('kiosk.fullscreen_form_refresh_failed') }}" hidden></p>
+            <form class="kiosk-unlock-form" data-kiosk-unlock-form>
+                <label>
+                    <span>{{ t("admin.username") }}</span>
+                    <input type="text" name="username" autocomplete="username" required data-kiosk-unlock-username>
+                </label>
+                <label>
+                    <span>{{ t("admin.password") }}</span>
+                    <input type="password" name="password" autocomplete="current-password" required data-kiosk-unlock-password>
+                </label>
+                <div class="kiosk-unlock-actions">
+                    <button type="button" class="kiosk-unlock-secondary" data-kiosk-unlock-return>{{ t("kiosk.fullscreen_return") }}</button>
+                    <button type="submit" class="kiosk-unlock-primary">{{ t("kiosk.fullscreen_exit") }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/kiosk_home.js') }}"></script>
+{% endblock %}

@@ -38,12 +38,25 @@ def elevate(action):
         raise ElevationUnavailable("Windows administrator approval was cancelled or unavailable.")
 
 
+def elevate_upgrade(package):
+    """Run the same offline update engine as ``KioskMaintenance.exe upgrade``."""
+    command = executable_command("--upgrade", package)
+    api = ctypes.WinDLL("shell32", use_last_error=True)
+    api.ShellExecuteW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_int]
+    api.ShellExecuteW.restype = ctypes.c_void_p
+    result = api.ShellExecuteW(None, "runas", command[0], subprocess.list2cmdline(command[1:]), None, 1)
+    if not result or result <= 32:
+        raise ElevationUnavailable("Windows administrator approval was cancelled or unavailable.")
+
+
 class Launcher:
     def __init__(self, root, storage, autostart=False, configure=False):
         self.root = root
         self.storage = storage
         self.status = None
         self.busy = False
+        self.updating = False
+        root.protocol('WM_DELETE_WINDOW', lambda: None if self.updating else root.destroy())
         self.autostart = autostart
         self.autostart_attempts = 0
         root.title("Kiosk Launcher")
@@ -60,7 +73,7 @@ class Launcher:
         for index, (label, command) in enumerate((("Запустить сервер", lambda: self.administrative("start")),
                                                   ("Остановить сервер", self.stop), ("Настройки", lambda: self.administrative("configure")),
                                                   ("Открыть экран", self.display), ("Администрирование", lambda: self.display("admin")),
-                                                  ("Экспорт диагностики", self.export))):
+                                                  ("Экспорт диагностики", self.export), ("Обновление из файла", self.update_from_file))):
             ttk.Button(buttons, text=label, command=command).grid(row=index // 3, column=index % 3, sticky="ew", padx=3, pady=4)
         for column in range(3):
             buttons.columnconfigure(column, weight=1)
@@ -69,7 +82,7 @@ class Launcher:
         ttk.Checkbutton(frame, text="Открывать экран после моего входа в Windows", variable=self.startup, command=self.change_startup).pack(anchor="w", pady=5)
         self.maintenance = tk.BooleanVar(value=maintenance_enabled())
         ttk.Checkbutton(frame, text="Обслуживание: временно не открывать экран автоматически", variable=self.maintenance, command=self.change_maintenance).pack(anchor="w", pady=5)
-        ttk.Label(frame, text="Для обслуживания экрана: Esc/F11 или Alt+F4. Полный экран не блокирует Windows.\nГруппы и сопряжение появятся в этапе 5; резервные копии и обновления — в этапе 7.", wraplength=690).pack(anchor="w", pady=15)
+        ttk.Label(frame, text="Для обслуживания экрана: Esc/F11 или Alt+F4. Полный экран не блокирует Windows.\nПодписанное обновление устанавливается кнопкой «Обновление из файла» (KioskMaintenance.exe upgrade).", wraplength=690).pack(anchor="w", pady=15)
         if not getattr(sys, "frozen", False):
             ttk.Label(frame, text="Режим разработки: системная установка и автозапуск требуют собранного комплекта.", wraplength=690).pack(anchor="w")
         elif Path(sys.executable).parent != binary_directory():
@@ -188,6 +201,55 @@ class Launcher:
         target = filedialog.asksaveasfilename(parent=self.root, defaultextension=".zip", initialfile="Kiosk-diagnostics.zip")
         if target:
             self.background(lambda: export_diagnostics(self.storage, target), lambda result: messagebox.showinfo("Kiosk", "Диагностика сохранена."), error_context="export")
+
+    def update_from_file(self):
+        if self.updating:
+            return
+        package = filedialog.askdirectory(parent=self.root, title="Выберите папку подписанного пакета обновления")
+        if not package:
+            return
+        version = None
+        if administrator():
+            from kiosk.launcher.updater import verify_and_read
+
+            try:
+                manifest, _ = verify_and_read(self.storage, package)
+                version = manifest["version"]
+            except Exception as error:
+                self.error(error, "system")
+                return
+        label = ("до версии " + version) if version else ""
+        if not messagebox.askyesno("Обновление", f"Установить обновление {label}? Сервер будет остановлен и перезапущен, данные сохранены.", parent=self.root):
+            return
+        if not administrator():
+            try:
+                elevate_upgrade(package)
+                self.details.set("Запрос на обновление отправлен. Launcher закроется; сервер перезапустится после активации. Проверьте состояние после перезапуска.")
+                self.root.after(1500, self.root.destroy)
+            except Exception as error:
+                self.error(error, "system")
+            return
+        from kiosk.launcher.updater import upgrade
+
+        self.updating = True
+        self.busy = True
+
+        def work():
+            try:
+                result = upgrade(self.storage, package)
+                self.root.after(0, lambda: self._update_staged(result))
+            except Exception as error:
+                self.root.after(0, lambda error=error: self._update_failed(error))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _update_failed(self, error):
+        self.updating = False
+        self.busy = False
+        self.error(error, "system")
+
+    def _update_staged(self, result):
+        self.details.set("Обновление до версии " + result["to_version"] + " передано на активацию. Launcher закроется; сервер перезапустится. Проверьте состояние после перезапуска (KioskMaintenance.exe upgrade-status).")
+        self.root.after(1500, self.root.destroy)
 
     def configure(self):
         if not administrator():

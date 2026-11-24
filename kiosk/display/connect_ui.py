@@ -6,8 +6,9 @@ import os
 from pathlib import Path
 import queue
 import sys
+import threading
 import tkinter as tk
-from tkinter import ttk
+from tkinter import filedialog, messagebox, ttk
 
 from . import admin as admin_ui
 from .connect import Connection, confirmed_time, public_input
@@ -21,8 +22,9 @@ MESSAGES = {
     'approved': 'Подключение одобрено. Запустите Events с синхронизацией.',
     'cancelled': 'Операция остановлена. Сохранённые данные не удалены.',
     'denied': 'Администратор отказал. Данные сохранены; автоматического нового запроса нет.',
-    'expired': 'Срок входных данных или доступа истёк. Новое подключение/приём остановлены.',
-    'access_refused': 'Доступ отозван или недействителен. Принятое содержимое остаётся доступно.',
+    'expired': 'Срок доступа истёк. Принятое содержимое сохранено; восстановите сопряжение с одобрением администратора.',
+    'access_refused': 'Доступ отозван или заменён сервером. Принятое содержимое остаётся доступно; восстановите сопряжение.',
+    'authority_expired': 'Срок доверия группы на сервере истёк. Администратор должен продлить доверие; принятое содержимое сохранено.',
     'time_required': 'Для нового приёма подтвердите независимо проверенное время UTC.',
     'time_confirmed': 'Время явно подтверждено. Регистрация сохранена.',
     'network_unavailable': 'Сервер недоступен. Принятые Events можно открыть без сети.',
@@ -43,6 +45,7 @@ class Window:
         self.facts = {}
         self.hints = []
         self.admin_session = None
+        self.updating = False
         root.title('Kiosk — подключение Windows')
         root.geometry(f'900x{min(850, root.winfo_screenheight() - 100)}')
         root.minsize(780, 550)
@@ -104,6 +107,9 @@ class Window:
         self.enroll_button.pack(side='left')
         self.time_button = ttk.Button(row, text='Подтвердить время', command=self.time)
         self.time_button.pack(side='left', padx=6)
+        self.recover_button = ttk.Button(row, text='Восстановить сопряжение', command=self.recover,
+                                        state='disabled')
+        self.recover_button.pack(side='left', padx=6)
         self.admin_button = ttk.Button(row, text='Администрирование', command=self.admin)
         self.admin_button.pack(side='left')
         ttk.Label(box, text='Код сопряжения (действует не более 10 минут)').pack(anchor='w')
@@ -123,10 +129,13 @@ class Window:
         self.cancel_button.pack(side='left', padx=7)
         ttk.Label(box, textvariable=self.status, wraplength=825, justify='left', font=('Segoe UI', 10)).pack(anchor='w', pady=7)
         ttk.Label(box, text='Поиск LAN — только подсказка. Доверие и сопряжение проверяются отдельно.', wraplength=825).pack(anchor='w')
+        self.update_button = ttk.Button(box, text='Обновление из файла', command=self.update_from_file)
+        self.update_button.pack(anchor='w', pady=(6, 0))
         self.editables = [self.address_entry, self.public, self.file_entry, self.load_button, self.review_button,
                           self.digest_entry, self.confirm_box, self.clock_entry, self.clock_box,
-                          self.enroll_button, self.time_button, self.run_button, self.offline_button,
-                          self.search_button, self.select_button, self.results]
+                          self.enroll_button, self.time_button, self.recover_button, self.run_button,
+                          self.offline_button,
+                          self.search_button, self.select_button, self.results, self.update_button]
         connection.start('inspect')
         root.after(100, self.tick)
 
@@ -201,6 +210,12 @@ class Window:
         except Exception:
             self.status.set(MESSAGES['time_required'])
 
+    def recover(self):
+        if not self.saved or self.connection.busy:
+            return
+        self.connection.start('recover')
+        self.status.set('Запрошено повторное одобрение того же устройства. Принятое содержимое сохранено.')
+
     def admin(self):
         # Only the origin from the already verified saved anchor is accepted. The
         # native window renders the ordinary server admin pages in an isolated
@@ -242,7 +257,56 @@ class Window:
         self.connection.cancel()
         self.status.set('Остановка текущей операции; ожидание завершения ограниченного запроса…')
 
+    def update_from_file(self):
+        from . import updater
+
+        if self.updating or self.connection.busy:
+            return
+        if self.admin_session is not None and self.admin_session.poll() is None:
+            messagebox.showinfo('Обновление', 'Закройте окно администрирования перед обновлением.', parent=self.root)
+            return
+        package = filedialog.askdirectory(parent=self.root, title='Выберите папку подписанного пакета обновления')
+        if not package:
+            return
+        try:
+            manifest = updater.verify(package)
+        except Exception as error:
+            messagebox.showerror('Kiosk', 'Пакет отклонён: ' + str(error), parent=self.root)
+            return
+        if not messagebox.askyesno('Обновление',
+                                   f'Установить обновление до версии {manifest["version"]}? Приложение закроется. После завершения обновления откройте KioskConnect снова; сохранённые данные и подключение останутся.',
+                                   parent=self.root):
+            return
+        self.update_button.configure(state='disabled')
+        self.updating = True
+        self.status.set('Установка обновления… не закрывайте приложение.')
+
+        def work():
+            try:
+                result = updater.upgrade(package, relaunch=True)
+                self.root.after(0, lambda: self.update_staged(result))
+            except Exception as error:
+                self.root.after(0, lambda error=error: self.update_failed(error))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def update_failed(self, error):
+        self.updating = False
+        messagebox.showerror('Kiosk', 'Обновление не установлено: ' + str(error), parent=self.root)
+        self.update_button.configure(state='normal')
+
+    def update_staged(self, result):
+        # Activation is handed to the detached helper, which waits for this window
+        # to exit before swapping. Honest completion: the window closes (releasing
+        # its files) and the helper relaunches the new client; we do not claim
+        # "installed" here because the swap has not completed yet.
+        self.status.set('Обновление до версии ' + result['to_version'] + ' подготовлено. Приложение закроется; данные и подключение сохранятся. Запустите его снова после завершения обновления.')
+        self.root.after(1000, self.root.destroy)
+
     def close(self):
+        if self.updating:
+            self.status.set('Обновление подготавливается. Дождитесь передачи на активацию; окно закроется автоматически.')
+            return
         self.closing = True
         self.cancel()
 
@@ -280,11 +344,15 @@ class Window:
                         self.results.delete(0, 'end')
                         self.mode.set(value['mode'])
                         self.address.set(value['origin'])
-                        self.details.set(f"Группа: {value['group']}\nСервер: {value['server']}\nУстройство: {value['device']}\nЗапрос: {value['request']}\nNonce: {value['nonce']}\nПрофиль: {value['profile']}\nСохранённые Events: {'есть' if value['content'] else 'пока нет'}; доступ: {'отозван' if value['revoked'] else 'одобрен' if value['approved'] else 'ожидает одобрения'}")
+                        self.details.set(f"Группа: {value['group']}\nСервер: {value['server']}\nУстройство: {value['device']}\nЗапрос: {value['request']}\nNonce: {value['nonce']}\nПрофиль: {value['profile']}\nСохранённые Events: {'есть' if value['content'] else 'пока нет'}; доступ: {'отозван' if value['revoked'] else 'одобрен' if value['approved'] else 'ожидает одобрения'}"
+                                          + (f"\nСостояние доступа: {value['recovery']} ({value['recovery_code']})" if value.get('recovery') else ''))
+                        self.recover_button.configure(
+                            state='normal' if value.get('recovery') in ('expired', 'revoked_or_replaced') else 'disabled')
                 if state == 'pending':
                     self.code.set(value['code'])
                     self.show_qr(value.get('origin', ''), value.get('code', ''))
-                elif state in ('approved', 'denied', 'expired', 'access_refused', 'cancelled', 'idle'):
+                elif state in ('approved', 'denied', 'expired', 'access_refused', 'authority_expired',
+                               'cancelled', 'idle'):
                     self.code.set('—')
                     self.clear_qr()
                 if state in MESSAGES:
@@ -300,7 +368,7 @@ class Window:
                     self.status.set(text)
         except queue.Empty:
             pass
-        busy = self.connection.busy
+        busy = self.connection.busy or self.updating
         if self.admin_session is not None:
             code = self.admin_session.poll()
             if code is not None:
@@ -326,7 +394,39 @@ def main():
     parser.add_argument('--shell', type=Path)
     parser.add_argument('--audit', type=Path)
     parser.add_argument('--events', type=Path, help='Fixed public UI states only; never native private state')
+    parser.add_argument('--upgrade', type=Path, help='Stage a signed update, exit, then reopen the client manually after activation')
+    parser.add_argument('--upgrade-status', action='store_true', help='Report the handed-off update outcome to a file')
     args = parser.parse_args()
+
+    def write_command_report(report):
+        try:
+            from pathlib import Path as _P
+
+            (_P(os.environ.get("LOCALAPPDATA", _P.home())) / "KioskConnect" / "upgrade-command.json").write_text(
+                json.dumps(report), encoding="utf-8")
+        except Exception:
+            pass
+
+    if args.upgrade:
+        from . import updater
+
+        import traceback
+
+        report = {}
+        try:
+            report = updater.upgrade(args.upgrade)
+        except Exception:
+            report = {"error": traceback.format_exc()}
+        write_command_report(report)
+        print(json.dumps(report))
+        return 1 if report.get('error') else 0
+    if args.upgrade_status:
+        from . import updater
+
+        report = updater.upgrade_status()
+        write_command_report(report)
+        print(json.dumps(report))
+        return 1 if report.get('state') in ('failed', 'recovery-required', 'rolled_back') else 0
     executable = Path(sys.executable if getattr(sys, 'frozen', False) else __file__).resolve()
     shell = args.shell or executable.parents[2] / 'shell' / 'KioskOfflineDisplay.exe'
 

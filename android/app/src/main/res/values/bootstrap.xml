@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Public bootstrap asset name. The sandbox build type overrides this with an isolated lab group. -->
+    <string name="delivery_bootstrap_asset" translatable="false">delivery-bootstrap.json</string>
+</resources>

@@ -140,3 +140,29 @@ class RendererTests(unittest.TestCase):
                 renderer.build_view(self.fixture.destination, self.destination)
         self.assertFalse(self.destination.exists())
         self.assertFalse(list(self.fixture.root.glob('.events-view-*')))
+
+
+class RendererIdentityTests(unittest.TestCase):
+    def test_only_proven_legacy_identity_is_equivalent_without_rewriting_metadata(self):
+        from kiosk.display.cache import renderer_identity, renderer_compatible
+        from kiosk.display.delivery_capture import validate_metadata
+        legacy = 'b55c9bdc54af16ce69b6b6b6be15375adc5891dc70b84eb2292de00cd59d49a6'
+        self.assertTrue(renderer_compatible(legacy))
+        self.assertTrue(renderer_compatible(renderer_identity(), legacy))
+        self.assertFalse(renderer_compatible('0' * 64))
+        path = Path(__file__).resolve().parents[1] / 'android/app/src/test/resources/delivery-v1/publication.json'
+        value = json.loads(path.read_text())
+        before = json.dumps(value, sort_keys=True)
+        validate_metadata(value)
+        self.assertEqual(json.dumps(value, sort_keys=True), before)
+        with patch.object(renderer, 'RENDERER_VERSION', 'actual-new-renderer'):
+            self.assertFalse(renderer_compatible(legacy))
+
+    def test_identity_is_independent_of_build_bytecode(self):
+        from kiosk.display.cache import renderer_identity
+        first = renderer_identity()
+        with patch.object(renderer, '__file__', 'C:/other/build/renderer.pyc'):
+            self.assertEqual(renderer_identity(), first)
+        with patch.object(renderer, 'RENDERER_VERSION', 'different-version'):
+            self.assertNotEqual(renderer_identity(), first)
+

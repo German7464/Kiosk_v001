@@ -12,11 +12,36 @@ DEFAULT_CACHE_BYTES = 256 * 1024 * 1024
 
 
 def renderer_identity():
-    """Invalidate generated artifacts when shipped code, templates or labels change."""
-    files = [Path(renderer.__file__), *sorted(renderer.ASSETS.glob('*')),
+    """Deterministic across separately built server and display packages.
+
+    The previous form hashed ``renderer.__file__``. In a frozen package that is a
+    compiled bytecode file whose metadata differs between builds (and always from
+    the source checkout), so the content service and a display built from the same
+    commit disagreed and every device looked renderer-incompatible. The explicit
+    version constant plus shipped assets/translations keeps the check meaningful
+    without depending on build metadata.
+    """
+    files = [*sorted(renderer.ASSETS.glob('*')),
              *(renderer.TRANSLATIONS / (language + '.json') for language in ('en', 'ru', 'de'))]
-    return hashlib.sha256(_json([hashlib.sha256(path.read_bytes()).hexdigest()
-                                 for path in files if path.is_file()])).hexdigest()
+    return hashlib.sha256(_json([renderer.RENDERER_VERSION,
+                                 *[hashlib.sha256(path.read_bytes()).hexdigest()
+                                   for path in files if path.is_file()]])).hexdigest()
+
+
+def renderer_compatible(identity, expected=None):
+    """One proven ID-algorithm transition; never rewrite signed metadata.
+
+    b55 is HEAD's exact renderer source + these same assets/translations under
+    the old source-file hashing algorithm.5913 changes only ID calculation.
+    A future renderer version/assets change disables this equivalence.
+    """
+    current = renderer_identity()
+    expected = current if expected is None else expected
+    if identity == expected:
+        return True
+    aliases = {'5913c239644a5b49cebeca375669a59bda739f14051f6bfbae62b3ec8047e2d1',
+               'b55c9bdc54af16ce69b6b6b6be15375adc5891dc70b84eb2292de00cd59d49a6'}
+    return current == '5913c239644a5b49cebeca375669a59bda739f14051f6bfbae62b3ec8047e2d1' and identity in aliases and expected in aliases
 
 
 def verify_cached_view(root, *, package_identity, mode):

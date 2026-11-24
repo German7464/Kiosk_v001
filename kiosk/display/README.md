@@ -1,5 +1,54 @@
 # Offline display candidate
 
+## Lifecycle refusal reasons, recovery and authority renewal
+
+The server keeps fixed refusal labels; the Windows client surfaces the exact one instead
+of guessing from the HTTP status (see `delivery_transport.refusal_reason`):
+
+| Refusal | Recorded client state | Operator action |
+| --- | --- | --- |
+| `credential_expired` | `expired` | explicit re-pairing of the same device |
+| `invalid_credential` | `revoked_or_replaced` | explicit re-pairing of the same device |
+| `admission_authority_expired` | `authority_expired` | administrator renews signed group trust; retry is automatic |
+| `uncertain_time` | time confirmation | confirm independently checked UTC |
+
+A server-confirmed revocation is durable until the operator uses the new
+`Восстановить сопряжение` action. That action keeps the confirmed bootstrap, the
+stable `device_id`, the secret verifier and all accepted offline packages, and only
+requests a fresh administrator approval for the same identity, so retained display
+content stays valid. An expired credential or expired signed authority never sets
+the durable revocation flag, and accepted content always remains openable offline.
+
+Bootstrap `expires_at` bounds first confirmation only; an enrolled client continues
+to synchronise under its credential and signed group trust. This is proven by the
+Android and Windows lifecycle checks in the Stage 5 completion evidence, including a
+real generation-1 → generation-2 signed trust renewal on the isolated pilot.
+Offline tooling (`tools/lan_trust_admin.py`) provides `backup`, `restore`,
+`reauthorize` and `rebuild-server`; custody and recovery limits are in the
+[trust contract](../trust/README.md).
+
+## Content-distribution telemetry
+
+The real `delivery_client` and Connect workflow implement additive
+[`content-progress-v1`](../delivery/README.md#content-distribution-monitoring-contract-content-progress-v1).
+Capture emits waiting/downloading (logical bytes, including reuse/resume),
+downloaded before full verification and verified after package/view/image checks.
+Native readiness still uses the existing guarded ready receipt; neither install
+nor verified telemetry claims activation. Switch/readiness failures report a
+bounded candidate_refused error while existing coordinator fallback is retained.
+Network/storage/integrity/incompatibility errors use fixed public labels, never
+raw paths, bearer credentials or arbitrary exception messages.
+
+`delivery_progress.py` owns one daemon worker and one newest pending slot. Native
+display/capture only offer snapshots; network, atomic sequence persistence and
+retry run on that worker. Byte updates coalesce to one/5seconds; state transitions
+may replace intermediate pending states. Retry backoff10..300seconds honors longer
+Retry-After up to1hour across replacements. Permanent4xx discards only telemetry.
+No durable progress outbox grows; only one sequence high-water JSON is retained
+in the protected private root. Existing durable ready receipts remain independent.
+Restart may lose intermediate telemetry; old servers/clients retain their paths.
+Offline-only reopening sends no progress and needs no server contact.
+
 ## Advisory LAN search in Windows Connect
 
 The opt-in server and Windows UI follow the coordinator-owned
@@ -202,6 +251,12 @@ Focused tests: `tests.test_windows_delivery`; physical evidence belongs in the r
 Windows-delivery report. Source tests/builds alone do not establish VM delivery acceptance
 or close stage5. The sole ledger remains authoritative for reviewed acceptance.
 
+The unified PC1 workspace also contains `android/`; its module README documents the
+external Android tool/signing config. Run Windows commands from the repository root
+in ordinary PowerShell with `./.venv/Scripts/python.exe`; no IDE is required. The
+same executor uses local ADB for the phone and strict SSH to the existing PC4/PC5
+VMs on PC2. A build does not authorize installation or a new acceptance journey.
+
 ## Boundary and platform decision
 
 Windows candidate: a thin x64 WinForms/.NET Framework host using the separately installed Evergreen WebView2 Runtime. The Flask/SQLite server, existing Launcher/service and Chrome path are unchanged. This is a bounded client-platform prototype, not a server-stack replacement or Android implementation. Edge browser acceptance remains excluded; WebView2 Runtime is a separate prerequisite.
@@ -305,3 +360,30 @@ Native startup follow-up confirmed a fresh session/PID and renderer readiness; a
 Same-window VM checks confirmed versions7 -> 8, rejection of a deliberately broken generated version9 while retaining8 and its receipt, then successful version10, all in one native PID with fullscreen preserved. Actual native command tests covered stale session, traversal, oversized input, duplicate last request and wrong package identity. A separate broken first-start exited1 with startup_failed true. Screenshots/statuses are sampled evidence, not a frame-by-frame no-flicker measurement.
 
 No disconnected OS restart, installed-package update, real touch/portrait, long-content endurance, process-crash recovery of the WebView host or Android acceptance is established. WebView2 was installed per-user on the dedicated VM under the owner's test authorization; its installer identity and retained fixture paths are in the ledger. Existing production installations were not modified.
+
+## Published Events display configuration
+
+Native delivery reports bounded `display-profile-v1` capabilities and requests
+assignment envelope2, separately from the unchanged enrollment resource binding.
+See the [shared delivery contract](../delivery/README.md#minimum-events-display-profiles--display-profile-v1).
+The administrator selects desired profiles; only Events publication activates the
+configuration transition. DPAPI accepted associations persist the profile ID,
+revision and mode. Native mode-only switches prepare verified cached views in the
+same WebView2 process; status/ready reports use the actual active mode, never the
+startup mode. Failed switches retain the prior view/mode. Offline reopening uses
+last actual activated mode; unsupported assignments retain accepted content.
+Legacy-local configuration continues using the existing local mode selection.
+
+## Independent publisher admission candidate
+
+The Windows private authority owner accepts assignment envelope3 only after an
+explicit independently fingerprint-confirmed publisher root. The root is not
+learned from a server login or display credential. Once enabled, unsigned
+assignments are refused; legacy installations without this explicit opt-in keep
+their existing path. Signed approvals bind exact metadata, renderer, display ID
+and profile/mode configuration. Accepted content remains available through the
+existing offline association path. No retained installation was opted in.
+
+This source boundary is not a completed native publisher workflow or acceptance.
+Publisher setup/review/signing UI needs completion; authenticated ancestry has focused source/restart checks;
+see [candidate contract](../delivery/README.md#roaming-publish-v1-candidate).

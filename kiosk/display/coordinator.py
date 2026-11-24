@@ -32,11 +32,11 @@ class DisplayRun:
     receipt_pending: bool = False
     _switch_lock: object = field(default_factory=threading.Lock, repr=False)
 
-    def switch_to_active(self, *, timeout=20, retry=False):
+    def switch_to_active(self, *, timeout=20, retry=False, mode=None):
         if not self._switch_lock.acquire(blocking=False):
             raise PackageError('display_switch_busy')
         try:
-            return self._switch_to_active(timeout=timeout, retry=retry)
+            return self._switch_to_active(timeout=timeout, retry=retry, mode=mode)
         except PackageError:
             raise
         except (OSError, ValueError, KeyError, TypeError, RecursionError):
@@ -44,7 +44,7 @@ class DisplayRun:
         finally:
             self._switch_lock.release()
 
-    def _switch_to_active(self, *, timeout=20, retry=False):
+    def _switch_to_active(self, *, timeout=20, retry=False, mode=None):
         """One staged native request; a timeout retains its ID for later reconciliation."""
         if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not 0.1 <= timeout <= 60:
             raise ValueError('Invalid switch timeout')
@@ -53,8 +53,11 @@ class DisplayRun:
         if self.receipt_pending:
             _save_ready(self.view, self.state, self.mode, self.process)
             self.receipt_pending = False
+        target_mode = mode or self.mode
+        if target_mode not in ('tv', 'kiosk'):
+            raise PackageError('unsupported_display_mode')
         if self.pending is None:
-            target = prepare_cached_view(self.store, self.cache, mode=self.mode)
+            target = prepare_cached_view(self.store, self.cache, mode=target_mode)
             if target == self.view:
                 if self.receipt_pending:
                     _save_ready(self.view, self.state, self.mode, self.process)
@@ -66,9 +69,9 @@ class DisplayRun:
             token = uuid.uuid4().hex
             _atomic_write(self.profile / 'display-command.json', _json(
                 {'session_id': self.session, 'request_id': token, 'view': target.parent.name,
-                 'package_sha256': identity, 'mode': self.mode}))
-            self.pending = (token, target, identity)
-        token, target, identity = self.pending
+                 'package_sha256': identity, 'mode': target_mode}))
+            self.pending = (token, target, identity, target_mode)
+        token, target, identity, target_mode = self.pending
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if self.process.poll() is not None:
@@ -87,7 +90,8 @@ class DisplayRun:
                 if (status.get('switch_state') == 'ready' and status.get('renderer_ready') is True and
                         status.get('navigation_success') is True and status.get('startup_failed') is False and
                         status.get('view_key') == target.parent.name and status.get('package_sha256') == identity and
-                        status.get('mode') == self.mode):
+                        status.get('mode') == target_mode):
+                    self.mode = target_mode
                     self.view = target
                     self.fallback = False
                     self.pending = None

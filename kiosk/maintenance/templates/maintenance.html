@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kiosk maintenance</title>
+<link rel="stylesheet" href="/static/maintenance.css">
+</head>
+<body data-csrf="{{ csrf }}">
+<header>
+  <h1>Kiosk maintenance</h1>
+  <p id="placement" class="muted"></p>
+</header>
+
+<section id="message" class="hidden" role="status"></section>
+
+<section id="login-panel">
+  <h2 id="login-title">Sign in</h2>
+  <p class="muted">Password authentication on this terminal. A trusted session may also approve a single-use QR or code.</p>
+  <form id="login-form">
+    <label>Account <input name="user" autocomplete="username" required></label>
+    <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit">Sign in</button>
+  </form>
+  <div id="suspended-box" class="hidden">
+    <h3>Suspended workspaces on this terminal</h3>
+    <p class="muted">Returning to a suspended workspace requires that account's password. Nothing reopens automatically.</p>
+    <ul id="suspended"></ul>
+  </div>
+  <form id="return-form" class="hidden">
+    <h3>Return to a suspended workspace</h3>
+    <label>Account <input name="user" autocomplete="username" required></label>
+    <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit">Return</button>
+  </form>
+</section>
+
+<section id="lock-panel" class="hidden">
+  <h2>Workspace locked</h2>
+  <p class="muted">The workspace is hidden. Enter the same account's password to continue; a locked
+    administrator session is never reopened by someone else.</p>
+  <form id="resume-form">
+    <label>Account <input name="user" autocomplete="username" required></label>
+    <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit">Unlock</button>
+  </form>
+  <button id="lock-switch">Switch user instead</button>
+  <button id="lock-logout">Sign out</button>
+</section>
+
+<section id="workspace" class="hidden">
+  <nav class="row">
+    <strong id="who"></strong>
+    <button id="lock">Lock</button>
+    <button id="switch">Switch user</button>
+    <button id="rotate">Rotate session secret</button>
+    <button id="logout">Sign out</button>
+    <button id="terminate-all">Terminate my sessions on this terminal</button>
+  </nav>
+  <p id="trust" class="muted"></p>
+  <p id="rights" class="muted"></p>
+
+  <div class="grid">
+    <article id="connections-article">
+      <h2>Sessions and connections</h2>
+      <ul id="sessions"></ul>
+      <h3>Approve a connection</h3>
+      <p class="muted">Enter the manual code shown on the requesting browser, review what it is bound to,
+        then approve it once.</p>
+      <form id="review-connection-form">
+        <label>Manual code <input name="code" maxlength="8" required autocomplete="off"></label>
+        <button type="submit">Review request</button>
+      </form>
+      <div id="connection-review"></div>
+      <h3>Connect this browser</h3>
+      <p class="muted">An untrusted browser asks an already trusted session for one single-use approval.</p>
+      <button id="start-login">Request approval for this browser</button>
+      <div id="connection"></div>
+      <div id="pending-box" class="hidden">
+        <h3>Pending requests</h3>
+        <ul id="pending"></ul>
+      </div>
+    </article>
+
+    <article id="publish-article">
+      <h2>Review and publish</h2>
+      <button id="load-drafts">Load drafts</button>
+      <div id="drafts"></div>
+      <form id="draft-form">
+        <label>Draft id <input name="identity" required></label>
+        <label>Title <input name="title" required></label>
+        <label>Short description <input name="short_description"></label>
+        <label>Full description <textarea name="full_description" rows="3"></textarea></label>
+        <label>Date <input name="event_date"></label>
+        <label>Place <input name="place"></label>
+        <label>Order <input name="sort_order" type="number" value="0"></label>
+        <label>Status
+          <select name="status"><option value="active">active</option><option value="hidden">hidden</option></select>
+        </label>
+        <button type="submit">Save draft and mark ready</button>
+      </form>
+      <h3>Site settings</h3>
+      <form id="settings-form">
+        <label>Site title <input name="site_title"></label>
+        <label>TV slide duration <input name="tv_slide_duration"></label>
+        <label>Kiosk heading <input name="kiosk_heading"></label>
+        <label>Kiosk label <input name="kiosk_label"></label>
+        <label>Kiosk description <textarea name="kiosk_description" rows="2"></textarea></label>
+        <button type="submit">Save settings</button>
+      </form>
+      <button id="review" disabled>Review exact publication</button>
+      <div id="review-view"></div>
+    </article>
+
+    <article id="maintenance-article">
+      <h2>Maintenance cycle</h2>
+      <div id="maintenance"></div>
+      <button id="record-maintenance" class="hidden">Record 90-day maintenance</button>
+      <button id="export-authority-request" class="hidden">Export my Maintenance recovery request</button>
+      <form id="recover-authority-form" class="hidden">
+        <label>Signed recovery package (public JSON) <input name="package" type="file" accept="application/json,.json" required></label>
+        <label>Independently checked publisher root SHA256 <input name="root_pin" required minlength="64" maxlength="64" autocomplete="off"></label>
+        <label><input name="confirm" type="checkbox" required> Recover the existing Maintenance publisher key</label>
+        <button type="submit">Import recovered authority</button>
+      </form>
+      <h3>Trusted placement</h3>
+      <div id="relocation"></div>
+      <button id="refresh-state">Refresh</button>
+    </article>
+
+    <article id="admin-article" class="hidden">
+      <h2>People and scoped permissions</h2>
+      <p class="muted">A delegated administrator can only grant, block, moderate or enroll inside the
+        exact bundles and groups it already holds.</p>
+      <ul id="users"></ul>
+      <form id="user-form">
+        <label>New account <input name="user" required></label>
+        <label>Password <input name="password" type="password" required></label>
+        <label>Role
+          <select name="role"><option value="user">user</option></select>
+        </label>
+        <button type="submit">Create account</button>
+      </form>
+      <h3>Grants</h3>
+      <form id="grant-form">
+        <label>Subject <input name="subject" required></label>
+        <label>Type
+          <select name="subject_type"><option value="user">user</option><option value="team">team</option></select>
+        </label>
+        <label>Bundle
+          <select name="bundle">
+            <option value="viewer">viewer</option>
+            <option value="editor">editor</option>
+            <option value="publisher">publisher</option>
+            <option value="group-administrator">group-administrator</option>
+            <option value="system-administrator">system-administrator</option>
+          </select>
+        </label>
+        <label>Groups, comma separated <input name="groups" required></label>
+        <button type="submit">Assign grant</button>
+      </form>
+      <form id="grant-view-form">
+        <label>Show grants for <input name="subject" required></label>
+        <label>Type
+          <select name="subject_type"><option value="user">user</option><option value="team">team</option></select>
+        </label>
+        <button type="submit">Show grants</button>
+      </form>
+      <ul id="grants"></ul>
+      <h3>Teams</h3>
+      <form id="team-form">
+        <label>Team id <input name="team" required></label>
+        <label>Name <input name="name" required></label>
+        <button type="submit">Create team</button>
+      </form>
+      <form id="membership-form">
+        <label>Team id <input name="team" required></label>
+        <label>Account <input name="user" required></label>
+        <button type="submit">Add member</button>
+        <button type="submit" id="membership-remove" formnovalidate>Remove member</button>
+      </form>
+      <div id="teams"></div>
+      <h3>Retained terminals</h3>
+      <ul id="terminals"></ul>
+      <form id="terminal-form">
+        <label>Terminal name <input name="name" value="Shared maintenance terminal" required></label>
+        <label>Allowed accounts, comma separated <input name="users" required></label>
+        <label>Groups, comma separated <input name="groups" required></label>
+        <button type="submit">Approve this terminal</button>
+      </form>
+      <h3>Enroll an account's signing device</h3>
+      <p class="muted">Creates one root-signed, non-delegating child grant with a signed group/target
+        scope. The account's reviewer key stays at this endpoint.</p>
+      <form id="enroll-form">
+        <label>Account <input name="user" required></label>
+        <label>Groups, comma separated <input name="groups" required></label>
+        <label>Display target ids, comma separated <input name="targets" required></label>
+        <label>Role
+          <select name="role"><option value="user">user</option><option value="administrator">administrator</option></select>
+        </label>
+        <button type="submit">Request enrollment</button>
+      </form>
+      <div id="enroll-review"></div>
+    </article>
+  </div>
+</section>
+<script src="/static/maintenance.js"></script>
+</body>
+</html>

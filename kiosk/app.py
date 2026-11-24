@@ -34,6 +34,10 @@ def create_app(config_overrides=None):
     app.register_blueprint(api_blueprint)
     from kiosk.delivery import configure_delivery
     configure_delivery(app)
+    from kiosk.publication.web import configure as configure_roaming
+    configure_roaming(app)
+    from kiosk.publication.service_api import register as configure_service_api
+    configure_service_api(app)
 
     @app.get("/static/<path:filename>", endpoint="static")
     def static_file(filename):

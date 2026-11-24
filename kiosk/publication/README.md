@@ -1,5 +1,14 @@
 # Events package preparation
 
+The Stage5 disposable transition fixture is `tools/seed_events_fixture.py`. It
+requires explicit confirmation, a verified package identity and an empty
+workspace. It records the original public package/data, seeds published version1
+and preserves the content sequence. Future edits create drafts without changing
+the original Events database, package or display assignment. Nullable dates and
+all three independent image variants are preserved. This command does not
+authorize migration of a retained/live installation. Evidence:
+`logs/stage5-final-20261121/coverage-review/baseline-tests-v2.log`.
+
 `exporter.py` exports a public Events snapshot from a read-only SQLite transaction into a **new** directory. `__main__.py` provides export/verify CLI commands. Local storage and renderer preparation APIs are described below; no HTTP routes, admin actions or installed-service integration are added.
 
 ```powershell
@@ -64,3 +73,110 @@ Real Chrome layout driver: `node tests/test_tv_pagination_browser.js PREPARED_CA
 Additional checks: `python -m unittest tests.test_publication_renderer` and `node tests/test_publication_renderer.js`.
 
 The [native display candidate](../display/README.md) consumes `view.json` with source-package identity and file inventory, pins shipped JS/CSS and exposes only allowlisted resources under a synthetic local origin. `kiosk.display.session.prepare_active_view` connects persistent-store recovery to view preparation. `install_for_display` uses the optional `PublicationStore.install(..., pre_activate=local_preflight)` hook to prepare/revalidate a cached view before publication-pointer commit; preflight must not re-enter the locked store or perform network/UI work. Native fullscreen, runtime servicing and acceptance have distinct evidence in the ledger; this does not replace Chrome or complete stage4.
+
+## Roaming publishing candidate (not stage-accepted)
+
+`workspace.py` implements a separate transactional Events draft database, immutable
+object revisions/readiness, bounded QR browser challenges, server-revocable
+15-minute-idle/four-hour browser sessions and single-use frozen preparation stages.
+`mapping.py` is the exact snapshot→public-data function: decimal Event identity,
+active-only selection, sorted tag-name ids, first-three media mapping, allowlisted
+settings and one immutable content revision per stage. Both the server export and
+every native reviewer recompute it; `prepare` refuses a package whose
+`data/events.json` does not match the frozen snapshot and revision.
+`materialize.prepare_publication` builds the package only from frozen rows, publishes
+it into the existing delivery catalog, and freezes the plan; the mutable Events
+database is never re-read. `approve` re-checks every pinned revision in one
+transaction, and every server-known approved head becomes a parent, so a display
+that accepted the previous publication can authenticate the next.
+
+`web.py` exposes the opt-in `/editor` HTML/API (draft save/readiness, browser
+sessions, display settings, eligible targets, prepare, exact candidate review bytes,
+signature approval and administrator distribution) only when `ROAMING_WORKSPACE`
+supplies the independently authenticated public root, group, exact HTTPS origin and
+disposable database path. Candidate bytes are public Events material only; the
+publisher signature, not that transport, authorizes the publication.
+
+`authority.py` verifies independently rooted policy/device grants and exact
+publication/target approvals. `distribution.promote` validates the exact approved
+target set and commits assignment/history/cohort/configurations/proofs in one
+transaction; any target or configuration mismatch leaves the previous distribution
+unchanged. The server distributes only that exact set and refuses to downgrade an
+approved roaming publication to an unsigned assignment. Approval and distribution
+are one product action: a valid native Publish is stored and immediately promoted
+when the display set still matches, with explicit pending/failure/retry reporting
+(never another administrator action).
+
+`publisher.py` owns unique Windows DPAPI-protected local keys and a single-use local
+review ticket. `verify_mapping` re-derives the public data from the candidate's own
+objects and refuses substituted package bytes; `publish_ui.py` is the native Tk
+publisher window (explicit confirmation, no WebView, no generic signing callback).
+The same native controller exposes bounded `--command` operations used for guided
+setup and acceptance: `status`, `identity`, `create-key`, `request-device`,
+`authorize-device`, `approve-login`, `publish`, `retry`, `import-bundle` and
+`recover-bundle`; `--result` writes bounded JSON for windowed execution. First trust
+still requires an independently typed root fingerprint. A display uses the separate
+`KioskDelivery publisher-root --public … --fingerprint …` command (or the Android
+SAF action) so signed assignments can be verified without importing a server-supplied
+anchor.
+
+Offline administrator maintenance uses `python -m tools.publisher_authority renew
+--authority-root <protected-backup> --output <new-policy.json>`. It prompts for the
+backup password and explicit `RENEW`, verifies the old signed policy even after
+expiry, and issues a higher policy version for 90 days under the same root while
+preserving revocations. It does not extend endpoint grants: use the ordinary
+fresh device-request/authorize flow, then the native Import authority control.
+Same-root import retains the device key and publication ancestry; root replacement
+remains a separate recovery action. Keep the authority outside service roots/OS.
+This operation renews publisher policy only, not TLS certificates, group trust or
+issuer delegations. Their separate lifetimes still bound actual admission and
+must be maintained through the applicable trust lifecycle workflow.
+
+On service restart, an exactly retained expired policy may be reopened to keep
+delivery and recovery available. This does not admit an expired new/replacement
+policy: ordinary privileged operations continue to validate current authority and
+refuse expiry. Administrator maintenance installs a higher, currently valid signed
+policy; no client clock or stored time floor is reset. The HTTPS chain must still
+be valid; this startup behavior is not recovery from an expired TLS certificate.
+
+`service_api.py` is the authenticated `/service/v1` contract used by the separate
+Maintenance service (see `kiosk/maintenance/README.md`). Every request binds the
+exact HTTPS origin, service id, body digest, timestamp and a single-use nonce; it
+is the same contract in Combined and Separated placement. The content service
+never receives a reviewer private key and never signs a publication. On commit it
+verifies the trusted side's automatic acceptance receipt against the configured
+public acceptance key and stores it atomically with the assignment, cohort,
+targets and publisher proofs, so later revocation does not invalidate the
+historical publication record.
+A signed approval is stored durably before submission; the local known head advances
+only after the server acknowledges that exact envelope, so a lost response is
+retried without re-signing or silently advancing ancestry. First trust requires an
+independently typed root fingerprint; policy versions are monotonic, same-version
+content conflicts and group/origin changes are refused, and root replacement is a
+separate typed RECOVERY action. `tools/register_publisher_link.py` optionally
+registers a **current-user** `kiosk://` handler (no administrator); the app also
+accepts a pasted link, so routine use needs no 64-hex typing. `python -m
+tools.publisher_authority --help` describes the separate administrator operation;
+private authority must stay outside the delivery-server OS.
+
+Android has a native review path: `publishing/PublisherReview.java` mirrors the
+mapping and plan checks, `PublisherEnvelope` produces the same canonical envelope,
+`KeystorePublisherKey` generates a non-exportable RSA3072 key in the Android
+Keystore, and `PublishActivity` is both a launcher entry point and the handler for
+`kiosk://roaming/login` and `kiosk://roaming/publish` links (system camera/deep-link
+handling, no WebView). It keeps verified policy/ancestry state and one exact signed
+approval in an atomically replaced private file, retries that same approval after a
+lost response or restart, and refuses to start on corrupt state. First trust requires
+an independently communicated root fingerprint; policy is monotonic with same-version
+conflict checks, and root replacement requires the explicit recovery flow. The
+generic APK's network security config already supports the guided user-CA setup.
+
+This is an opt-in signed workflow with bounded Windows/physical Android campaign
+evidence; it is not whole-Stage5 or production trust-lifecycle acceptance. See
+`logs/stage5-final-20261121/README.md` and the coordinator's Nov17 campaign review.
+Device/session administration uses the delivery-device/editor-session UI and
+offline policy revocation. There is no embedded QR decoder (links use the system
+camera/app handler or paste), automatic retained migration or full page builder.
+Native review/Publish, independent publisher-root confirmation, guided user-CA
+WebView HTTPS and offline restart have evidence within the recorded packages and
+devices. Remaining installed whole-chain maintenance limits are reported separately.

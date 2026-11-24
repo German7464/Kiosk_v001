@@ -2,6 +2,7 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from kiosk.launcher.storage import atomic_json, copy_tree, safe_local_path
 from kiosk.transport.profile import CADDY_SHA256, CADDY_VERSION
+from kiosk.version import VERSION
 
 
 def digest(path):
@@ -48,6 +50,15 @@ def main():
     (target / "runtime/caddy").mkdir(parents=True)
     for name in ("caddy.exe", "LICENSE"):
         shutil.copy2(caddy / name, target / "runtime/caddy" / name)
+    # Compile the self-contained update helper and include it in the package so
+    # KioskMaintenance can copy it to a staging location before replacing itself.
+    helper_source = project / "tools/update_helper.cs"
+    compiler = Path(os.environ.get("WINDIR", "C:/Windows")) / "Microsoft.NET/Framework64/v4.0.30319/csc.exe"
+    if not compiler.is_file():
+        raise RuntimeError("Windows .NET Framework compiler required for the update helper.")
+    subprocess.run([str(compiler), "/nologo", "/target:exe", "/platform:x64",
+                    "/out:" + str(target / "KioskUpdateHelper.exe"), str(helper_source)],
+                   check=True, timeout=60)
     licenses = target / "licenses"
     licenses.mkdir()
     shutil.copy2(project / "requirements.txt", licenses / "requirements.txt")
@@ -58,7 +69,7 @@ def main():
                 destination.parent.mkdir(exist_ok=True)
                 shutil.copy2(distribution.locate_file(file), destination)
     files = {path.relative_to(target).as_posix(): digest(path) for path in sorted(target.rglob("*")) if path.is_file()}
-    atomic_json(target / "package.json", {"schema_version": 1, "powershell": info, "caddy_version": CADDY_VERSION, "files": files})
+    atomic_json(target / "package.json", {"schema_version": 1, "version": VERSION, "powershell": info, "caddy_version": CADDY_VERSION, "files": files})
     print(json.dumps({"package": str(target), "files": len(files), "bytes": sum(path.stat().st_size for path in target.rglob("*") if path.is_file())}))
     return 0
 

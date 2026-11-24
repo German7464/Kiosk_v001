@@ -93,10 +93,36 @@ def token():
     return jsonify(result), 202 if result['state'] == 'pending' else 200
 
 
+@device_delivery.post('/client/capabilities')
+@guarded
+def capabilities():
+    owner = device()
+    if request.mimetype != 'application/json':
+        raise DeliveryError('json_required', 415)
+    raw = request.stream.read(4097)
+    if len(raw) > 4096:
+        raise DeliveryError('capabilities_limit', 413)
+    return jsonify(state().report_capabilities(owner, decode(raw)))
+
+
 @device_delivery.get('/client/status')
 @guarded
 def status():
     return jsonify(state()._device(device()))
+
+
+@device_delivery.post('/device/renew')
+@guarded
+def renew():
+    # Bearer-authenticated automatic renewal without re-enrollment. The current
+    # secret is re-read here (rather than through device()) so the renewal method
+    # can re-verify possession and idempotency in one transaction.
+    header = request.headers.get('Authorization', '')
+    if not header.startswith('Bearer '):
+        raise DeliveryError('invalid_credential', 401)
+    secret = header[7:]
+    digest(secret)
+    return jsonify(state().renew(secret))
 
 
 @device_delivery.get('/group/trust')
@@ -109,7 +135,32 @@ def trust():
 @device_delivery.get('/client/assignment')
 @guarded
 def assignment():
-    return jsonify(state().assignment(device(), request.args.get('renderer'), request.args.get('resource_profile')))
+    return jsonify(state().assignment(device(), request.args.get('renderer'), request.args.get('resource_profile'), request.args.get('display_protocol')))
+
+
+@device_delivery.get('/client/progress')
+@guarded
+def progress_target():
+    return jsonify(state().progress_target(device()))
+
+
+@device_delivery.post('/client/progress')
+@guarded
+def progress():
+    from .progress import MAX_PROGRESS_BYTES
+    owner = device()
+    wait = current_app.extensions['device_progress_limiter'].reserve('devices', owner['device_id'])
+    if wait:
+        response = jsonify(version=1, error='progress_limit')
+        response.status_code = 429
+        response.headers['Retry-After'] = str(wait)
+        return response
+    if request.mimetype != 'application/json':
+        raise DeliveryError('json_required', 415)
+    raw = request.stream.read(MAX_PROGRESS_BYTES + 1)
+    if len(raw) > MAX_PROGRESS_BYTES:
+        raise DeliveryError('progress_limit', 413)
+    return jsonify(state().progress(owner, decode(raw)))
 
 
 @device_delivery.get('/publications/<package_id>/<group>/<path:name>')
@@ -120,10 +171,14 @@ def artifact(package_id, group, name):
     if group not in ('package', 'kiosk', 'tv'):
         raise DeliveryError('file_not_found', 404)
     # Artifact fetches are restricted to the current assignment, not any known hash.
-    with state().connection() as db:
+    with state().connection(write=False) as db:
         row = db.execute('SELECT * FROM assignments WHERE profile=? AND package_id=?', (owner['profile'], package_id)).fetchone()
     if row is None:
         raise DeliveryError('assignment_changed', 409)
+    with state().connection(write=False) as db:
+        configured = db.execute('SELECT reason FROM publication_configs WHERE generation=? AND device_id=?', (row['generation'], owner['device_id'])).fetchone()
+    if configured and configured['reason'] != 'compatible':
+        raise DeliveryError(configured['reason'], 409)
     root = state().root / 'publications' / package_id
     payload = (root / 'delivery.json').read_bytes()
     if sha(payload) != row['metadata_hash']:
@@ -145,6 +200,7 @@ def receipt():
 def register_admin_routes(app):
     # The admin.* endpoint prefix makes the existing CSRF before_request apply.
     app.extensions['device_delivery_limiter'] = AuthenticationLimiter(account_limit=1200, source_limit=2400)
+    app.extensions['device_progress_limiter'] = AuthenticationLimiter(account_limit=150, source_limit=15000, window=600)
     app.extensions['device_decision_limiter'] = AuthenticationLimiter(account_limit=5, source_limit=20, window=600)
     # Bounded pre-lookup budget so unknown-code guessing cannot bypass the
     # request-specific decision limit. Codes are 8 chars from a 32-char alphabet

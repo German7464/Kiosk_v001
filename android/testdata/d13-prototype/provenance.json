@@ -1,0 +1,13 @@
+{
+  "scope": "synthetic test-only interoperability, not product bootstrap or protocol",
+  "owner_task_sha256": "22bf219b3d50fc9efac16cc8a15eaf9ef177bd2df52c0530c76008be893bdea8",
+  "source": "PC1 supplied files, 2026-11-02; private keys stayed in PC1 process memory",
+  "files": {
+    "trusted-group-public-spki.der": "b702e6c9d2d3546b0ce60746fe0ffc6c21a0e728c23af9c3021610647c1c49d0",
+    "vectors.json": "88013034624d01d9ff36ab9a9da73b115596f26e5d9734a4072e2387d9da8dcb",
+    "windows-signature-results.json": "d670d917f669f2b6c981728d0afbdfb13a8a253a6d4f9f82fd41fa12b16b7852"
+  },
+  "signed_bytes": "ASCII Kiosk/D13/SYNTHETIC/v0 followed by NUL, then decoded original payload bytes",
+  "authority": "independent fixed SPKI SHA256 in D13Prototype, never envelope self-selection",
+  "production_limits": false
+}

@@ -1,0 +1,138 @@
+{
+  "python": "3.14.5 (tags/v3.14.5:5607950, May 10 2026, 10:43:50) [MSC v.1944 64 bit (AMD64)]",
+  "pillow": "13.0.0",
+  "max_image_pixels": 89478485,
+  "warning_policy": "inherited defaults; catch_warnings(record=True), no filter override",
+  "verifier": "kiosk.publication.exporter._validate_image_path",
+  "verifier_sha256": "7c63f2c256a5ebfd2e206ede415bde5332231c3ae2f39ef591b38fc846e3e3ed",
+  "jpeg_sha256": "91073b508d9fd564ab2967383e193b9bf59cf82a7c0cfdda5bcc568c72f2580c",
+  "cases": [
+    {
+      "id": "pc1-card-png",
+      "sha256": "4b02621a1639a302da7e368db30b5b96f931f6be98b1154b2e0d787986227a46",
+      "verifier_result": "ok",
+      "warnings": []
+    },
+    {
+      "id": "generated-1x1-rgb-png",
+      "sha256": "02584355d28f975bcab40aa86f01b7084ee60affcc01fb5a920b9f347b4ff550",
+      "verifier_result": "ok",
+      "warnings": []
+    },
+    {
+      "id": "generated-3x2-rgb-png",
+      "sha256": "2bd2ce4f03b35976d5c645381368275d51f08639afaaf0d8a9f28f858bc2af21",
+      "verifier_result": "ok",
+      "warnings": []
+    },
+    {
+      "id": "generated-2x3-rgba-png",
+      "sha256": "91fc545ccdfcc76bc21c07b4199c76c5f29f3ab3f99c37f5a5614568b9e0f74a",
+      "verifier_result": "ok",
+      "warnings": []
+    },
+    {
+      "id": "generated-7x5-rgba-png",
+      "sha256": "833b39d9a8afb0eb5710c60a0064dbbf89fd76f53a001ca9df84d21d7c94956f",
+      "verifier_result": "ok",
+      "warnings": []
+    },
+    {
+      "id": "png-bad-ihdr-crc-png",
+      "sha256": "7d22175dd0e07f071f906e041c2a72ea4cd76f6cbe1267c2e6ea1e3474be1a9a",
+      "verifier_result": "invalid_image",
+      "warnings": []
+    },
+    {
+      "id": "png-truncated-signature-png",
+      "sha256": "0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543",
+      "verifier_result": "invalid_image",
+      "warnings": []
+    },
+    {
+      "id": "png-truncated-ihdr-png",
+      "sha256": "703a4ff6e1373416434a39c0b49ac36de9232c1d467412cf2326fba96c88e198",
+      "verifier_result": "invalid_image",
+      "warnings": []
+    },
+    {
+      "id": "png-truncated-idat-png",
+      "sha256": "4c6e1eb628c71d055e97d5694caa3494c4c25a6d6e6d523abec0c9ac889267cc",
+      "verifier_result": "invalid_image",
+      "warnings": []
+    },
+    {
+      "id": "png-truncated-before-iend-png",
+      "sha256": "146dd66f7806ff770718dc1fdff16dbf9b87a82dd0b27931c902c6cfbfb47f1f",
+      "verifier_result": "invalid_image",
+      "warnings": []
+    },
+    {
+      "id": "png-trailing-png",
+      "sha256": "d9d09f93e64c2b93d2e4aa192033534bd45f86b370bf2156904e9728a9766984",
+      "verifier_result": "ok",
+      "warnings": []
+    },
+    {
+      "id": "empty-png",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "verifier_result": "invalid_image",
+      "warnings": []
+    },
+    {
+      "id": "not-image-png",
+      "sha256": "8abf2218f5c8311d130faf48000ed8c21a44b99609f9d0f69304f8fc126fa706",
+      "verifier_result": "invalid_image",
+      "warnings": []
+    },
+    {
+      "id": "progressive-jpg",
+      "sha256": "91073b508d9fd564ab2967383e193b9bf59cf82a7c0cfdda5bcc568c72f2580c",
+      "verifier_result": "ok",
+      "warnings": []
+    },
+    {
+      "id": "progressive-wrong-png",
+      "sha256": "91073b508d9fd564ab2967383e193b9bf59cf82a7c0cfdda5bcc568c72f2580c",
+      "verifier_result": "ok",
+      "warnings": []
+    },
+    {
+      "id": "progressive-no-extension",
+      "sha256": "91073b508d9fd564ab2967383e193b9bf59cf82a7c0cfdda5bcc568c72f2580c",
+      "verifier_result": "ok",
+      "warnings": []
+    },
+    {
+      "id": "jpeg-truncated-soi-jpg",
+      "sha256": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89",
+      "verifier_result": "invalid_image",
+      "warnings": []
+    },
+    {
+      "id": "jpeg-truncated-scan-header-jpg",
+      "sha256": "b02eb69db6074050b75c0c89882f6a5b7833854707f05d59e457f7df11a77736",
+      "verifier_result": "invalid_image",
+      "warnings": []
+    },
+    {
+      "id": "jpeg-truncated-scan-data-jpg",
+      "sha256": "af20451175ff10df882248f4deac9f4ad907f5e095e2f99df1733c80e7496319",
+      "verifier_result": "ok",
+      "warnings": []
+    },
+    {
+      "id": "jpeg-truncated-before-eoi-jpg",
+      "sha256": "d2147c7084ea53a1825cc559a80f74fdebeec000097a8697c0442e0f03eff723",
+      "verifier_result": "ok",
+      "warnings": []
+    },
+    {
+      "id": "jpeg-trailing-jpg",
+      "sha256": "f3a00eae290241d0bc6af855e446523b75209bf6ad018a3fc7fc337bdc486e7b",
+      "verifier_result": "ok",
+      "warnings": []
+    }
+  ],
+  "scope": "Pillow verify only; no Android/WebView/load/admission claim"
+}

@@ -27,7 +27,7 @@ def lab_app(root):
                       'PRIVATE_UPLOAD_DIR': instance / 'uploads', 'PUBLIC_UPLOAD_DIR': root / 'uploads',
                       'STATIC_FOLDER': root, 'DEVICE_DELIVERY_ROOT': root / 'server'})
     password_file = root / 'admin-private/admin-password.txt'
-    if not password_file.exists():
+    if not password_file.exists() and not (root / 'initialized.json').exists():
         password_file.write_text(secrets.token_urlsafe(32), encoding='utf-8')
         save_admin_password(app, password_file.read_text(), setup=True)
         now = datetime.now(timezone.utc).isoformat()
@@ -35,6 +35,7 @@ def lab_app(root):
             db.execute("INSERT INTO events(title,full_description,status,created_at,updated_at) VALUES (?,?,?,?,?)",
                        ('Laboratory Events A', 'Server-authorized offline Events publication.', 'active', now, now))
             db.commit()
+    (root / 'initialized.json').write_text('{"prepared":true}')
     return app
 
 
@@ -62,8 +63,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', required=True, type=Path)
     parser.add_argument('--backend-port', type=int, default=8765)
+    parser.add_argument('--credential-seconds', type=int, default=604800, help='Isolated pilot only; 60..604800 seconds')
     parser.add_argument('--prepare-only', action='store_true')
     args = parser.parse_args()
+    if not 60 <= args.credential_seconds <= 604800:
+        parser.error('credential lifetime out of pilot bounds')
+    import kiosk.delivery.state as delivery_state
+    delivery_state.CREDENTIAL_SECONDS = args.credential_seconds
     app = lab_app(args.root)
     refresh(app, args.root)
     if args.prepare_only:

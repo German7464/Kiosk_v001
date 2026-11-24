@@ -10,6 +10,8 @@
 .delivery-table table { width: 100%; border-collapse: collapse; text-align: left; }
 .delivery-table caption { text-align: left; font-weight: 600; padding: .6rem; }
 .delivery-table td, .delivery-table th { padding: .75rem; border-bottom: 1px solid #c7d5df; vertical-align: top; }
+.delivery-table progress { width: min(12rem, 100%); }
+.delivery-table small { display: inline-block; margin-top: .25rem; }
 .delivery-profile { margin: 1rem 0; }
 .delivery-profile summary { cursor: pointer; }
 @media (max-width: 600px) {

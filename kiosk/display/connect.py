@@ -54,15 +54,21 @@ def error_status(error):
     code = str(error)
     if code in ('time_confirmation_required', 'uncertain_time', 'time_confirmation_refused'):
         return 'time_required'
+    # The server's own fixed refusal label decides the meaning; the HTTP status is
+    # only a fallback. An expired credential, a revoked/replaced credential and an
+    # expired signed group authority have different recovery paths.
+    if code in ('admission_authority_expired', 'trust_binding_or_time_refused'):
+        return 'authority_expired'
+    if code in ('credential_expired', 'bootstrap_expired_or_future'):
+        return 'expired'
+    if code in ('invalid_credential', 'credential_revoked'):
+        return 'access_refused'
     if status == 403:
         return 'denied'
     if status == 410:
         return 'expired'
-    if status == 401 or code == 'credential_revoked':
+    if status == 401:
         return 'access_refused'
-    if code in ('bootstrap_expired_or_future', 'credential_expired', 'admission_authority_expired',
-                'trust_binding_or_time_refused'):
-        return 'expired'
     if code == 'no_publication':
         return 'no_content'
     if isinstance(error, TransportError):
@@ -140,11 +146,13 @@ class Connection:
         binding = data.get('binding', {})
         credential = data.get('credential')
         active = PublicationStore(client.store).active()
+        recovery = client.recovery() or {}
         return dict(origin=anchor.get('origin', ''), group=anchor.get('group_id', ''),
                     server=anchor.get('server_id', ''), device=binding.get('device_id', ''),
                     nonce=binding.get('nonce', ''), request=binding.get('request_id', ''),
                     profile=binding.get('profile', ''), saved=bool(anchor),
                     approved=bool(credential), revoked=bool(data.get('revoked')),
+                    recovery=recovery.get('state', ''), recovery_code=recovery.get('code', ''),
                     credential_expires=credential['expires_at'] if credential else None,
                     mode=data.get('ui_mode', 'tv'),
                     content=active.name if active else None)
@@ -189,6 +197,11 @@ class Connection:
                     finally:
                         if path.exists():
                             path.unlink()
+                elif action == 'recover':
+                    # Explicit administrator-confirmed re-pairing of the SAME device
+                    # identity. Accepted offline content and its binding stay valid.
+                    client.recover()
+                    self._enroll(client, None, options)
                 elif action == 'display':
                     self._display(client, options['mode'], options['online'])
                 else:
@@ -241,7 +254,7 @@ class Connection:
                     try:
                         client.flush_ready()
                         client.synchronize()
-                        run.switch_to_active()
+                        client.switch_to_active(run)
                         client.queue_ready(run)
                         client.flush_ready()
                         self.emit('connected', **self._facts(client))

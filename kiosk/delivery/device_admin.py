@@ -19,7 +19,7 @@ def register_device_admin(app):
 
     def page(error=None, number=1):
         model = state.admin_devices(number) if error is None else None
-        return render_template('admin_devices.html', model=model, error=error, profile=PROFILE, utc=utc)
+        return render_template('admin_devices.html', model=model, error=error, profile=PROFILE, utc=utc, profiles=state.profiles_admin() if error is None else None)
 
     def guarded(function):
         @wraps(function)
@@ -70,4 +70,21 @@ def register_device_admin(app):
         if request.form.get('confirm_device_id') != device_id:
             raise DeliveryError('confirmation_required', 400)
         state.revoke(device_id, request.form.get('review_hash', ''))
+        return redirect(url_for('admin.devices_home'), code=303)
+
+    @app.post('/admin/profiles/save', endpoint='admin.profiles_save')
+    @admin_required
+    @guarded
+    def save_profile():
+        revision = request.form.get('revision', '0')
+        if not revision.isascii() or not revision.isdecimal() or len(revision) > 9:
+            raise DeliveryError('invalid_profile_revision')
+        state.save_profile(request.form.get('profile_id'), request.form.get('name'), request.form.get('mode'), int(revision))
+        return redirect(url_for('admin.devices_home'), code=303)
+
+    @app.post('/admin/devices/<device_id>/profile', endpoint='admin.devices_profile')
+    @admin_required
+    @guarded
+    def assign_profile(device_id):
+        state.select_profile(device_id, request.form.get('profile_id'))
         return redirect(url_for('admin.devices_home'), code=303)

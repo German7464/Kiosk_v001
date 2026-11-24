@@ -16,6 +16,7 @@ from .session import install_for_display
 from .delivery_authority import PrivateState, bootstrap, positive
 from .delivery_capture import Capture, validate_metadata
 from .delivery_transport import MAX_RETRY_SECONDS, Transport, TransportError, retry_delay
+from .delivery_progress import Reporter
 
 
 # The server enforces a minimum poll interval and answers earlier polls with 429
@@ -23,6 +24,19 @@ from .delivery_transport import MAX_RETRY_SECONDS, Transport, TransportError, re
 # the server timestamp, and any remaining 429 is retried after its Retry-After.
 POLL_SECONDS = 5
 POLL_MARGIN_SECONDS = 1
+# Renew the device credential proactively when less than one day remains, so a
+# routine LAN sync extends authorization without re-enrollment or admin re-approval.
+RENEWAL_MARGIN_SECONDS = 86400
+# Fixed server refusal codes that have a distinct recovery meaning. Everything
+# else stays a generic transport refusal and is never guessed from the HTTP status.
+REFUSAL_STATES = {
+    'credential_expired': 'expired',
+    'invalid_credential': 'revoked_or_replaced',
+    'credential_revoked': 'revoked_or_replaced',
+    'admission_authority_expired': 'authority_expired',
+    'trust_binding_or_time_refused': 'authority_expired',
+}
+RECOVERY_STATES = ('expired', 'revoked_or_replaced', 'authority_expired')
 # Persisted server-imposed prohibition; distinct from the ordinary local poll
 # schedule so a throttle is not confused with "the next ordinary poll is due".
 RETRY_DEADLINE_KEY = 'retry_not_before'
@@ -52,13 +66,18 @@ class Client:
         self.audit = audit
         self.capture = Capture(self.capture_root, reuse_roots=(self.store / 'revisions', self.cache), audit=audit)
         self.transport = None
+        self.progress = Reporter(self.private / 'progress-sequence.json')
+        self.progress_target = None
 
     @contextmanager
     def ownership(self):
         with PublicationStore(self.private)._lease():
             # Reload only after acquiring the one network/capture/outbox owner's lease.
             self.native = PrivateState(self.private)
-            yield self
+            try:
+                yield self
+            finally:
+                self.progress.close()
 
     def connect(self):
         value = self.native.data
@@ -67,6 +86,7 @@ class Client:
         self.transport = Transport(value['bootstrap'], secret=value.get('secret'), audit=self.audit)
         if value.get('trust'):
             self.transport.pin = value['trust']['tls_pin']
+            self.transport.pin_kind = value['trust'].get('pin_kind', 'leaf')
         return self.transport
 
     def enroll(self, bootstrap_path=None, confirmation=None, confirmed_utc=None):
@@ -109,8 +129,7 @@ class Client:
                 return self._defer(value, retry_wait(error))
             if error.status != 401 or value.get('credential'):
                 if error.status == 401:
-                    value['revoked'] = True
-                    self.native.save()
+                    self._record_refusal(error)
                 raise
         else:
             self._credential(credential)
@@ -179,37 +198,155 @@ class Client:
             raise PackageError('credential_replacement_requires_enrollment')
         self.native.data['credential'] = credential
         self.native.data.pop('revoked', None)
+        self.clear_recovery()
         self.native.data.pop(RETRY_DEADLINE_KEY, None)
         self.native.data.pop('next_poll', None)
         self.native.save()
 
+    def recovery(self):
+        """Persisted server-confirmed refusal state, or None.
+
+        The value is evidence-backed: ``code`` is the fixed server refusal label and
+        ``state`` is its client meaning. It never blocks retained offline display.
+        """
+        value = self.native.data.get('recovery')
+        return value if isinstance(value, dict) and value.get('state') in RECOVERY_STATES else None
+
+    def clear_recovery(self):
+        if self.native.data.pop('recovery', None) is not None:
+            self.native.save()
+
+    def _record_refusal(self, error):
+        """Persist the server's actual refusal reason instead of guessing from 401."""
+        code = str(error)
+        state = REFUSAL_STATES.get(code)
+        if state is None:
+            return None
+        try:
+            when = self.native.now()
+        except PackageError:
+            when = int(time.time())
+        self.native.data['recovery'] = {'code': code, 'state': state, 'at': when}
+        # A confirmed revocation is a durable prohibition; an expired credential or
+        # expired signed authority is recoverable by explicit re-pairing/refresh.
+        if state == 'revoked_or_replaced':
+            self.native.data['revoked'] = True
+        else:
+            self.native.data.pop('revoked', None)
+        self.native.save()
+        return state
+
+    def _renew_if_needed(self, transport):
+        """Automatically renew the device credential before expiry, without re-enrollment.
+
+        The server extends only the expiry of a stable, non-revoked credential when
+        the device proves possession of its current bearer secret and the signed
+        group trust is still valid. The secret/credential identity are unchanged, so
+        lost responses and retries are idempotent. Failure keeps the current
+        credential (and accepted offline content) and is not an enrollment reset.
+        """
+        credential = self.native.data.get('credential')
+        if not credential:
+            return
+        if positive(credential['expires_at']) - self.native.now() >= RENEWAL_MARGIN_SECONDS:
+            return
+        renewed = transport.json('/api/v2/device/renew', body={}, authenticated=True)
+        fields(renewed, 'version state device_id credential_id expires_at scopes')
+        if (type(renewed['version']) is not int or renewed['version'] != 1 or
+                renewed['state'] != 'renewed' or
+                renewed['device_id'] != credential['device_id'] or
+                renewed['credential_id'] != credential['credential_id'] or
+                renewed['scopes'] != ['read_assignment', 'submit_receipt']):
+            raise PackageError('renewal_refused')
+        if positive(renewed['expires_at']) <= self.native.now():
+            raise PackageError('renewal_expired')
+        self.native.data['credential'] = {**credential, 'expires_at': renewed['expires_at']}
+        self.native.save()
+
+    def recover(self):
+        """Explicit re-pairing for the SAME device identity, preserving accepted content.
+
+        Only the enrollment request identity and any server-confirmed refusal are
+        cleared. The confirmed bootstrap anchor, device_id, secret verifier, accepted
+        offline packages and their binding stay unchanged, so a new administrator
+        approval of the same device cannot invalidate retained display content.
+        """
+        value = self.native.data
+        if not value.get('bootstrap') or not value.get('binding'):
+            raise PackageError('confirmed_bootstrap_required')
+        value['binding'] = {**value['binding'], 'request_id': secrets.token_hex(16),
+                            'nonce': secrets.token_hex(16)}
+        value.pop('credential', None)
+        value.pop('revoked', None)
+        value.pop('recovery', None)
+        value.pop('pending', None)
+        value.pop(RETRY_DEADLINE_KEY, None)
+        value.pop('next_poll', None)
+        self.native.save()
+        return True
+
     def _online_authority(self):
-        if self.native.data.get('revoked'):
+        recovery = self.recovery()
+        # A server-confirmed revocation is durable until the explicit re-pairing
+        # action clears it; an expired credential or expired signed authority is
+        # recoverable automatically and must not be blocked here.
+        if self.native.data.get('revoked') or (recovery and recovery['state'] == 'revoked_or_replaced'):
             raise PackageError('credential_revoked')
         self.native.now()
         transport = self.connect()
         try:
             self._credential(transport.json('/api/v2/client/status'))
             trust = transport.json('/api/v2/group/trust')
-            self.native.verify_trust(trust, transport.observed_pin)
+            self.native.verify_trust(trust, transport.observed_pin, transport.observed_issuer_pin)
             transport.pin = self.native.data['trust']['tls_pin']
-        except TransportError as error:
-            if error.status == 401:
-                self.native.data['revoked'] = True
-                self.native.save()
+            transport.pin_kind = self.native.data['trust'].get('pin_kind', 'leaf')
+            if (self.recovery() or {}).get('state') == 'authority_expired':
+                # The server served a currently valid signed group list at a
+                # non-decreasing generation: ordinary admission is restored.
+                self.clear_recovery()
+            self._renew_if_needed(transport)
+        except (TransportError, PackageError) as error:
+            self._record_refusal(error)
             raise
         return transport
 
     def assignment(self, transport):
-        query = urlencode({'renderer': renderer_identity(), 'resource_profile': PROFILE})
+        try:
+            transport.json('/api/v2/client/capabilities', body={'version': 1, 'platform': 'windows',
+                'modes': ['tv', 'kiosk'], 'content': ['events'], 'resource_profile': PROFILE, 'renderer': renderer_identity()})
+        except TransportError as exc:
+            if exc.status not in (404, 405):
+                raise
+        query = urlencode({'renderer': renderer_identity(), 'resource_profile': PROFILE, 'display_protocol': 'display-profile-v1'})
         value = transport.json('/api/v2/client/assignment?' + query)
         self.native.validate_assignment(value)
+        digest(value['publication']['package_id'])
+        self.progress_target = {key: value[key] for key in ('device_id', 'group_id', 'generation')}
+        self.progress_target['version'] = 1
+        self.progress_target['package_id'] = value['publication']['package_id']
         validate_metadata(value['publication'])
         return value
 
     def synchronize(self, *, full_resync=False):
         transport = self._online_authority()
-        assignment = self.assignment(transport)
+        target = {'version': 1, 'device_id': self.native.data['binding']['device_id'],
+                  'group_id': self.native.data['bootstrap']['group_id']}
+        attempt = self.progress.begin()
+        self.progress_target = None
+        try:
+            assignment = self.assignment(transport)
+        except (PackageError, DeliveryError) as exc:
+            incompatible = ((isinstance(exc, TransportError) and exc.status == 409) or str(exc).startswith('unsupported_'))
+            if self.progress_target or incompatible:
+                self.progress.offer(transport, self.progress_target or target, attempt,
+                                    'incompatible' if incompatible else 'error',
+                                    error='requires_update' if incompatible else 'candidate_refused')
+            raise
+        # Only the fully validated assignment binds download telemetry. A changed
+        # target snapshot cannot redirect reports to another publication.
+        target = {key: assignment[key] for key in ('device_id', 'group_id', 'generation')}
+        target['version'] = 1
+        target['package_id'] = assignment['publication']['package_id']
         package_id = assignment['publication']['package_id']
         active = PublicationStore(self.store).active()
         if active is not None and active.name == package_id:
@@ -217,17 +354,58 @@ class Client:
             self.native.accepted(package_id)
             self.native.accept(assignment)
             return package_id
-        package = self.capture.fetch(assignment, transport, full_resync=full_resync)
-        # Long capture cannot preserve stale/expired authority or an obsolete assignment.
-        transport = self._online_authority()
-        fresh = self.assignment(transport)
-        if encode(fresh) != encode(assignment):
-            raise PackageError('assignment_changed_before_admission')
-        self.native.accept(fresh)
-        install_for_display(package, self.store, self.cache, mode='tv')
+        total = sum(entry['size'] for group in ('package', 'kiosk', 'tv') for entry in assignment['publication'][group]['files'])
+        def report(state, completed=0):
+            self.progress.offer(transport, target, attempt, state, completed, total)
+        report('waiting')
+        try:
+            package = self.capture.fetch(assignment, transport, full_resync=full_resync, progress=report)
+            # Long capture cannot preserve stale/expired authority or an obsolete assignment.
+            transport = self._online_authority()
+            fresh = self.assignment(transport)
+            if encode(fresh) != encode(assignment):
+                raise PackageError('assignment_changed_before_admission')
+            self.native.accept(fresh)
+            install_for_display(package, self.store, self.cache, mode='tv')
+        except (PackageError, DeliveryError, OSError, ValueError, KeyError, TypeError) as exc:
+            code = str(exc)
+            error = ('connection' if isinstance(exc, TransportError) else
+                     'storage' if isinstance(exc, OSError) or code == 'capture_disk_full' else
+                     'assignment_changed' if code == 'assignment_changed_before_admission' else
+                     'requires_update' if code.startswith('unsupported_') else
+                     'integrity' if any(word in code for word in ('hash', 'binding', 'validator')) else 'candidate_refused')
+            self.progress.offer(transport, target, attempt, 'incompatible' if error == 'requires_update' else 'error',
+                                self.capture.completed, total, error)
+            raise
         return package_id
 
     def queue_ready(self, run):
+        try:
+            return self._queue_ready(run)
+        except (PackageError, DeliveryError, OSError, ValueError, KeyError, TypeError):
+            self.activation_failed()
+            raise
+
+    def activation_failed(self):
+        if getattr(self, 'transport', None) is None:
+            return
+        if getattr(self, 'progress_target', None):
+            self.progress.offer(self.transport, self.progress_target, self.progress.begin(), 'error', error='candidate_refused')
+
+    def assigned_mode(self, package, fallback='tv'):
+        mode = self.native.accepted(package).get('display', {}).get('mode', 'local')
+        return mode if mode in ('tv', 'kiosk') else fallback
+
+    def switch_to_active(self, run):
+        try:
+            active = PublicationStore(self.store).active()
+            mode = self.assigned_mode(active.name, run.mode) if active else run.mode
+            return run.switch_to_active(mode=mode)
+        except (PackageError, OSError, ValueError, KeyError, TypeError):
+            self.activation_failed()
+            raise
+
+    def _queue_ready(self, run):
         if run.process.poll() is not None or run.pending is not None or run.receipt_pending:
             raise PackageError('native_ready_not_confirmed')
         package = _view_identity(run.view)
@@ -240,6 +418,10 @@ class Client:
             raise PackageError('native_ready_not_confirmed')
         verify_cached_view(run.view.parent, package_identity=package, mode=run.mode)
         association = self.native.accepted(package)
+        if self.assigned_mode(package, run.mode) != run.mode:
+            return None  # Preserve the previous usable display without crediting the new configuration.
+        self.native.data['activated_display'] = {'package_id': package, 'mode': run.mode}
+        self.native.save()
         receipt_path = run.state / ('last-ready-' + run.mode + '.json')
         receipt = decode(receipt_path.read_bytes())
         if receipt.get('package_sha256') != package or receipt.get('view') != run.view.parent.name:
@@ -287,15 +469,23 @@ class Client:
         active = store.active()
         if active is None:
             raise PackageError('no_publication')
+        saved = self.native.data.get('activated_display', {})
+        mode = saved.get('mode', mode) if saved.get('package_id') == active.name else self.assigned_mode(active.name, mode)
         self.native.accepted(active.name)
         from .coordinator import _confirmed_view
         previous = _confirmed_view(self.store, self.cache, self.state, mode)
         if previous is not None:
             self.native.accepted(_view_identity(previous))
-        with display_session(self.store, self.cache, self.state, self.profile, self.shell, mode=mode) as run:
-            self.native.accepted(_view_identity(run.view))
-            self.queue_ready(run)
-            yield run
+        try:
+            with display_session(self.store, self.cache, self.state, self.profile, self.shell, mode=mode) as run:
+                self.native.accepted(_view_identity(run.view))
+                if self.progress_target and _view_identity(run.view) != self.progress_target['package_id']:
+                    self.activation_failed()  # Coordinator recovered the previous usable view.
+                self.queue_ready(run)
+                yield run
+        except (PackageError, OSError, ValueError, KeyError, TypeError):
+            self.activation_failed()
+            raise
 
 
 def main():
@@ -313,6 +503,11 @@ def main():
     commands.add_parser('sync').add_argument('--full-resync', action='store_true')
     commands.add_parser('flush')
     commands.add_parser('identity')
+    anchor = commands.add_parser('publisher-root')
+    anchor.add_argument('--public', type=Path, required=True,
+                        help='Publisher public.json with root_spki and root_sha256')
+    anchor.add_argument('--fingerprint', required=True,
+                        help='Root SHA-256 received through an independent trusted channel')
     run = commands.add_parser('run')
     run.add_argument('--mode', choices=('kiosk', 'tv'), default='tv')
     run.add_argument('--interval', type=int, default=5)
@@ -348,6 +543,10 @@ def main():
             elif args.command == 'flush':
                 client.flush_ready()
                 emit({'result': 'receipts_delivered', 'queued': len(client.native.data.get('outbox', []))})
+            elif args.command == 'publisher-root':
+                public = decode(args.public.read_bytes())
+                client.native.confirm_publisher_root(public['root_spki'], args.fingerprint)
+                emit({'result': 'publisher_root_confirmed', 'root_sha256': public['root_sha256']})
             else:
                 if not 5 <= args.interval <= 60:
                     raise PackageError('invalid_poll_interval')
@@ -363,7 +562,7 @@ def main():
                             client.synchronize()
                             target = PublicationStore(client.store).active()
                             client.native.accepted(target.name)
-                            native.switch_to_active()
+                            client.switch_to_active(native)
                             client.queue_ready(native)
                             client.flush_ready()
                             delay = args.interval

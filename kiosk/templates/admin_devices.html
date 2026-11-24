@@ -33,7 +33,7 @@
             <dt>{{ tr('Device', 'Устройство', 'Gerät') }}</dt><dd><code>{{ item.binding.device_id }}</code></dd>
             <dt>{{ tr('Requested group', 'Запрошенная группа', 'Angefragte Gruppe') }}</dt><dd><code>{{ item.binding.group_id }}</code></dd>
             <dt>{{ tr('Requested origin', 'Запрошенный адрес', 'Angefragte Adresse') }}</dt><dd><code>{{ item.binding.origin }}</code></dd>
-            <dt>{{ tr('Fixed lab profile', 'Фиксированный профиль лаборатории', 'Festes Laborprofil') }}</dt><dd><code>{{ item.binding.profile }}</code></dd>
+            <dt>{{ tr('Enrollment resource class', 'Ресурсный класс регистрации', 'Ressourcenklasse der Registrierung') }}</dt><dd><code>{{ item.binding.profile }}</code></dd>
             <dt>Nonce</dt><dd><code>{{ item.binding.nonce }}</code></dd>
             <dt>Binding SHA256</dt><dd><code>{{ item.binding_sha256 }}</code></dd>
             <dt>{{ tr('Expires', 'Истекает', 'Gültig bis') }}</dt><dd>{{ utc(item.expires) }}</dd>
@@ -53,6 +53,22 @@
         {% endif %}
     </article>
     {% else %}<p>{{ tr('No unexpired pairing requests.', 'Неистёкших запросов сопряжения нет.', 'Keine gültigen Kopplungsanfragen.') }}</p>{% endfor %}
+    <h2>{{ tr('Events display profiles', 'Профили отображения Events', 'Events-Anzeigeprofile') }}</h2>
+    <p>{{ tr('Changes apply only after publishing Events. No deletion; accepted content is retained.', 'Изменения применяются после публикации Events. Удаление недоступно; принятое содержимое сохраняется.', 'Änderungen erst nach Events-Veröffentlichung. Kein Löschen; akzeptierte Inhalte bleiben erhalten.') }}</p>
+    {% for p in profiles.profiles %}
+    <form class="admin-form" method="post" action="{{ url_for('admin.profiles_save') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="profile_id" value="{{ p.id }}"><input type="hidden" name="revision" value="{{ p.revision }}">
+    <code>{{ p.id }}</code> · {{ p.revision }}
+    {% if p.mode == 'local' %}{{ p.name }}{% else %}
+    <label>{{ tr('Name', 'Название', 'Name') }} <input name="name" value="{{ p.name }}" maxlength="64" required></label>
+    <select name="mode"><option value="tv" {% if p.mode == 'tv' %}selected{% endif %}>TV</option><option value="kiosk" {% if p.mode == 'kiosk' %}selected{% endif %}>Kiosk</option></select>
+    <button>{{ tr('Save profile', 'Сохранить профиль', 'Profil speichern') }}</button>{% endif %}</form>{% endfor %}
+    <form class="admin-form" method="post" action="{{ url_for('admin.profiles_save') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="revision" value="0">
+    <label>ID <input name="profile_id" pattern="[A-Za-z0-9_.-]{1,64}" maxlength="64" required></label>
+    <label>{{ tr('Name', 'Название', 'Name') }} <input name="name" maxlength="64" required></label>
+    <select name="mode"><option value="tv">TV</option><option value="kiosk">Kiosk</option></select>
+    <button>{{ tr('Create profile', 'Создать профиль', 'Profil anlegen') }}</button></form>
     <h2>{{ tr('Registered devices', 'Зарегистрированные устройства', 'Registrierte Geräte') }}</h2>
     <p>{{ tr('Access is separate from activation history. Silence does not confirm offline status. Ready does not prove physical screen power.', 'Доступ и история активации учитываются отдельно. Отсутствие сообщений не подтверждает офлайн. Ready не доказывает включение экрана.', 'Zugriff und Aktivierungshistorie sind getrennt. Keine Meldung bestätigt keinen Offlinezustand. Ready beweist keinen eingeschalteten Bildschirm.') }}</p>
     <p class="device-totals">{{ tr('Registered devices', 'Зарегистрированные устройства', 'Registrierte Geräte') }}: <strong>{{ model.device_total }}</strong> / {{ model.device_capacity }}{% if model.device_total %} · {{ tr('Showing', 'Показаны', 'Angezeigt') }} {{ model.device_first }}–{{ model.device_last }}{% endif %}{% if model.device_pages > 1 %} · {{ tr('Page', 'Страница', 'Seite') }} {{ model.device_page }} / {{ model.device_pages }}{% endif %}</p>
@@ -60,7 +76,29 @@
     {% for item in model.devices %}
     <article class="device-request">
         <h3><code>{{ item.device_id }}</code></h3>
-        <p>{{ tr('Fixed lab profile', 'Фиксированный профиль лаборатории', 'Festes Laborprofil') }}: <code>{{ item.profile }}</code></p>
+        <p>{{ tr('Enrollment resource class', 'Ресурсный класс регистрации', 'Ressourcenklasse der Registrierung') }}: <code>{{ item.profile }}</code></p>
+        {% set d = profiles.desired.get(item.device_id) %}
+        {% set published = profiles.published.get(item.device_id) %}
+        {% set caps = profiles.capabilities.get(item.device_id) %}
+        <p>{{ tr('Assigned for next publication', 'Назначено для следующей публикации', 'Für nächste Veröffentlichung zugewiesen') }}:
+            <strong>{{ profiles.names.get(d.config.profile_id, d.config.profile_id) }}</strong> · {{ d.config.mode }} · {{ tr('revision', 'редакция', 'Revision') }} {{ d.config.revision }}</p>
+        <p>{{ tr('Published configuration', 'Опубликованная конфигурация', 'Veröffentlichte Konfiguration') }}:
+            {% if published %}<code>{{ published.config.profile_id }}</code> · {{ published.config.mode }} · {{ tr('revision', 'редакция', 'Revision') }} {{ published.config.revision }}
+                {% if published.reason != 'compatible' %}<strong>{{ tr('Refused; synchronize capabilities and publish again', 'Отклонена; синхронизируйте возможности и опубликуйте снова', 'Abgelehnt; Fähigkeiten synchronisieren und erneut veröffentlichen') }}</strong> <code>{{ published.reason }}</code>{% endif %}
+            {% else %}{{ tr('Legacy local mode / no configuration snapshot yet', 'Прежний локальный режим / снимка конфигурации пока нет', 'Bisheriger lokaler Modus / noch kein Konfigurationsstand') }}{% endif %}</p>
+        <p>{{ tr('Reported capabilities', 'Заявленные возможности', 'Gemeldete Fähigkeiten') }}:
+            {% if caps %}{{ caps.platform }} · Events · {{ caps.modes|join(', ') }}
+            {% else %}{{ tr('Unknown; update client and synchronize', 'Неизвестны; обновите клиент и синхронизируйте', 'Unbekannt; Client aktualisieren und synchronisieren') }}{% endif %}</p>
+        {% if caps %}<details><summary>{{ tr('Compatibility details', 'Сведения о совместимости', 'Kompatibilitätsdetails') }}</summary><p>{{ tr('Resource class', 'Ресурсный класс', 'Ressourcenklasse') }}: <code>{{ caps.resource_profile }}</code> · renderer <code>{{ caps.renderer }}</code></p></details>{% endif %}
+        <p>{{ tr('Next-publication compatibility', 'Совместимость следующей публикации', 'Kompatibilität der nächsten Veröffentlichung') }}:
+        {% if d.reason == 'compatible' %}{{ tr('Compatible', 'Совместимо', 'Kompatibel') }}
+        {% elif d.reason == 'report_capabilities_update_client' %}{{ tr('Update this client and synchronize capabilities, then publish again.', 'Обновите клиент, синхронизируйте возможности и опубликуйте снова.', 'Client aktualisieren, Fähigkeiten synchronisieren und erneut veröffentlichen.') }}
+        {% elif d.reason == 'unsupported_mode_select_another_profile' %}{{ tr('Select a profile with a supported mode.', 'Выберите профиль с поддерживаемым режимом.', 'Profil mit unterstütztem Modus wählen.') }}
+        {% else %}{{ tr('Update the renderer before publishing.', 'Обновите renderer перед публикацией.', 'Renderer vor Veröffentlichung aktualisieren.') }}{% endif %}</p>
+        <form class="admin-form" method="post" action="{{ url_for('admin.devices_profile', device_id=item.device_id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <select name="profile_id">{% for p in profiles.profiles %}<option value="{{ p.id }}" {% if d.config.profile_id == p.id %}selected{% endif %}>{{ p.name }} ({{ p.mode }})</option>{% endfor %}</select>
+        <button>{{ tr('Assign for next publication', 'Назначить для следующей публикации', 'Für nächste Veröffentlichung zuweisen') }}</button></form>
         <p>{{ tr('Credential expires', 'Допуск истекает', 'Berechtigung gültig bis') }}: {{ utc(item.expires) }} · <strong>{{ tr('Revoked', 'Отозван', 'Widerrufen') if item.revoked else tr('Expired', 'Истёк', 'Abgelaufen') if item.expired else tr('Access permitted', 'Доступ разрешён', 'Zugriff erlaubt') }}</strong></p>
         <p><a href="{{ url_for('admin.delivery_home') }}">{{ tr('Publication targets and activation reports', 'Получатели публикаций и отчёты об активации', 'Veröffentlichungsziele und Aktivierungsmeldungen') }}</a></p>
         {% if not item.revoked %}

@@ -159,3 +159,7 @@ If a quoting error exposes the password, stop and ask the owner to rotate it.
 - Offline payload and this guide: `dist\gui-harness\` on PC1 and
   `gui\payload` on both VMs.
 - Policy: `AGENTS.md` and `docs\WINDOWS_GUI_HARNESS.md`.
+
+## PC4 clock maintenance note - 2026-11-15
+
+During profile acceptance, unstable guest UTC slew prevented native time confirmation. PC4 VBoxService intentionally retains --disable-timesync; other Guest Additions and W32Time configuration remain unchanged. Original service configuration: C:/KioskLab-DeviceProfiles-20261115/time-configuration-before.json. Forward-only correction from independently verified host UTC yielded840s bounded stability; this is not permanent LAN time provisioning. Before time-sensitive acceptance compare exact UTC/timezone and monotonic progress; never edit client floors or bypass guards. Evidence: logs/device-profiles-integration-20261115/time-diagnosis.json. Do not silently restore the observed unstable synchronization setting.

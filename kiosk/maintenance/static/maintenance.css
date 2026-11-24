@@ -1,0 +1,40 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 1.5rem; font: 15px/1.45 system-ui, sans-serif;
+  background: #12161c; color: #e8edf4;
+}
+header h1 { margin: 0 0 .2rem; font-size: 1.4rem; }
+.muted { color: #94a3b2; }
+.hidden { display: none !important; }
+section { margin-top: 1.2rem; }
+article {
+  background: #1a2029; border: 1px solid #2b3542; border-radius: 10px;
+  padding: 1rem; min-width: 0;
+}
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+h2 { font-size: 1.05rem; margin-top: 0; }
+h3 { font-size: .95rem; margin-bottom: .3rem; }
+form { display: grid; gap: .5rem; margin: .6rem 0; }
+label { display: grid; gap: .2rem; font-size: .9rem; color: #c3ccd8; }
+input, select, button {
+  font: inherit; padding: .45rem .6rem; border-radius: 7px;
+  border: 1px solid #37424f; background: #0f141a; color: inherit;
+}
+button { background: #2c6fe0; border-color: #2c6fe0; cursor: pointer; }
+button:hover { background: #3a7ff0; }
+.row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+ul { list-style: none; padding: 0; }
+li { display: flex; gap: .6rem; justify-content: space-between; align-items: center;
+  padding: .35rem 0; border-bottom: 1px solid #232b36; overflow-wrap: anywhere; }
+#message { background: #3a2a12; border: 1px solid #6d4d14; padding: .6rem .8rem; border-radius: 8px; }
+img { max-width: 220px; image-rendering: pixelated; background: #fff; padding: .4rem; border-radius: 6px; }
+.events { display: grid; gap: .6rem; }
+.card { background: #131922; border: 1px solid #26303d; border-radius: 8px; padding: .6rem .8rem; }
+.card h3 { margin: 0 0 .3rem; font-size: .98rem; }
+dt { font-size: .82rem; color: #94a3b2; margin-top: .35rem; }
+dd { margin: 0; overflow-wrap: anywhere; }
+#suspended-box, #return-form { border-top: 1px solid #2b3542; margin-top: 1rem; padding-top: .6rem; }
+#lock-panel { max-width: 34rem; }
+#connection img { margin: .4rem 0; }
+#pending-box { border-top: 1px solid #2b3542; margin-top: .8rem; padding-top: .6rem; }

@@ -131,6 +131,27 @@ class NativeAuthorityTests(unittest.TestCase):
             with self.subTest(changed=changed), self.assertRaises(PackageError):
                 self.state.validate_assignment({**value, **changed})
 
+    def test_published_display_profile_negotiation_persistence_and_conflict(self):
+        self.state.data['binding'] = {'device_id': 'device', 'profile': PROFILE}
+        self.state.verify_trust(self.public['trust'], self.pin)
+        self.state.data['credential'] = {'expires_at': self.now + 300}
+        publication = {'package_id': 'c' * 64}
+        legacy = {'version': 1, 'group_id': self.anchor['group_id'], 'device_id': 'device', 'profile': PROFILE,
+                  'generation': 1, 'metadata_sha256': sha(encode(publication)), 'publication': publication}
+        self.state.validate_assignment(legacy)
+        default = {'version': 1, 'profile_id': 'events-default', 'revision': 1, 'mode': 'local'}
+        self.state.validate_assignment({**legacy, 'version': 2, 'display': default})
+        value = {**legacy, 'version': 2, 'generation': 2,
+                 'display': {'version': 1, 'profile_id': 'shared', 'revision': 1, 'mode': 'kiosk'}}
+        self.state.accept(value)
+        reopened = PrivateState(self.root)
+        self.assertEqual(reopened.accepted('c' * 64)['display'], value['display'])
+        with self.assertRaisesRegex(PackageError, 'rollback_or_conflict'):
+            reopened.validate_assignment({**value, 'display': {**value['display'], 'mode': 'tv'}})
+        with self.assertRaisesRegex(PackageError, 'unsupported_display_profile'):
+            reopened.validate_assignment({**value, 'generation': 3, 'display': {**value['display'], 'mode': 'touch'}})
+        self.assertEqual(PrivateState(self.root).accepted('c' * 64)['display'], value['display'])
+
 
 class Response(BytesIO):
     def __init__(self, payload, status=200, headers=None, interrupt=False):
@@ -152,7 +173,7 @@ class ArtifactTransport:
         self.interrupt, self.change_headers, self.full_after_range, self.fail_status = False, {}, False, 0
 
     @contextmanager
-    def response(self, path, headers):
+    def response(self, path, headers=None, *, authenticated=True):
         self.requests.append((path, headers))
         relative = path.split('/', 5)[5]
         payload = (self.root / relative).read_bytes()
@@ -365,7 +386,7 @@ class NativeClientTests(unittest.TestCase):
 
             fake.json.side_effect = call
             client.connect = lambda: fake
-            with patch('kiosk.display.delivery_authority.time.time', return_value=now):
+            with patch('kiosk.display.delivery_authority.time.time', return_value=now) as authority_clock:
                 with self.assertRaisesRegex(TransportError, 'lost_authorize'):
                     client.enroll(bootstrap_path, sha(bootstrap_path.read_bytes()), now)
                 original = deepcopy(client.native.data)
@@ -376,6 +397,9 @@ class NativeClientTests(unittest.TestCase):
                 with self.assertRaisesRegex(TransportError, 'lost_token'):
                     client.enroll()
                 # /status recovers the same approved metadata even if the token reply was lost.
+                # Honor the existing persisted polling deadline after a lost reply.
+                now += 6
+                authority_clock.return_value = now
                 approved = client.enroll()
                 self.assertEqual(approved['result'], 'approved')
                 self.assertEqual(original['secret'], client.native.data['secret'])

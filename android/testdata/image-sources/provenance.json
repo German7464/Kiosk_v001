@@ -1,0 +1,14 @@
+{
+  "jpeg": {
+    "sha256": "91073b508d9fd564ab2967383e193b9bf59cf82a7c0cfdda5bcc568c72f2580c",
+    "origin": "PC1 synthetic via existing kiosk.core.images.save_optimized_image; see jpeg-identity.json"
+  },
+  "png": {
+    "sha256": "4b02621a1639a302da7e368db30b5b96f931f6be98b1154b2e0d787986227a46",
+    "origin": "PC1 original contract valid/static/uploads/card.png"
+  },
+  "oracle": {
+    "origin": "PC1 project .venv Pillow13.0.0; not PC2 execution",
+    "sha256": "266e7589cf00c906e187a92468dd7e07ca7c66b9e81511ea18136bad86c64571"
+  }
+}

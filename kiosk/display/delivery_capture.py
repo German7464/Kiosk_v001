@@ -12,7 +12,7 @@ from kiosk.delivery.protocol import LIMITS, PROFILE, decode, encode, fields, dig
 from kiosk.publication.exporter import PackageError, _is_link, _path_name, _plain_path, _references, _stream_stable, _json, verify_package
 from kiosk.publication.renderer import ASSETS
 from kiosk.publication.store import _atomic_write
-from .cache import renderer_identity, verify_cached_view
+from .cache import renderer_identity, renderer_compatible, verify_cached_view
 from .delivery_authority import positive
 from .delivery_transport import TransportError
 
@@ -29,7 +29,11 @@ def validate_metadata(value):
         raise PackageError('unsupported_limits')
     expected = {'build_id': renderer_identity(), 'js_sha256': sha((ASSETS / 'events.js').read_bytes()),
                 'css_sha256': sha((ASSETS / 'events.css').read_bytes())}
-    if value['renderer'] != expected:
+    supplied = value['renderer']
+    if (not isinstance(supplied, dict) or set(supplied) != set(expected)
+            or not renderer_compatible(supplied['build_id'])
+            or supplied['js_sha256'] != expected['js_sha256']
+            or supplied['css_sha256'] != expected['css_sha256']):
         raise PackageError('unsupported_renderer')
     total, count = 0, 0
     for group in ('package', 'kiosk', 'tv'):
@@ -62,6 +66,8 @@ class Capture:
         self.root = Path(root)
         self.reuse_roots, self.audit = tuple(map(Path, reuse_roots)), audit
         self.stats = {'reused_files': 0, 'reused_bytes': 0, 'received_bytes': 0, 'resumed_offsets': [], 'restarts': []}
+        self.completed = 0
+        self.progress = None
 
     def inspect(self):
         total, count = 0, 0
@@ -130,8 +136,10 @@ class Capture:
                     return True
         return False
 
-    def fetch(self, assignment, transport, *, full_resync=False):
+    def fetch(self, assignment, transport, *, full_resync=False, progress=None, path_prefix=None):
         metadata = validate_metadata(assignment['publication'])
+        self.completed, self.progress = 0, progress
+        self._progress('downloading')
         identity = sha(encode(assignment))
         self.inspect()
         journal_path = self.root / 'candidate.json'
@@ -154,6 +162,8 @@ class Capture:
                 if target.exists():
                     _plain_path(work, relative)
                     if self._valid(work, relative, entry):
+                        self.completed += entry['size']
+                        self._progress('downloading')
                         continue
                 else:
                     # Include already captured complete files for cross-mode exact-byte reuse.
@@ -164,12 +174,24 @@ class Capture:
                     finally:
                         self.reuse_roots = before
                     if reused:
+                        self.completed += entry['size']
+                        self._progress('downloading')
                         continue
-                self._download(target, relative, entry, metadata['package_id'], transport, journal, journal_path)
+                self._download(target, relative, entry, metadata['package_id'], transport, journal, journal_path,
+                               path_prefix=path_prefix)
+                self.completed += entry['size']
+                self._progress('downloading')
+        self._progress('downloaded')
         verify_captured(work, metadata)
+        self._progress('verified')
         return work / 'package'
 
-    def _download(self, target, relative, entry, package, transport, journal, journal_path):
+    def _progress(self, state, partial=0):
+        if self.progress:
+            self.progress(state, self.completed + partial)
+
+    def _download(self, target, relative, entry, package, transport, journal, journal_path,
+                  *, path_prefix=None):
         for attempt in range(2):
             actual = target.stat().st_size if target.exists() else 0
             saved = journal['offsets'].get(relative, 0)
@@ -183,8 +205,10 @@ class Capture:
             if offset == entry['size']:
                 offset = 0  # A complete hash mismatch cannot be repaired by a suffix.
             headers = {'Range': f'bytes={offset}-', 'If-Range': '"' + entry['sha256'] + '"'} if offset else {}
-            path = '/api/v2/publications/' + package + '/' + quote(relative, safe='/')
-            with transport.response(path, headers=headers) as response:
+            base = path_prefix if path_prefix is not None else '/api/v2/publications/' + package
+            path = base.rstrip('/') + '/' + quote(relative, safe='/')
+            with transport.response(path, headers=headers,
+                                    authenticated=path_prefix is None) as response:
                 status = response.status
                 if status == 416:
                     self.stats['restarts'].append('range_416')
@@ -234,6 +258,7 @@ class Capture:
                         journal['offsets'][relative] = offset
                         _atomic_write(journal_path, encode(journal))
                         self.stats['received_bytes'] += len(block)
+                        self._progress('downloading', offset)
                     if response.read(1):
                         raise PackageError('artifact_overflow')
             if self._valid(target.parent, target.name, entry):

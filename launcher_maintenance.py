@@ -44,6 +44,11 @@ def main():
     remover.add_argument("--device-id")
     recovery = commands.add_parser("restore-config")
     recovery.add_argument("--device-id", required=True)
+    upgrade = commands.add_parser("upgrade")
+    upgrade.add_argument("package", help="Path to the signed offline update package directory.")
+    commands.add_parser("upgrade-status")
+    trust = commands.add_parser("trust-update-key")
+    trust.add_argument("key", help="Path to the Ed25519 public verification key (PEM).")
     commands.add_parser("setup-admin")
     commands.add_parser("reset-admin-password")
     args = parser.parse_args()
@@ -66,6 +71,23 @@ def main():
         print(json.dumps({"result": "configured", "device_id": profile["device_id"],
                           "transport": profile["transport"], "port": profile["port"],
                           "server_autostart": profile["server_autostart"]}))
+        return 0
+    if args.command == "upgrade":
+        from kiosk.launcher.updater import upgrade as upgrade_server
+
+        result = upgrade_server(storage, args.package)
+        print(json.dumps(result))
+        return 0
+    if args.command == "upgrade-status":
+        from kiosk.launcher.updater import upgrade_status
+
+        print(json.dumps(upgrade_status(storage)))
+        return 0
+    if args.command == "trust-update-key":
+        from kiosk.launcher.updater import trust_update_key
+
+        trust_update_key(storage, args.key)
+        print(json.dumps({"result": "trusted"}))
         return 0
     if args.command == "import-runtime":
         from kiosk.launcher.migration import import_runtime

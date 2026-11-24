@@ -1,0 +1,485 @@
+{
+  "contract": "content-progress-v1",
+  "context": {
+    "device_id": "device-public",
+    "group_id": "group-public",
+    "generation": 1,
+    "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "accepts": [
+    {
+      "version": 1,
+      "device_id": "device-public",
+      "group_id": "group-public",
+      "generation": 1,
+      "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "attempt": 100,
+      "sequence": 100,
+      "state": "waiting",
+      "completed_bytes": 0,
+      "total_bytes": 1024,
+      "error": "none"
+    },
+    {
+      "version": 1,
+      "device_id": "device-public",
+      "group_id": "group-public",
+      "generation": 1,
+      "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "attempt": 100,
+      "sequence": 101,
+      "state": "downloading",
+      "completed_bytes": 0,
+      "total_bytes": 1024,
+      "error": "none"
+    },
+    {
+      "version": 1,
+      "device_id": "device-public",
+      "group_id": "group-public",
+      "generation": 1,
+      "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "attempt": 100,
+      "sequence": 102,
+      "state": "downloaded",
+      "completed_bytes": 1024,
+      "total_bytes": 1024,
+      "error": "none"
+    },
+    {
+      "version": 1,
+      "device_id": "device-public",
+      "group_id": "group-public",
+      "generation": 1,
+      "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "attempt": 100,
+      "sequence": 103,
+      "state": "verified",
+      "completed_bytes": 1024,
+      "total_bytes": 1024,
+      "error": "none"
+    },
+    {
+      "version": 1,
+      "device_id": "device-public",
+      "group_id": "group-public",
+      "generation": 1,
+      "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "attempt": 100,
+      "sequence": 100,
+      "state": "error",
+      "completed_bytes": 0,
+      "total_bytes": 1024,
+      "error": "connection"
+    },
+    {
+      "version": 1,
+      "device_id": "device-public",
+      "group_id": "group-public",
+      "generation": 1,
+      "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "attempt": 100,
+      "sequence": 100,
+      "state": "incompatible",
+      "completed_bytes": 0,
+      "total_bytes": 0,
+      "error": "requires_update"
+    }
+  ],
+  "rejects": [
+    {
+      "name": "bool-version",
+      "body": {
+        "version": true,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "error": "unsupported_version"
+    },
+    {
+      "name": "unknown-version",
+      "body": {
+        "version": 2,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "error": "unsupported_version"
+    },
+    {
+      "name": "negative-bytes",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "waiting",
+        "completed_bytes": -1,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "error": "invalid_progress"
+    },
+    {
+      "name": "oversize-bytes",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 201326593,
+        "error": "none"
+      },
+      "error": "invalid_progress"
+    },
+    {
+      "name": "bytes-over-total",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "waiting",
+        "completed_bytes": 1025,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "error": "invalid_progress"
+    },
+    {
+      "name": "false-download",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "downloaded",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "error": "invalid_progress"
+    },
+    {
+      "name": "false-activation",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "activated",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "error": "invalid_progress"
+    },
+    {
+      "name": "error-detail",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "error",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "C:/private"
+      },
+      "error": "invalid_progress"
+    },
+    {
+      "name": "missing-error",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "error",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "error": "invalid_progress"
+    },
+    {
+      "name": "bool-sequence",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": true,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "error": "invalid_progress"
+    },
+    {
+      "name": "old-sequence",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 99,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "error": "invalid_progress"
+    },
+    {
+      "name": "huge-generation",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 9223372036854775808,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "error": "invalid_progress"
+    },
+    {
+      "name": "uppercase-hash",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "error": "invalid_digest"
+    },
+    {
+      "name": "extra-field",
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none",
+        "secret": "never-send"
+      },
+      "error": "invalid_fields"
+    }
+  ],
+  "ordering": [
+    {
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "http": 200,
+      "state": "recorded"
+    },
+    {
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 100,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "http": 200,
+      "state": "duplicate"
+    },
+    {
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 102,
+        "state": "downloading",
+        "completed_bytes": 512,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "http": 200,
+      "state": "recorded"
+    },
+    {
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 101,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "http": 200,
+      "state": "superseded"
+    },
+    {
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 102,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "http": 409,
+      "error": "progress_conflict"
+    },
+    {
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 103,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "http": 409,
+      "error": "progress_conflict"
+    },
+    {
+      "body": {
+        "version": 1,
+        "device_id": "foreign",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 104,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "http": 403,
+      "error": "binding_refused"
+    },
+    {
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 2,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 100,
+        "sequence": 104,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "http": 409,
+      "error": "assignment_changed"
+    },
+    {
+      "body": {
+        "version": 1,
+        "device_id": "device-public",
+        "group_id": "group-public",
+        "generation": 1,
+        "package_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "attempt": 105,
+        "sequence": 105,
+        "state": "waiting",
+        "completed_bytes": 0,
+        "total_bytes": 1024,
+        "error": "none"
+      },
+      "http": 200,
+      "state": "recorded"
+    }
+  ]
+}

@@ -15,9 +15,7 @@ from kiosk.launcher.storage import atomic_json, read_profile
 from kiosk.transport.profile import load_profile
 from kiosk.transport.profile_operations import ProfileLease
 from kiosk.transport.runtime import ManagedHttps
-
-
-VERSION = "2.0-stage3-dev"
+from kiosk.version import VERSION
 
 
 class LocalRuntime:

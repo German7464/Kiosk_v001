@@ -1,7 +1,226 @@
-# Android workspace on PC1
+# Android offline Events client
 
-Android implementation is maintained on PC2 in `android/events-conformance-design`, checkpoint `44519a51261b2aa57d28e5207fe0438934cc6dd9` / `checkpoint-2026-11-07`. This PC1 branch intentionally contains only this workspace pointer; absence of Android code here does not mean it is unimplemented.
+The Nov22 Stage5 candidate accepts bounded104-day publisher policy/grants while
+keeping publication-plan validity bounded at90 days. Both the104-day boundary
+and legacy nullable-date/image mapping ran on physical moto g85 ZY22KDWDNH in
+the separate `org.kiosk.harness.stage5life` application (2 instrumentation tests).
+This is validator/mapping evidence, not a new signed-publication display receipt.
+`-PkioskCampaignSuffix=.stage5life` selects that disposable campaign identity;
+the default remains `.campaign`. Existing debug/sandbox/campaign data are retained.
 
-Use [development recovery](../docs/DEVELOPMENT_RECOVERY.md) to open the Android checkpoint in a separate directory. Do not merge or overwrite PC1 solely to restore Android. The Android branch owns its module README, source, tests and build declarations; device registrations, signer and SDK are external prerequisites.
+Experimental Android display/client implementation integrated into the current PC1 project from the PC2 `android/events-conformance-design` working tree. The primary PC1 executor owns Windows/server/Android implementation; PC2 retains its source/toolchain as a recovery copy and hosts test VMs. No server or offline editor. Current product acceptance belongs to the coordinator's PC1 [ledger](../docs/TZ_PROGRESS.md); this README describes Android interfaces and local build prerequisites, not another status journal.
 
-The [current coordinator ledger](../docs/TZ_PROGRESS.md) governs acceptance. Android LAN discovery is PARTIAL; [authenticated continuation](../docs/ANDROID_LAN_CONTINUATION.md) requires the concrete owner selection. No new Android task is dispatched by this pointer. Android is an offline display client, not a server or offline editor. Preserve registration/content and original signer; never uninstall or reset to bypass a test blocker.
+## Current boundary
+
+Native LAN discovery, exact-origin enrollment/trust, resumable capture, verified package storage, shared Events rendering, offline reopening and real-ready outbox are implemented for the bounded phone profile. Discovery/select/cancel and wrong-origin refusal passed on moto g85 5G, Android16/API36. Additive manual same-anchor bootstrap renewal now validates a locally delivered public input without changing group/server/key/CA identity, preserves registration/trust/outbox/accepted content atomically, and stays separate from uncertain-boot time confirmation. The authenticated LAN journey was completed on the retained phone pending coordinator review; stage5 remains PARTIAL. Preserve existing registration,154 publication files and Events Version7. No forced migration/re-enrollment.
+
+Pending enrollment now has a normal operator screen: the exact 8-character user code plus a locally generated QR for `https://origin/admin/devices/pair#v=1&code=CODE`. The QR carries no device secret, credential, key, bootstrap or CA payload, and displaying it never approves anything; an authenticated administrator still reviews and decides through the server's guarded route. The disposable pairing journey uses a debug-derived `sandbox` application id, never the retained phone registration.
+
+[Continuation proposal](../docs/ANDROID_LAN_CONTINUATION.md) is NOT execution permission. Coordinator reviews PC1 prerequisites and SAME-ANCHOR renewal contract before dependent Android work. Discovery label parity follows Python `str.isprintable` common semantics: ASCII space allowed, other Unicode C/Z categories rejected (including U+E000/U+00A0). Do not repeat closed renderer/resume/reboot scenarios merely because documentation changed.
+
+## Code map
+
+| Area | Responsibility |
+| --- | --- |
+| `app/src/main/java/org/kiosk/harness/discovery/` | Bounded advisory UDP search/protocol/UI; hints never establish trust. |
+| `delivery/` under the same Java package | Exact-origin authority, TLS/credential transport, saved registration/time, manual same-anchor renewal and ready delivery. |
+| `binding/` | Confirmed input, bounded/resumable capture and admission into the existing store. |
+| `pairing/` | Exact QR payload contract, local QR view and pending-enrollment dialog; display only, no approval. |
+| `admin/` | Isolated `:admin` process WebView for the existing server-rendered admin pages; exact-origin navigation, app-scoped TLS trust and explicit server logout. |
+| `io/nayuki/qrcodegen/` | Vendored MIT QR generator (pinned commit; see `third_party/nayuki-qr-code-generator/`). |
+| `packagecore/`, `storage/`, `core/` | Package validation, activation/recovery and shared native helpers. |
+| `StoredHarnessActivity` and local WebView host | Normal Connect/TV/kiosk UI, lifecycle and accepted-content display. |
+| `app/src/test`, `app/src/androidTest`, `app/src/sharedTest`, `testdata/` | JVM, instrumentation/shared drivers and synthetic fixtures. |
+| `tools/build.ps1`, Gradle declarations and Wrapper | Explicit build paths and reproducible declared toolchain. |
+
+Packaged scripts/templates never become arbitrary executable client software. Discovery is explicit, at most3 requests/3seconds to UDP47751; selection stages a manual address and resets confirmation without enroll/fetch/bootstrap. Exact origin and independently confirmed authority/time remain mandatory. Cancellation closes search, suppresses stale callbacks and retains registration/content.
+
+Capture revalidates current authority/assignment, bounds incomplete bytes and verifies full hashes before activation. Range206 validation precedes append; retained accepted/recovery content is not overwritten. Ready is generated by actual display, queued durably and correlated to its real session; successful download is not ready. Offline reopening does not grant fresh network authority. Preserve wrong-origin/rollback/expiry/revocation checks and manual uncertain-boot time confirmation.
+
+Content distribution uses the additive authenticated `content-progress-v1` endpoint `/api/v2/client/progress`. Logical byte totals sum the package, kiosk and TV inventories, including resumed/reused bytes; network throughput counters are not reported. `downloading` follows a real validated transfer, `downloaded` follows complete capture, and `verified` follows successful native package/view/image admission. Actual renderer-ready receipts remain the only activation evidence and are delivered independently. The existing connection status shows bounded transfer/error guidance; accepted offline content is retained on failure.
+
+Progress has one memory-only newest pending item and one background worker, sends no more than once per five seconds, and stops an attempt after six transient failures. Retries back off 10..300 seconds and honor Retry-After (seconds or HTTP date), capped at one hour. Permanent 4xx stops that attempt; 404/405 disables progress for the client process, including later syncs, without affecting ordinary assignment/ready operation. Restart may probe once again. The encrypted delivery state reserves sequence high-water blocks of 1,048,576 numbers before each attempt; unused numbers are skipped after restart. There is no durable progress outbox/history. Attempt tokens reject delayed callbacks; a replaced assignment cannot acquire another transfer's state. The frozen public vectors are pinned in `app/src/test/resources/content-progress-v1.json`. Physical operator correlation requires an explicitly prepared reachable API server; retained 18443/19443 servers do not supply this API.
+
+Renewal reads the bounded packaged `delivery-bootstrap-renewal.json` public input and requires an operator-confirmed time plus matching saved origin/group/server/CA/key, monotonic issuance/expiry bounded by saved signed trust, finite credential and valid saved trust envelope. It rejects malformed/oversize/expired/future/rollback/different-identity input, treats an identical accepted input as a no-op, and writes through the existing atomic encrypted state. It never changes `clock_boot`, so uncertain-boot confirmation remains a separate action before network use. The input file is public configuration, not signed authority or a product hash allowlist.
+
+First trust shows the complete bootstrap file SHA-256, the group-key SHA-256 and the TLS root CA DER SHA-256 before any connection. The operator must compare the whole-input hash (or at least both fingerprints) with a value supplied through a separate trusted channel; a value displayed only by this app authenticates nothing by itself. `check` and `journey` also fail when the sandbox bootstrap `tls_ca_pem` is not the single CA anchored by the sandbox WebView, so a stale or mixed root set cannot be deployed silently; that embedded anchor is a disposable pilot fixture, not a general runtime provisioning mechanism. `journey` also reads the **device** clock and refuses to start when the packaged bootstrap window (`issued_at`..`expires_at`) is closed or not yet open, because Delivery validates that window against device time; its evidence records the bootstrap id/group/origin, the bootstrap file SHA-256, the CA fingerprint and the device/PC clock offset, so a stale fixture or a wrong device clock cannot be presented as a passed first-trust journey.
+
+Pairing display is derived only from the persisted authorize reply: the saved `user_code`, its bounded `expires_in` window and the confirmed anchor origin. The QR is regenerated locally by the vendored Nayuki generator; no cloud encoder or scanner SDK is involved. Denial, expiry, approval and local cancellation clear the code/QR state; denial, expiry and cancellation also block automatic re-request until the operator uses the explicit `Re-enroll` action. Closing the dialog or leaving the app never sends an approval or denial, so the server request stays pending until the administrator decides or the code expires. The `sandbox` build type (`org.kiosk.harness.sandbox`, debug-derived, same signer) isolates application data for a disposable lab group; its bootstrap asset name is overridden in `src/sandbox/res/values/bootstrap.xml`, so it cannot reuse the retained group's anchor. Do not install the sandbox APK over the retained app, and remove the disposable app plus any manually installed test CA when the owner directs it.
+
+Group trust has two explicit formats chosen by envelope `version`, never inferred. Legacy v1 keeps its original `Kiosk/GroupTrust/v1` domain and leaf-SPKI pin. `lan-trust-lifecycle-v2` uses envelope/payload `version=2` and the `Kiosk/GroupTrust/v2` domain, verifies the single server entry (`server_id`, `origin`, `roles=["publisher"]`, `tls_issuer_spki_sha256`) and pins the **intermediate issuer** SPKI instead of the serving leaf, so a legitimate leaf rotation reconnects without re-enrollment. The canonical payload is re-serialised and compared byte-for-byte before signature verification; a v2 enrollment never falls back to v1 leaf trust, and a v1 envelope is never reinterpreted as v2. The issuer pin must equal the certificate that actually signed the served leaf.
+
+Credential renewal is automatic: inside the last day of a valid credential the sync path calls `POST /api/v2/device/renew` with the existing bearer, accepts only a strictly later `expires_at` with unchanged `device_id`/`credential_id` (bounded by the seven-day maximum lifetime), and writes atomically to the existing encrypted state. The local secret is never rotated and no root-signed group authority is extended. A `401` sets `credential_expired` recovery state instead of silently discarding identity, registration or accepted offline content; failures retry with bounded backoff while the current credential remains valid.
+
+Administration opens the existing server HTML/CSS/JS pages in a separate `AdminActivity` (`android:process=":admin"`). Before creating the WebView it calls `WebView.setDataDirectorySuffix("admin")`, so `app_webview_admin` cookies/storage cannot mix with the packaged display WebView's default `app_webview`; the display view continues to disable cookies and network loading. The activity takes the exact confirmed origin from the native delivery state (no address field or Intent extra), validates the bootstrap window/time/chain/hostname and saved peer pin (leaf for v1, intermediate issuer for v2) with a bounded native preflight, and then lets the WebView perform the real TLS validation. `onReceivedSslError` only cancels; there is no proceed/trust-all/password injection/JS bridge. Navigation and subresources are restricted to the exact HTTPS origin (scheme, host, port), and foreign schemes/hosts, popups, downloads and file choosers are refused. Server login, form POST, CSRF, fetch and session cookies remain the server's own.
+
+Sign-out opens `/admin` and submits the server's existing CSRF-protected `/admin/logout` form, then clears WebView cookies, storage, form data, cache and history and finishes, so Back/reopen reaches the server login again. The app never stores the administrator password. Production keeps the system-only network-security baseline (`src/main/res/xml/network_security_config.xml`); the disposable `src/sandbox` build adds `debug-overrides` with the isolated pilot's public root CA and a local TLS-fixture CA, ignored by non-debuggable builds. Arbitrary dynamic per-installation CA trust remains unsolved and needs a deployment-specific CA resource/overlay; do not treat the lab resource as a production default. The instrumented `AdminTlsSandboxTest` proves the WebView uses that app-scoped anchor (a fixture CA absent from the system/user store loads) while a different self-signed server is rejected.
+
+## Build prerequisites and commands
+
+Run from an ordinary PowerShell terminal at the repository root; neither IDE is required. Supply an external JSON through `-Config` with `buildJdk`, `androidSdk`, `debugKeystore`, and optionally `gradleUserHome`, `readOnlyDependencyCache`, `device`, `package`, `resultsDir`, `javaToolOptions`. Explicit arguments override config, then defaults apply. Keep that JSON and the existing signer outside Git. Use a short external `gradleUserHome` on Windows to avoid deeply nested cache paths. On PC1 the measured Java dual-stack loopback failure requires `javaToolOptions` set to `-Djava.net.preferIPv4Stack=true`; this affects build JVMs only, without changing Windows networking or trust.
+
+```powershell
+$androidConfig = '<external-local-config.json>'
+& ./android/tools/build.ps1 -Mode check -Config $androidConfig
+& ./android/tools/build.ps1 -Mode gradle -Tasks ':app:testDebugUnitTest' -Config $androidConfig
+& ./android/tools/build.ps1 -Mode build -Config $androidConfig
+# Only within an owner-authorized compatible sandbox update:
+& ./android/tools/build.ps1 -Mode deploy -Config $androidConfig -Device ZY22KDWDNH -Package org.kiosk.harness.sandbox -Apk ./android/app/build/outputs/apk/sandbox/app-sandbox.apk
+```
+
+These Gradle modes use `--offline`; prepare the pinned Wrapper and dependency cache separately. Historical bundled Events fixtures retain their immutable renderer hashes from Android checkpoint `73772b2`; `check-fixtures.py` verifies those pins and inventories independently of the unified branch HEAD. It does not claim current Windows/Android renderer parity. Existing journey tooling is reserved for its selected acceptance task, not routinely replayed during workstation setup.
+
+Declarations at checkpoint44519a5: Java17 source/bytecode, AGP9.4.1, Gradle9.6.0, compile/target SDK35, minSdk30, Build Tools36.0.0; JVM test dependencies JUnit4.13.2 and org.json20240303. These are the experimental build tuple, not a universal product support promise. Prior builds used measured full JBR25.0.3; IDE/PATH Java is not automatically a compatible build JDK.
+
+`tools/build.ps1` is the single entry point. It needs explicit machine paths (arguments, or an external `-Config` JSON; never committed), checks JDK/SDK/cache/signer/device prerequisites early, refuses a missing signer (never regenerates one), and writes machine-readable results plus a meaningful exit status. Modes: `check` (fast JVM/static/fixture, no install), `build` (APK identities + source fingerprint, no install), `deploy` (same-signer sandbox replacement on an explicit device, no uninstall/reset, refuses the retained `org.kiosk.harness.debug` target and a wrong package/signer/downgrade, verifies the installed identity and FAILS nonzero if preserved state changed), `journey` (consolidated local-fixture physical/instrumentation workflow with hard gates on state preservation, WebView isolation, authoritative offline content, and original-app preservation), `selftest` (offline negative/positive gate self-test with mocked tool failures; no device), and `gradle` (raw pass-through, the previous behaviour).
+
+Exit codes: `0` success, `1` run-time gate failure, `2` missing prerequisite/fixture/tool, `3` wrong device/package/signer/downgrade refusal. Each run writes a distinct timestamped result under `<ResultsDir>/runs/<mode>-<utc>.json` plus `<ResultsDir>/last-run.json`; failures also record `status`, `error` and an `exit_code` there (the consolidated summary is `<ResultsDir>/results.json`).
+
+```powershell
+& ./android/tools/build.ps1 -Mode check    -BuildJdk '<JDK>' -AndroidSdk '<SDK>' -ReadOnlyDependencyCache '<cache>'
+& ./android/tools/build.ps1 -Mode build    -BuildJdk '<JDK>' -AndroidSdk '<SDK>' -ReadOnlyDependencyCache '<cache>'
+& ./android/tools/build.ps1 -Mode deploy   -BuildJdk '<JDK>' -AndroidSdk '<SDK>' -Device <SERIAL> -Package org.kiosk.harness.sandbox
+& ./android/tools/build.ps1 -Mode journey  -BuildJdk '<JDK>' -AndroidSdk '<SDK>' -ReadOnlyDependencyCache '<cache>' -Device <SERIAL> -Package org.kiosk.harness.sandbox
+& ./android/tools/build.ps1 -Mode selftest -BuildJdk '<JDK>' -ResultsDir '<dir>'
+& ./android/tools/build.ps1 -Mode gradle   -BuildJdk '<JDK>' -AndroidSdk '<SDK>' -Tasks ':app:testDebugUnitTest'
+```
+
+Runtime requirements: Windows PowerShell 5.1 or PowerShell 7 (Core), Git on PATH, an existing full JDK (with `keytool`), an Android SDK with platform android-35 + build-tools 36.0.0 (`aapt2`/`apksigner`) + platform-tools (`adb`), the Gradle wrapper with an offline dependency cache, and the existing debug keystore. `selftest` additionally uses the .NET Framework C# compiler `csc.exe` (it is skipped with a note if unavailable). All machine paths stay outside Git.
+
+Use existing explicit JDK/SDK/compatible dependency-cache paths. Do not install or upgrade tools merely for cleanup. Offline Gradle needs the Wrapper distribution and all dependencies already available; `--offline` alone does not stop a missing Wrapper from downloading its distribution. Emulator evidence cannot replace physical phone/Android TV acceptance.
+
+`:app:assembleSandbox` builds the debug-derived disposable pairing variant (`org.kiosk.harness.sandbox`). It shares implementation and signer with debug but has separate application data and a separate bootstrap asset name; it is not a release build, a second production account or permission to enroll the retained group. The vendored QR generator is unmodified upstream source pinned by commit and hash in [third_party/nayuki-qr-code-generator](third_party/nayuki-qr-code-generator/PROVENANCE.md). Android TV, release signing, fleet/device lockdown and broad capacity remain separate gates. `check`/`build` never install or launch; `deploy`/`journey` refuse `org.kiosk.harness.debug`.
+
+The administration WebView instrumentation fixtures (`AdminTlsSandboxTest`) are private-key `.p12` material and are ignored by Git, so a fresh checkout must regenerate them once with `& ./android/tools/generate-admin-tls-fixtures.ps1 -BuildJdk '<JDK>' -Force` (disposable test-only CA, ephemeral key; never production trust). `journey` validates the fixtures first (the `trusted.p12` server must chain to `admin_fixture_ca.pem`, `untrusted.p12` must be self-signed, and the fixture CA must be distinct from `lab_ca.pem` and scoped under `debug-overrides`), and fails with a clear pointer if they are missing or mismatched. `-OutputRoot <dir>` exercises the generator against an isolated missing-fixture layout without touching the real `android/` fixtures.
+
+Existing phone updates require the ORIGINAL signer; `tools/build.ps1` refuses a missing signer. Preserve its private external keystore and compatible update path. Never generate a replacement, uninstall or clear application data to bypass mismatch. SDK/dependency caches, local settings, device state and private signing material are outside GitHub; [recovery](../docs/DEVELOPMENT_RECOVERY.md) is source recovery, not a full lab restore.
+
+## Evidence and history
+
+Current checkpoint is44519a51261b2aa57d28e5207fe0438934cc6dd9 / `checkpoint-2026-11-07`; publication verification did not run builds/hardware tests or change stage acceptance. Reports remain under ignored logs: `pc2-lan-discovery-20261106`, `pc2-resumable-delivery-20261104`, `android-lan-continuation-20261108`, `android-pairing-journey-20261108`, and the paths in [preserved Android history](docs/archive/README_2026-11-07.md). Coordinator reviews are recorded in the PC1 ledger.
+
+The former long README is archived intact apart from navigation repairs; old proposed tools, commands and next steps there are historical. Consult only for a specific evidence question. New work follows [AGENTS](../AGENTS.md), current owner prompt and coordinated contracts, not archived dispatches.
+
+## Lifecycle refusal reasons and trust renewal
+
+Android stores the server's fixed refusal label (`credential_expired`,
+`invalid_credential`, `admission_authority_expired`) for any authenticated call, not only
+renewal, and exposes a distinct recovery state with bounded diagnostics
+(`files/authority-refusal.json`). Re-enroll keeps the stable `device_id`, the secret and
+accepted offline content, so administrator re-approval restores access without losing
+the retained display. Accepted content stays openable after expiry, revocation or
+expired signed authority.
+
+The short bootstrap window bounds **first** confirmation only. Ongoing sync and time
+confirmation use the credential and the signed group trust, so a long-disconnected
+device resumes automatically once the offline administrator re-signs group trust at a
+higher generation. `trust_expires` is persisted with each accepted envelope and gates
+new admission only.
+
+Physical acceptance for these paths uses
+`androidTest/.../delivery/Stage5LifecyclePhoneTest` with an in-memory store, real native
+TLS and real administrator approve/revoke actions; it never changes retained app data,
+trust or credentials. The production `network_security_config.xml` stays system-only, so
+in-app administration over a private-CA deployment fails closed; provisioning that
+anchor is an owner decision, not a TLS override.
+
+## Published Events display configuration
+
+The native authenticated sync reports `display-profile-v1` capabilities and opts
+into assignment envelope2; the shared interface is in
+[delivery README](../kiosk/delivery/README.md#minimum-events-display-profiles--display-profile-v1).
+Named shared profiles select existing TV/Kiosk renderer modes. Enrollment identity,
+credentials and trust remain unchanged. Configuration is accepted only with an
+explicit publication generation, persisted in encrypted accepted associations and
+checked against generation/configuration rollback/conflict. Same-package mode
+changes still prepare the native WebView; ready is emitted for actual visible mode
+and generation. Last activated mode survives offline restart; failed/unsupported
+updates retain the previous view. Manual local-mode buttons cannot override a
+published nonlocal mode. Legacy servers/default profiles retain local mode choice.
+These capabilities do not claim Android TV hardware or touchscreen acceptance.
+
+The encrypted ready state retains the last package/generation/mode/native-session
+key after successful delivery, so unchanged syncs do not regenerate receipts after
+the outbox drains. New publication generations and actual native sessions still
+produce real ready receipts. The key and queued exact body commit atomically.
+
+### Persistent lifecycle acceptance
+
+`Stage5PersistentRecoveryTest` is explicitly phased instrumentation for the sandbox
+only, using the production `DeliveryClient(Context)` and `PrivateDeliveryState`
+(Android Keystore + AtomicFile), never the old in-memory fixture. Select individual
+methods 01 through 05 in separate process invocations around real administrator
+revocation and ordinary binding approval. Preserve the current identity and all
+accepted associations. Each phase writes bounded non-secret facts under
+`files/stage5-persistent-*.json`. Build success is preparation, not physical
+acceptance; ordinary application rendering after process restart must be observed
+separately. Operational permission for the isolated stand/registration is required.
+
+## Generic CA provisioning and publisher admission candidate
+
+The main generic network-security configuration now explicitly opts into Android
+user CAs as selected by the owner. Administration still requires the independently
+confirmed installation's native TLS chain/hostname/pin preflight, restricts the
+actual WebView to its trusted origin, and cancels all WebView TLS errors. A native
+preflight is not proof of WebView trust. Sandbox-only historical CA overrides
+remain test fixtures and cannot demonstrate production/user-CA acceptance.
+
+Administration → CA setup prepares only the already-confirmed installation's
+public CA certificate after the operator enters the SHA256 obtained independently
+from the administrator. The system document picker saves that certificate; the
+wizard opens Android Security Settings and explains the Android11+ CA-install
+path. Only the owner can confirm the OS flow. No silent installation, private-key
+export or TLS warning bypass occurs. Returning to the app requires Retry and a
+real successful WebView HTTPS load before entering credentials. Android may use
+different Settings menu labels. Cancelling saving/Settings leaves trust unchanged.
+Real user-CA WebView acceptance is still pending; no certificate was installed or
+app updated during the Nov16 continuation.
+
+`publishing/PublisherAuthority` is the bounded Java counterpart of the candidate
+independent publication verifier. Python-signed public fixtures exercise RSA,
+UTF-8/canonical escapes, target tampering, policy rollback, expiry and known
+conflicts in JVM checks. Assignment3 requires an explicitly fingerprint-confirmed
+independent publisher root in persistent private state and rejects unsigned
+fallback thereafter. Grants may carry an optional versioned `scope` (`groups`,
+`targets`, `permissions`); a scoped grant can only approve its signed targets and
+a scoped administrator may enroll another account's non-delegating child within
+that scope. `PublisherScopeTest` covers both the accepted and refused cases; an
+older unscoped grant keeps its original group-wide meaning.
+
+`publishing/KeystorePublisherKey` generates a non-exportable RSA3072 key in the
+Android Keystore (`kiosk-publisher-v1`) and signs only inside the platform. A lost
+device requires revocation and a fresh independently authorized key; there is no
+portable copy. `PublisherReview` recomputes the frozen-draft public data in Java and
+compares it with the exact downloaded `data/events.json`; the fixture
+`testdata/roaming-candidate-v1-public.json` (generated by
+`tools/make_publishing_candidate_fixture.py`) proves byte parity with the Python
+mapping. `PublishActivity` is the launcher entry point and the handler for
+`kiosk://roaming/login` and `kiosk://roaming/publish` links, so the browser QR opens
+the exact review/login without typing ids. It is non-WebView and has no remote
+signing bridge.
+
+`PublisherState` persists the verified policy floor, ancestry heads and one exact
+signed approval in an atomically replaced private file before submission. A lost
+response or process restart retries the same envelope (no re-signing, no head
+advance before server acknowledgement); corrupt state refuses to start. First trust
+requires a fingerprint typed from an independent channel; policy versions are
+monotonic with same-version conflict refusal, and root replacement is a separate
+typed recovery action. The first device imports one administrator bundle via SAF;
+routine use does not import it again.
+
+`StoredHarnessActivity` exposes a separate **Publisher root** action for the display:
+it reads the publisher `public.json` via SAF and requires the root SHA-256 to be
+typed from an independent channel before `DeliveryClient.confirmPublisherRoot`
+stores the anchor for signed-assignment verification. A new same-user device can
+export its add-device request before it has authority; group/origin come from the
+already confirmed display bootstrap and the user id is entered explicitly. The
+`org.kiosk.harness.campaign` build identity is a disposable campaign sibling of
+`.debug`/`.sandbox`, so installing it does not change an existing sandbox display
+group. The 2026-11-17 physical campaign exercised system link login, native review,
+one-action User/Administrator publication, durable retry after process restart,
+actual ready receipts and offline reopen on the retained phone.
+
+Not implemented: an embedded camera QR decoder (supported system link handling is
+used); resistance to a compromised publisher OS/Keystore. See the
+[candidate protocol](../kiosk/delivery/README.md#roaming-publish-v1-candidate)
+and the Stage5 report.

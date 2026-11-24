@@ -2,10 +2,14 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from kiosk.version import VERSION
 
 
 def main():
@@ -17,7 +21,8 @@ def main():
     root = Path(__file__).resolve().parents[1]
     output = args.destination.absolute()
     output.mkdir(parents=True, exist_ok=False)
-    sources = [*sorted((root/'kiosk/display').glob('delivery_*.py')), root/'kiosk/display/native_crypto.py', Path(__file__)]
+    sources = [*sorted((root/'kiosk/display').glob('delivery_*.py')), root/'kiosk/display/native_crypto.py', root/'kiosk/display/coordinator.py', root/'kiosk/display/cache.py', Path(__file__)]
+    sources += [root/'kiosk/publication/authority.py']
     if args.connect_ui:
         # Discovery is a top-level module (kiosk/discovery.py), not kiosk/display/discovery.py.
         sources += [root/'kiosk/display/connect.py', root/'kiosk/display/connect_ui.py',
@@ -60,14 +65,22 @@ def main():
             raise RuntimeError('Native shell identity mismatch')
         (candidate/filename).write_bytes(payload)
     (candidate/'build.json').write_bytes((args.shell_candidate/'build.json').read_bytes())
+    # Compile the self-contained update helper for the client's self-update.
+    compiler = Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+    if not compiler.is_file():
+        raise RuntimeError('Windows .NET Framework compiler required for the update helper.')
+    subprocess.run([str(compiler), '/nologo', '/target:exe', '/platform:x64',
+                    '/out:' + str(output/'KioskUpdateHelper.exe'), str(root/'tools/update_helper.cs')],
+                   check=True, timeout=60)
     after = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}
     if after != before:
         raise RuntimeError('Source changed during build; reject mixed build evidence')
     inventory = {'sources': before,
                  'files': {p.relative_to(output).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                            for folder in (output/'dist', candidate) for p in sorted(folder.rglob('*')) if p.is_file()},
-                 'python': sys.version, 'native_build_reused': expected}
+                 'python': sys.version, 'version': VERSION, 'native_build_reused': expected}
     (output/'identities.json').write_text(json.dumps(inventory, indent=2), encoding='utf-8')
+    (output/'version.json').write_text(json.dumps({'schema_version': 1, 'version': VERSION}, indent=2), encoding='utf-8')
     print(json.dumps({'result': 'built', 'files': len(inventory['files']),
                       'client_sha256': inventory['files'][f'dist/{name}/{name}.exe']}))
 

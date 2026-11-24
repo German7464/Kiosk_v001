@@ -12,6 +12,7 @@ from kiosk.features.admin.routes import admin_required
 from kiosk.publication.exporter import PackageError, export_events_package
 from .protocol import DeliveryError, LIMITS, PROFILE, decode, encode, sha, text
 from .publication import MAX_CATALOG_BYTES, MAX_PUBLICATION_BYTES, _publish
+from .progress import STALE_SECONDS
 
 
 def publish_current_events(app, operation_id):
@@ -30,7 +31,7 @@ def publish_current_events(app, operation_id):
                                   app.config['RESOURCE_DIR'] / 'kiosk', source)
             metadata = _publish(state, source, db)
         # Even export cleanup must succeed before changing the assignment.
-        generation = state._assign(db, PROFILE, metadata['package_id'], sha(encode(metadata)), metadata['revision'])
+        generation = state._assign(db, PROFILE, metadata['package_id'], sha(encode(metadata)), metadata['revision'], renderer=metadata['renderer']['build_id'])
         db.execute('INSERT INTO operator_publications VALUES (?,?,?)', (operation_id, PROFILE, generation))
     return generation
 
@@ -49,7 +50,7 @@ def eligibility(device, now):
 
 def distribution(state, generation=None, before=None):
     """One consistent read; presence of a cohort distinguishes known-empty from unknown."""
-    with state.connection() as db:
+    with state.connection(write=False) as db:
         now = int(state.clock())
         history = [dict(row) for row in db.execute('''SELECT h.*,c.revision,c.created
             FROM assignment_history h LEFT JOIN assignment_cohorts c
@@ -74,6 +75,17 @@ def distribution(state, generation=None, before=None):
         devices = {row['device_id']: dict(row) for row in db.execute(
             'SELECT device_id,profile,revoked,expires FROM devices ORDER BY device_id')}
         members = [{'device_id': key, 'eligibility': eligibility(value, now)} for key, value in devices.items()]
+        contacts = {row['device_id']: row['last_contact'] for row in db.execute('SELECT * FROM device_contacts')}
+        progress = {row['device_id']: (decode(bytes(row['body'])), row['received'])
+                    for row in db.execute('SELECT * FROM device_progress')}
+        def monitoring(device_id):
+            contact = contacts.get(device_id)
+            entry = progress.get(device_id)
+            transfer = None
+            if entry and selected and entry[0]['generation'] == generation and entry[0]['package_id'] == selected['package_id']:
+                transfer = {**entry[0], 'received': utc(entry[1])}
+            return {'transfer': transfer, 'last_contact': utc(contact) if contact is not None else None,
+                    'stale': contact is not None and now - contact >= STALE_SECONDS}
         if selected:
             known = selected['created'] is not None
             ids = [row['device_id'] for row in db.execute('''SELECT device_id FROM assignment_targets
@@ -92,7 +104,10 @@ def distribution(state, generation=None, before=None):
                 report = reports.get(device_id)
                 targets.append({'device_id': device_id, 'eligibility': eligibility(devices.get(device_id), now),
                                 'ready': bool(report), 'modes': sorted(report['modes']) if report else [],
-                                'received': utc(report['received']) if report else None})
+                                'received': utc(report['received']) if report else None,
+                                **monitoring(device_id)})
+            for member in members:
+                member.update(monitoring(member['device_id']))
             ready = sum(target['ready'] for target in targets)
             selected.update(targets=targets if known else None, ready=ready if known else None,
                             outstanding=len(targets) - ready if known else None,

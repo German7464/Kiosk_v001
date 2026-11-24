@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kiosk Events drafts</title><script defer src="{{ url_for('static',filename='js/roaming_editor.js') }}"></script>
+</head><body data-csrf="{{ csrf_token() }}">
+<h1>Events drafts</h1><p id="notice" role="status"></p>
+{% if not identity %}
+<p>Scan with your authorized Kiosk app, check the origin and confirmation, then explicitly accept Login.</p>
+<button id="login">Create temporary login QR</button><p id="context"></p><img id="qr" alt="Temporary login QR" hidden>
+<p><a id="login-link" hidden>Open login link on your authorized device</a></p>
+<p>Password fallback for existing permitted operations: <a href="/admin/login">Password login</a>.</p>
+{% else %}
+<p>Signed in as {{ identity.user_id }} ({{ identity.role }}). Saving does not change published screens.</p>
+<button id="logout">Sign out</button><button id="sessions">My browser sessions</button><div id="session-list"></div>
+<h2>Drafts</h2><button id="refresh">Refresh</button><div id="objects"></div>
+<h2>Edit Event</h2><form id="event-form">
+<label>Stable Event ID <input id="identity" maxlength="128" required></label>
+<label>Loaded version <input id="version" type="number" min="0" value="0" readonly></label>
+<p><label>Title <input id="title" maxlength="300" required></label></p>
+<p><label>Summary <textarea id="short_description" maxlength="4096"></textarea></label></p>
+<p><label>Full description <textarea id="full_description" maxlength="16384"></textarea></label></p>
+<p><label>Date <input id="event_date" maxlength="64"></label><label>Place <input id="place" maxlength="512"></label></p>
+<label>Order <input id="sort_order" type="number" value="0"></label>
+<label>Visibility after publication <select id="visibility"><option value="active">Visible</option><option value="hidden">Hidden</option></select></label>
+<button>Save draft</button><button type="button" id="ready">Mark loaded version ready</button></form>
+<p>Ready revisions require a separate exact-content review and Publish action in an authorized native app.</p>
+<h2>Display settings</h2><form id="settings-form">
+<label>Site title <input id="site_title" maxlength="300"></label>
+<label>Language <input id="interface_language" maxlength="8"></label>
+<label>TV slide duration (seconds) <input id="tv_slide_duration" maxlength="16"></label>
+<label>Kiosk heading <input id="kiosk_heading" maxlength="300"></label>
+<input id="settings_version" type="number" hidden><button>Save settings</button></form>
+<h2>Prepare publication</h2><p>Every ready draft revision is included. All currently eligible displays are the exact signed target set; if enrollment changes before approval, prepare again.</p>
+<button id="targets">Load eligible displays</button><div id="target-list"></div>
+<button id="prepare">Prepare publication from ready drafts</button><p id="candidate"></p><img id="candidate-qr" alt="Publication candidate QR" hidden>
+<p><a id="candidate-link" hidden>Open on an authorized publisher device</a></p>
+<p id="distribution" role="status"></p><button id="retry" hidden>Retry distribution</button>
+{% endif %}</body></html>

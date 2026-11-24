@@ -1,0 +1,54 @@
+plugins { id 'com.android.application' }
+android {
+    namespace = 'org.kiosk.harness'
+    compileSdk = 35
+    buildToolsVersion = '36.0.0'
+    useLibrary 'android.test.runner'
+    useLibrary 'android.test.base'
+    defaultConfig {
+        applicationId = 'org.kiosk.harness'
+        minSdk = 30
+        targetSdk = 35
+        versionCode = 1
+        versionName = '0.1-experiment'
+        testInstrumentationRunner = 'org.kiosk.harness.HarnessTestRunner'
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    signingConfigs { debug { storeFile = rootProject.file(providers.gradleProperty('kioskDebugKeystore').getOrElse('.gradle/debug.keystore')) } }
+    buildTypes {
+        debug { applicationIdSuffix = '.debug' }
+        // Debug-only disposable identity for a separate lab group. Same source/transport as debug;
+        // the distinct application id isolates app data, so a parallel enrollment cannot overwrite
+        // the retained phone registration. Not a production multi-account feature.
+        sandbox { initWith debug; applicationIdSuffix = '.sandbox'; versionNameSuffix = '-sandbox'; signingConfig = signingConfigs.debug }
+        // Task-owned disposable campaign identity. Kept separate from the retained
+        // sandbox data so an existing display group is never silently replaced.
+        campaign { initWith debug; applicationIdSuffix = providers.gradleProperty('kioskCampaignSuffix').getOrElse('.campaign'); versionNameSuffix = '-campaign'; signingConfig = signingConfigs.debug }
+    }
+    testOptions { unitTests.all {
+        systemProperty 'fixtureRoot', file('src/main/assets/views').absolutePath
+        systemProperty 'packageFixtureRoot', file('src/androidTest/assets/package-cases').absolutePath
+        systemProperty 'tvPaginationRoot', rootProject.file('testdata/tv-pagination').absolutePath
+        systemProperty 'contentFitnessRoot', rootProject.file('testdata/content-fitness').absolutePath
+        systemProperty 'preparationFixtureRoot', rootProject.file('testdata/local-admission').absolutePath
+        systemProperty 'bindingFixtureRoot', rootProject.file('testdata/generic-binding').absolutePath
+        systemProperty 'publishingFixture', rootProject.file('testdata/roaming-publish-v1-public.json').absolutePath
+        systemProperty 'publishingCandidateFixture', rootProject.file('testdata/roaming-candidate-v1-public.json').absolutePath
+        systemProperty 'publishingAncestryFixture', rootProject.file('testdata/roaming-ancestry-v1-public.json').absolutePath
+    } }
+    // Debug remains the default test build type. The disposable sandbox lab can be
+    // selected explicitly for its isolated WebView/network-security test APK.
+    testBuildType = providers.gradleProperty('kioskTestBuildType').getOrElse('debug')
+    sourceSets {
+        test.java.srcDir 'src/sharedTest/java'
+        androidTest.java.srcDir 'src/sharedTest/java'
+        androidTest.assets.srcDir rootProject.file('testdata')
+    }
+}
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+}

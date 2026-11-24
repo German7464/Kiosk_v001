@@ -90,6 +90,22 @@ class DisplaySwitchTests(unittest.TestCase):
             self.assertEqual((self.profile / 'display-command.json').read_bytes(), command)
             self.assertEqual((self.store.root / 'active.json').read_bytes(), pointer)
 
+    def test_mode_only_switch_same_package_and_failed_mode_keeps_previous(self):
+        with self.spawn(), self.session() as run:
+            old_package = coordinator._view_identity(run.view)
+            self.assertTrue(run.switch_to_active(mode='kiosk', timeout=1))
+            self.assertEqual(run.mode, 'kiosk')
+            self.assertEqual(coordinator._view_identity(run.view), old_package)
+            self.assertTrue((self.state / 'last-ready-kiosk.json').is_file())
+            self.assertTrue(run.switch_to_active(mode='tv', timeout=1))
+            self.assertEqual(run.mode, 'tv')
+        with self.spawn('failed'), self.session() as run:
+            previous = run.view
+            with self.assertRaisesRegex(PackageError, '^display_switch_failed$'):
+                run.switch_to_active(mode='kiosk', timeout=1)
+            self.assertEqual(run.mode, 'tv')
+            self.assertEqual(run.view, previous)
+
     def test_failed_candidate_preserves_old_receipt_and_requires_explicit_retry(self):
         with self.spawn('failed'), self.session() as run:
             old = run.view

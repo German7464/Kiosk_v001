@@ -12,6 +12,11 @@ from .store import _ExpectedFileWriter, _directory
 
 ASSETS = Path(__file__).with_name('renderer_assets')
 TRANSLATIONS = Path(__file__).parent.parent / 'translations'
+# Bump only when this module's rendering logic changes; the identity is derived
+# from shipped assets/translations plus this constant so separately built server
+# and display packages agree. Hashing the frozen module file instead made two
+# builds of identical source differ by compiled-bytecode metadata.
+RENDERER_VERSION = '2026-11-20.1'
 
 
 def build_view(package, destination, *, mode='kiosk', max_bytes=128 * 1024 * 1024):

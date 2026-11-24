@@ -213,8 +213,14 @@ def _check_resources(payloads):
                     raise PackageError('missing_display_resource')
 
 
-def export_events_package(database_path, public_upload_dir, resource_dir, destination):
-    """Export to a NEW directory. Existing destinations are never overwritten."""
+def export_events_package(database_path, public_upload_dir, resource_dir, destination, *, data=None):
+    """Export to a NEW directory. Existing destinations are never overwritten.
+
+    ``data`` exports an already frozen public snapshot (workspace draft mapping)
+    instead of reading the mutable Events database. The caller owns the exact
+    snapshot-to-package correspondence and must hand the same document to the
+    native reviewer.
+    """
     destination = Path(destination).absolute()
     parent = destination.parent
     staging = None
@@ -223,7 +229,7 @@ def export_events_package(database_path, public_upload_dir, resource_dir, destin
             raise PackageError('destination_exists')
         if not parent.is_dir() or any(_is_link(p.lstat()) for p in (parent, *parent.parents)):
             raise PackageError('unsafe_destination')
-        data = _snapshot(database_path)
+        data = _snapshot(database_path) if data is None else data
         _validate_data(data)
         payloads = {'data/events.json': _json(data)}
         witnesses = []

@@ -1,0 +1,53 @@
+{
+  "contract": "lan-trust-lifecycle-v2",
+  "group_spki_base64": "MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAqJzOlPQ5D5BPZUZ/a7QOrYs9VJ6UdtV/bBFcnEU7tCVgDktyUYr3nT9UudxUuob1hhEq/91TkM+obFWYYZWABOofh6wgIJcXbXkyJCcSIZ1zyRxhXMr43WM4WIW3ZyDgxijJqYqa/59R//IP0jCCPdn2zq57KP6kLJ7UWKS2B5/4X4sKvcu4tMnmZwIPs3rLTudsEMxo1LopjFFqnwEM3m2uDDO3a2mLZQDeteGCzP+r2RVVJsbhVXY5A6lDP7eGFAYC8zmfo10y1IfTaMhkoaDmb6J5jXM4vLT6aAPcYIIhuPrrYmH7LiCd44FSNELRIOehjo3OQkYXJj57o7rqAJpMYWlfnLbYyiKKK9N/K3Zyu/1ifVtZyoMnR7Uxio+st/uzjZQ/UKn+Njj9+sr5/Ll1S1PCXfgfV1AkSvXE+7RdRZDA/UZPDeiJ4ccL2PtksPGoZsCeGOoM2lMe500sJTZ9uHjn7XI29/e0MmKdz8WViLa0kgv/3kJDtJmMhRdLAgMBAAE=",
+  "trust_valid": {
+    "envelope": {
+      "version": 2,
+      "key_id": "53848605167f061880d95e4b22d51e8cd0e537d0bbe853226f13a98bc9bdf1b7",
+      "algorithm": "RSA3072-SHA256-PKCS1-v1_5",
+      "payload_base64": "eyJleHBpcmVzX2F0IjoxNzk1MjQzOTQ4LCJnZW5lcmF0aW9uIjoxLCJncm91cF9pZCI6IjZlOTAzZmNkLWNkYmQtNDA4Mi1iN2RiLWU1Y2M4N2M2ZDI4ZiIsImlzc3VlZF9hdCI6MTc5NDYzOTE0OCwic2VydmVycyI6W3sib3JpZ2luIjoiaHR0cHM6Ly8xOTIuMTY4LjEuMTI0OjE5NDQzIiwicm9sZXMiOlsicHVibGlzaGVyIl0sInNlcnZlcl9pZCI6IjdjNmQzNjZmLWQzZDUtNDdkOS1hMWRkLWM3ZDI2MzExMTgwZiIsInRsc19pc3N1ZXJfc3BraV9zaGEyNTYiOiIyMjlkZmFiMTk0MzRiNzJiZGQxYjA2Nzc4MTFlZTM1MzY0OWE3YjI0MDA4NDUxZjY2YmY3NGM4YTYxNjViM2ZkIn1dLCJ2ZXJzaW9uIjoyfQ==",
+      "signature_base64": "pZXracLKIQgW9VGZOgn1/QL/XVGKReQ7qALtmmjZ/bTIKrzFpDkVNW7vbOuU4jws9815TClSKEJbfN9XIfmeLCRY5+UomFsVvjmz040J5uBiS2fCZTC4xQ0ygC9yhPGWqZiff1PrTdzefAbjg6VcUG2HahfDtLwUPQ9zaPEou35pWPJpg12hn0gASxOBZNov2jxOYM3kbcz/0sij81lc3FQDRuyPb09FsZ8gud5D5O61l+R5TiV7znifGKObdKvYo1gThdntcxFYA+csHPjkr0LIRpB1e0202m3x0lO618WucQTF82W5LmottDiNHnBzJekz64XTiynS7JRwIgIwY7zvzBqL35feQBb/Ax5ElnrLpJXPFK18lenV2U7ZyJHXFBOdDKNHIvcJ3ZAlhz0vt6uKVZJmW2yME+9SzaSzew395MfwJv2Z35ew5HfMvMQffejNgvT/VDuq0a4cl71iQYijbDf4Ta++M6FTEzKLQNDDmGDkEakbxPeme2TWV7MF"
+    },
+    "domain_hex": "4b696f736b2f47726f757054727573742f763200",
+    "payload_utf8": "{\"expires_at\":1795243948,\"generation\":1,\"group_id\":\"6e903fcd-cdbd-4082-b7db-e5cc87c6d28f\",\"issued_at\":1794639148,\"servers\":[{\"origin\":\"https://192.168.1.124:19443\",\"roles\":[\"publisher\"],\"server_id\":\"7c6d366f-d3d5-47d9-a1dd-c7d26311180f\",\"tls_issuer_spki_sha256\":\"229dfab19434b72bdd1b0677811ee353649a7b24008451f66bf74c8a6165b3fd\"}],\"version\":2}",
+    "payload_sha256": "442443a92cbea9c07fbdd2bbfc6b5191754c11e38b01436592c3031c02b8dc94"
+  },
+  "delegation_valid": {
+    "payload_base64": "eyJleHBpcmVzX2F0IjoxODAyNDE1MTQ4LCJncm91cF9pZCI6IjZlOTAzZmNkLWNkYmQtNDA4Mi1iN2RiLWU1Y2M4N2M2ZDI4ZiIsImlzc3VlZF9hdCI6MTc5NDYzOTE0OCwiaXNzdWVyX2tleV9pZCI6IjIyOWRmYWIxOTQzNGI3MmJkZDFiMDY3NzgxMWVlMzUzNjQ5YTdiMjQwMDg0NTFmNjZiZjc0YzhhNjE2NWIzZmQiLCJpc3N1ZXJfc3BraV9iYXNlNjQiOiJNSUlCb2pBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVk4QU1JSUJpZ0tDQVlFQXpVc3lYL0gzR1k3TEtzZUVyZ3FZbnRuS0dSRWF6Mkd2akoxdGozbW8xTlkrR1pkV0IwbEpJNTNtdUxWRThFQmcvRk5BRTFabmkvZ0FYZ0w1RzViRGJUdjdYMGRLVEJrVmNQMmprVklGc1VHdnFyTXEyTXA0RjNtMnRVdWh4M3VIemhRVnBLZ3RCeFRtV29HVFlRdEhKemF5ZVVRT29PSTBUQlgrSmt6NktacytiYkdzazZTcnZrdjhwWEhkV3NYNGRjN0JkdG1MdXBSbVcxWnRWdnlTdmRMWWJSbnZ1TGhNS2pCMFE5UXpQSC9Ja0NFWUUza0U1TVRCeWcxQzNjenhJL2cxV21kVXlvZkpXcE5GSFhjZUxIZlhrWCtqUkZ2c3QxVnJRTzR0djFseEZwRTdVSWRMaEM5TjduRGRnYkhyTGU2QUU0cVpSWENHUGhiaE4wd2lGSnJHaWdxemZwTjI1eHZMUnBVb05SZHBuSVJ6cXBVRHlXYXpuanB0QjRZYUkxM0tFY2JDejd3cDQyNnB0ZUdoeWtnQ2dZcmR3YTNLSmFXSUdJU3RyY3VTeDZQNnhtbUpyaU5WYzJrZGt0dGNwbExFWmVLd2NBYXVSV2JQNWFaTC9Idmt4ek9oT1A3TEZCb1hDRk1VZzJ4V0N3Wk1qOWROcjF4U3pKSEMxL0xOQWdNQkFBRT0iLCJtYXhfdGxzX3ZhbGlkaXR5X2RheXMiOjMwLCJvcmlnaW4iOiJodHRwczovLzE5Mi4xNjguMS4xMjQ6MTk0NDMiLCJwZXJtaXR0ZWRfZG5zIjpbImxvY2FsaG9zdCJdLCJwZXJtaXR0ZWRfaXAiOlsiMTkyLjE2OC4xLjEyNCJdLCJzY29wZXMiOlsiaXNzdWVfdGxzX2xlYWYiXSwic2VydmVyX2lkIjoiN2M2ZDM2NmYtZDNkNS00N2Q5LWExZGQtYzdkMjYzMTExODBmIiwidmVyc2lvbiI6MX0=",
+    "signature_base64": "IiqZzIgD5EQ+qCLY3CTNFjYNXS/KiKMc9+WNQtttjObVyNAn9NYgY2/oBzDjLLDWDf/lWFxblmNXj5kWIs5ZBi7H71EvMUgR43/vUZyQearMBA6Rh1LbgrKw7LGHyQM5fEvKusW5SXf0LoF1NbEooB56/lhIzdRKGyOHEzDErLNRU367y/6U5paSWOzSJl5vLRmIUgIyuAynNptakwDeT1ytxeknKZnIMs6+9kmoFVafa+QBn6f6roAG/RwQC8kZyA3AparbZhHtO2/7tHNp5PUH423dtz9yCriuy2fuFjB1MtayqVEbK6yEp4RY6aXHI3qUcwHnCrrx8exviNRGVmifRmnvwrhz/xxVEXR/6Q4dzLEU1GDxvB6YA4y4ewegtuKv/MKnSUoMPtSN7OIuMo97CZjC7bb0ivMSMJQdVjWV4dFXAjRGNOa6n2AMWLR+1LXhkdvD9Zzlmp0nsVFebTsd70XN1j/qHdvAGA2yQa2e5PBvMlzZER63CY+rJxSt",
+    "domain_hex": "4b696f736b2f4c616e54727573742f76312f64656c65676174696f6e00"
+  },
+  "negative_transformations": [
+    {
+      "base": "trust_valid",
+      "change": "envelope.version=1",
+      "expect": "signature/domain refused"
+    },
+    {
+      "base": "trust_valid",
+      "change": "payload.version=1 without re-signing",
+      "expect": "signature refused"
+    },
+    {
+      "base": "bootstrap",
+      "change": "append intermediate to tls_ca_pem",
+      "expect": "bootstrap_requires_one_root"
+    },
+    {
+      "base": "delegation_valid",
+      "change": "origin/server/group/IP/DNS expansion",
+      "expect": "signature refused"
+    },
+    {
+      "base": "TLS",
+      "change": "unknown root/wrong SAN/expired leaf/wrong issuer pin",
+      "expect": "refused"
+    },
+    {
+      "base": "trust_valid",
+      "change": "lower generation or equal generation/different payload",
+      "expect": "rollback/conflict refused"
+    }
+  ]
+}

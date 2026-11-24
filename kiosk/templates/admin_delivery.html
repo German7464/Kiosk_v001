@@ -8,6 +8,27 @@
 {% else %}{{ tr('No longer registered', 'Больше не зарегистрировано', 'Nicht mehr registriert') }}{% endif %}
 {%- endmacro %}
 {% block title %}{{ tr('Events publications', 'Публикации Events', 'Events veröffentlichen') }}{% endblock %}
+{% macro monitoring(target) -%}
+<td>{% if target.transfer %}
+{% set value = target.transfer %}
+{% if value.state == 'waiting' %}{{ tr('Waiting', 'Ожидает', 'Wartet') }}
+{% elif value.state == 'downloading' %}{{ tr('Downloading', 'Получает данные', 'Download läuft') }}
+{% elif value.state == 'downloaded' %}{{ tr('Downloaded', 'Загружено', 'Heruntergeladen') }}
+{% elif value.state == 'verified' %}{{ tr('Verified', 'Проверено', 'Geprüft') }}
+{% elif value.state == 'incompatible' %}{{ tr('Incompatible — update client', 'Несовместимо — обновите клиент', 'Inkompatibel — Client aktualisieren') }}
+{% else %}{{ tr('Transfer error', 'Ошибка передачи', 'Übertragungsfehler') }}{% endif %}
+{% if value.total_bytes %}<br><progress max="{{ value.total_bytes }}" value="{{ value.completed_bytes }}"></progress> {{ value.completed_bytes }} / {{ value.total_bytes }} B{% endif %}
+{% if value.error != 'none' %}<br><code>{{ value.error }}</code>
+{% if value.error == 'connection' %}<br>{{ tr('Check LAN; client retries automatically.', 'Проверьте LAN; клиент повторяет автоматически.', 'LAN prüfen; Client versucht erneut.') }}
+{% elif value.error == 'storage' %}<br>{{ tr('Free space on the client, then retry.', 'Освободите место на клиенте и повторите.', 'Client-Speicher freigeben und erneut versuchen.') }}
+{% elif value.error == 'integrity' %}<br>{{ tr('Retry; if repeated, check the server publication.', 'Повторите; при повторной ошибке проверьте публикацию сервера.', 'Erneut versuchen; bei Wiederholung Server-Veröffentlichung prüfen.') }}
+{% elif value.error == 'assignment_changed' %}<br>{{ tr('Resynchronize the latest assignment.', 'Повторите синхронизацию текущего назначения.', 'Aktuelle Zuweisung erneut synchronisieren.') }}
+{% elif value.error == 'candidate_refused' %}<br>{{ tr('Retry; inspect client diagnostics if repeated.', 'Повторите; при повторной ошибке проверьте диагностику клиента.', 'Erneut versuchen; bei Wiederholung Client-Diagnose prüfen.') }}{% endif %}
+{% endif %}
+<br><small>{{ value.received }}</small>
+{% else %}{{ tr('Unknown intermediate state (no progress report)', 'Промежуточное состояние неизвестно (нет отчёта)', 'Zwischenstand unbekannt (keine Meldung)') }}{% endif %}</td>
+<td>{% if target.last_contact %}{{ target.last_contact }}<br>{{ tr('No recent contact — possibly offline', 'Нет недавнего контакта — возможно не в сети', 'Kein aktueller Kontakt — möglicherweise offline') if target.stale else tr('Recent authenticated contact', 'Недавний подтверждённый контакт', 'Kürzlicher authentifizierter Kontakt') }}{% else %}{{ tr('Contact unknown', 'Контакт неизвестен', 'Kontakt unbekannt') }}{% endif %}</td>
+{%- endmacro %}
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_delivery.css') }}">
 <section class="admin-panel delivery-panel">
@@ -40,15 +61,15 @@
             <dt>Metadata SHA256</dt><dd><code>{{ publication.metadata_hash }}</code></dd>
             {% if publication.created %}<dt>{{ tr('Published', 'Опубликовано', 'Veröffentlicht') }}</dt><dd>{{ publication.created }}</dd>{% endif %}
         </dl>
-        <p>{{ tr('Ready is the client’s activation report for this assignment, not proof that a physical screen is powered on. Downloaded, verified, offline and incompatible stages are unknown to this view.', 'Готовность — отчёт клиента об активации именно этого назначения, без подтверждения включённого экрана. Скачивание, проверка, офлайн и несовместимость здесь неизвестны.', 'Bereit ist die Aktivierungsmeldung des Clients für diese Zuweisung, kein Nachweis eines eingeschalteten Bildschirms. Download-, Prüf-, Offline- und Kompatibilitätsstatus sind hier unbekannt.') }}</p>
+        <p>{{ tr('Activation is a historical ready receipt for this exact publication, not proof of screen power. Transfer is separate. Contact is server-observed, coalesced within 30 seconds; after 120 seconds silence means possibly offline, not proven physical failure. Refresh to update.', 'Активация — исторический ready-отчёт именно об этой публикации, без подтверждения питания экрана. Передача показана отдельно. Контакт наблюдает сервер (точность до 30 секунд); молчание от 120 секунд означает возможный офлайн, а не доказанную неисправность. Обновите страницу для актуализации.', 'Aktivierung ist eine historische Ready-Meldung für genau diese Veröffentlichung, kein Stromnachweis. Übertragung separat. Serverkontakt mit bis zu 30 Sekunden Zusammenfassung; nach 120 Sekunden möglicherweise offline, kein Ausfallnachweis. Seite aktualisieren.') }}</p>
         {% if publication.targets is none %}
         <p class="delivery-warning">{{ tr('Original recipients unknown: this assignment predates recipient snapshots. Current membership is not a historical target set.', 'Исходные получатели неизвестны: назначение создано до сохранения списка. Текущий состав не подставляется вместо исторического.', 'Ursprüngliche Empfänger unbekannt: Zuweisung vor Einführung der Empfängerliste. Aktuelle Mitglieder ersetzen keine historischen Ziele.') }}</p>
         {% else %}
-        <p class="delivery-counts" role="status">{{ tr('Original recipients', 'Исходные получатели', 'Ursprüngliche Empfänger') }}: <strong>{{ publication.targets|length }}</strong> · {{ tr('Ready confirmed', 'Готовность подтверждена', 'Bereit bestätigt') }}: <strong>{{ publication.ready }}</strong> · {{ tr('Outstanding', 'Ожидаются', 'Ausstehend') }}: <strong>{{ publication.outstanding }}</strong></p>
+        <p class="delivery-counts" role="status">{{ tr('Updated', 'Обновлено', 'Aktualisiert') }}: <strong>{{ publication.ready }} / {{ publication.targets|length }}</strong> · {{ tr('Original recipients', 'Исходные получатели', 'Ursprüngliche Empfänger') }}: <strong>{{ publication.targets|length }}</strong> · {{ tr('Activation confirmed', 'Активация подтверждена', 'Aktivierung bestätigt') }}: <strong>{{ publication.ready }}</strong> · {{ tr('Outstanding', 'Ожидаются', 'Ausstehend') }}: <strong>{{ publication.outstanding }}</strong></p>
         {% if publication.targets %}
         <div class="delivery-table"><table><caption>{{ tr('Frozen original recipient set', 'Неизменяемый исходный набор получателей', 'Unveränderliche ursprüngliche Empfängerliste') }}</caption>
-            <thead><tr><th>{{ tr('Device', 'Устройство', 'Gerät') }}</th><th>{{ tr('Activation report', 'Отчёт об активации', 'Aktivierungsmeldung') }}</th><th>{{ tr('Current access', 'Текущий доступ', 'Aktueller Zugriff') }}</th></tr></thead>
-            <tbody>{% for target in publication.targets %}<tr><td><code>{{ target.device_id }}</code></td><td>{% if target.ready %}<strong>{{ tr('Ready confirmed', 'Готовность подтверждена', 'Bereit bestätigt') }}</strong> ({{ target.modes|join(', ') }})<br>{{ target.received }}{% else %}{{ tr('Outstanding — no ready report', 'Ожидается — отчёта о готовности нет', 'Ausstehend — keine Bereitmeldung') }}{% endif %}</td><td>{{ member_state(target.eligibility) }}</td></tr>{% endfor %}</tbody>
+            <thead><tr><th>{{ tr('Device', 'Устройство', 'Gerät') }}</th><th>{{ tr('Activation report', 'Отчёт об активации', 'Aktivierungsmeldung') }}</th><th>{{ tr('Transfer', 'Передача', 'Übertragung') }}</th><th>{{ tr('Last contact', 'Последний контакт', 'Letzter Kontakt') }}</th><th>{{ tr('Current access', 'Текущий доступ', 'Aktueller Zugriff') }}</th></tr></thead>
+            <tbody>{% for target in publication.targets %}<tr><td><code>{{ target.device_id }}</code></td><td>{% if target.ready %}<strong>{{ tr('Ready confirmed', 'Готовность подтверждена', 'Bereit bestätigt') }}</strong> ({{ target.modes|join(', ') }})<br>{{ target.received }}{% else %}{{ tr('Outstanding — no ready report', 'Ожидается — отчёта о готовности нет', 'Ausstehend — keine Bereitmeldung') }}{% endif %}</td>{{ monitoring(target) }}<td>{{ member_state(target.eligibility) }}</td></tr>{% endfor %}</tbody>
         </table></div>
         {% else %}<p>{{ tr('No original recipients. This does not mean any device displayed the publication.', 'Исходных получателей нет. Это не означает, что какое-либо устройство показало публикацию.', 'Keine ursprünglichen Empfänger. Daraus folgt keine Anzeige auf einem Gerät.') }}</p>{% endif %}
         {% endif %}
@@ -58,7 +79,7 @@
         {% endif %}
         {% if publication.later_members %}
         <h3>{{ tr('Current registrations outside the known original set', 'Текущие регистрации вне известного исходного набора', 'Aktuelle Registrierungen außerhalb der bekannten ursprünglichen Liste') }}</h3>
-        <ul>{% for member in publication.later_members %}<li><code>{{ member.device_id }}</code> — {{ member_state(member.eligibility) }}</li>{% endfor %}</ul>
+        <div class="delivery-table"><table><tbody>{% for member in publication.later_members %}<tr><td><code>{{ member.device_id }}</code></td>{{ monitoring(member) }}<td>{{ member_state(member.eligibility) }}</td></tr>{% endfor %}</tbody></table></div>
         {% endif %}
     </section>
     {% else %}<p>{{ tr('No publication assigned yet.', 'Публикаций пока нет.', 'Noch keine Veröffentlichung zugewiesen.') }}</p>{% endif %}
