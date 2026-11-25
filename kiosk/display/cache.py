@@ -7,6 +7,7 @@ from pathlib import Path
 from kiosk.publication.exporter import PackageError, _is_link, _json, _plain_path, _stream_stable, verify_package
 from kiosk.publication import renderer
 from kiosk.publication.store import PublicationStore, POINTER_RESERVE_BYTES
+from . import page_view
 
 DEFAULT_CACHE_BYTES = 256 * 1024 * 1024
 
@@ -54,6 +55,9 @@ def verify_cached_view(root, *, package_identity, mode):
         if len(payload) > 2 * 1024 * 1024:
             raise PackageError('invalid_cached_view')
         descriptor = json.loads(payload)
+        if (isinstance(descriptor, dict)
+                and descriptor.get('renderer') == page_view.PAGE_RENDERER_NAME):
+            return page_view.verify_page_view(root, package_identity=package_identity, mode=mode)
         if (not isinstance(descriptor, dict) or type(descriptor.get('schema_version')) is not int or
                 descriptor['schema_version'] != 1 or descriptor.get('renderer') != 'events-v1' or
                 descriptor.get('package_sha256') != package_identity or descriptor.get('mode') != mode):
@@ -104,6 +108,19 @@ def prepare_cached_view(store_root, cache_root, *, mode='kiosk', max_bytes=DEFAU
     if package is None:
         raise PackageError('no_publication')
     return prepare_package_view(package, cache_root, mode=mode, max_bytes=max_bytes)
+
+
+def prepare_active_view(store_root, cache_root, *, mode='kiosk', max_bytes=DEFAULT_CACHE_BYTES):
+    """Resolve the newest admitted renderer, keeping Events if a pages pointer is invalid."""
+    if page_view.active_kind(store_root) == 'pages':
+        try:
+            return page_view.prepare_cached_page_view(store_root, cache_root, mode=mode, max_bytes=max_bytes)
+        except PackageError as error:
+            try:
+                return prepare_cached_view(store_root, cache_root, mode=mode, max_bytes=max_bytes)
+            except PackageError:
+                raise error
+    return prepare_cached_view(store_root, cache_root, mode=mode, max_bytes=max_bytes)
 
 
 def prepare_package_view(package, cache_root, *, mode='kiosk', max_bytes=DEFAULT_CACHE_BYTES):

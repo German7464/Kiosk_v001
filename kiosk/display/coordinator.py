@@ -13,7 +13,8 @@ import uuid
 
 from kiosk.publication.exporter import PackageError, _json, _plain_path, verify_package
 from kiosk.publication.store import PublicationStore, _atomic_write, _directory
-from .cache import prepare_cached_view, renderer_identity, verify_cached_view
+from . import page_view
+from .cache import prepare_active_view, renderer_identity, verify_cached_view
 
 
 @dataclass
@@ -57,7 +58,7 @@ class DisplayRun:
         if target_mode not in ('tv', 'kiosk'):
             raise PackageError('unsupported_display_mode')
         if self.pending is None:
-            target = prepare_cached_view(self.store, self.cache, mode=target_mode)
+            target = prepare_active_view(self.store, self.cache, mode=target_mode)
             if target == self.view:
                 if self.receipt_pending:
                     _save_ready(self.view, self.state, self.mode, self.process)
@@ -115,11 +116,19 @@ def _view_identity(view):
 
 def _save_ready(view, state, mode, process):
     identity = _view_identity(view)
-    verify_cached_view(view.parent, package_identity=identity, mode=mode)
+    kind = page_view.view_kind(view)
+    if kind == 'pages':
+        page_view.verify_page_view(view.parent, package_identity=identity, mode=mode)
+        build = page_view.page_renderer_identity()
+    else:
+        verify_cached_view(view.parent, package_identity=identity, mode=mode)
+        build = renderer_identity()
     if process.poll() is not None:
         raise PackageError('display_engine_exited')
     receipt = {'schema_version': 1, 'package_sha256': identity, 'view': view.parent.name,
-               'mode': mode, 'renderer_build': renderer_identity()}
+               'mode': mode, 'renderer_build': build}
+    if kind == 'pages':
+        receipt['kind'] = 'pages'
     _atomic_write(state / ('last-ready-' + mode + '.json'), _json(receipt))
 
 
@@ -146,6 +155,25 @@ def _confirmed_view(store, cache, state, mode):
     """Only a previously confirmed view from this renderer build can be retried."""
     try:
         receipt = _read_json(state, 'last-ready-' + mode + '.json')
+        if not isinstance(receipt, dict):
+            return None
+        if receipt.get('kind') == 'pages':
+            if set(receipt) != {'schema_version', 'package_sha256', 'view', 'mode',
+                                'renderer_build', 'kind'}:
+                return None
+            if (type(receipt['schema_version']) is not int or receipt['schema_version'] != 1
+                    or receipt['mode'] != mode or receipt['kind'] != 'pages'
+                    or receipt['renderer_build'] != page_view.page_renderer_identity()):
+                return None
+            for field in ('package_sha256', 'view'):
+                if not isinstance(receipt[field], str) or not re.fullmatch('[0-9a-f]{64}', receipt[field]):
+                    return None
+            package = store / 'pages' / 'revisions' / receipt['package_sha256']
+            metadata = json.loads(_plain_path(store / 'pages' / 'metadata',
+                                              receipt['package_sha256'] + '.json').read_bytes())
+            page_view.verify_page_package(package, metadata)
+            return page_view.verify_page_view(cache / 'pages' / receipt['view'],
+                                              package_identity=receipt['package_sha256'], mode=mode)
         if (not isinstance(receipt, dict) or set(receipt) !=
                 {'schema_version', 'package_sha256', 'view', 'mode', 'renderer_build'} or
                 type(receipt['schema_version']) is not int or receipt['schema_version'] != 1 or
@@ -232,7 +260,7 @@ def display_session(store_root, cache_root, state_root, profile_root, shell, *, 
             _directory(profile)
             previous = _confirmed_view(store, cache, state, mode)
             try:
-                current = prepare_cached_view(store, cache, mode=mode)
+                current = prepare_active_view(store, cache, mode=mode)
             except PackageError:
                 if previous is None:
                     raise
@@ -275,6 +303,11 @@ def display_session(store_root, cache_root, state_root, profile_root, shell, *, 
 def _publication_fingerprint(store):
     values = []
     for name in ('active.json', 'active.backup.json'):
+        try:
+            values.append(_read_json(store, name))
+        except (OSError, ValueError, TypeError, RecursionError):
+            values.append(None)
+    for name in ('pages/active.json', 'active-kind.json'):
         try:
             values.append(_read_json(store, name))
         except (OSError, ValueError, TypeError, RecursionError):

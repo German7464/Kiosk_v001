@@ -34,8 +34,10 @@ public sealed class PreparedView : IDisposable {
             };
             core.NavigationCompleted += async (s, e) => {
                 try {
-                    bool valid = e.IsSuccess && await core.ExecuteScriptAsync(
-                        "(() => { const n = document.getElementById('counter'); return !!n && /^\\d{1,5} \\/ \\d{1,5}$/.test(n.textContent); })()") == "true";
+                    string probe = View.Kind == "pages"
+                        ? "(() => { const b = document.body; return !!b && b.getAttribute('data-kiosk-ready') === '1' && b.getAttribute('data-kiosk-failed') !== '1'; })()"
+                        : "(() => { const n = document.getElementById('counter'); return !!n && /^\\d{1,5} \\/ \\d{1,5}$/.test(n.textContent); })()";
+                    bool valid = e.IsSuccess && await core.ExecuteScriptAsync(probe) == "true";
                     ready.TrySetResult(valid && !disposed);
                 } catch { ready.TrySetResult(false); }
             };

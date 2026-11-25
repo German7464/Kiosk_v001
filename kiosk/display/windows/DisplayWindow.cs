@@ -158,12 +158,12 @@ public sealed class DisplayWindow : Form {
             diagnosticBusy = true;
             try {
                 string result = await active.Browser.CoreWebView2.ExecuteScriptAsync(
-                    "(() => { const n = document.getElementById('counter'); return n && /^\\d{1,5} \\/ \\d{1,5}$/.test(n.textContent) ? n.textContent : ''; })()");
+                    "(() => { const n = document.getElementById('counter'); if (n && /^\\d{1,5} \\/ \\d{1,5}$/.test(n.textContent)) return n.textContent; const b = document.body; return b && b.getAttribute('data-kiosk-ready') === '1' && b.getAttribute('data-kiosk-failed') !== '1' ? 'pages-ready' : ''; })()");
                 string counter = new JavaScriptSerializer().Deserialize<string>(result);
                 if (counter != null && Regex.IsMatch(counter, "\\A[0-9]{1,5} / [0-9]{1,5}\\z")) {
                     if (diagnosticCounter.Length != 0 && diagnosticCounter != counter) diagnosticTransitions++;
                     diagnosticCounter = counter;
-                } else diagnosticFailures++;
+                } else if (counter != "pages-ready") diagnosticFailures++;
             } catch { diagnosticFailures++; }
             finally { diagnosticSamples++; diagnosticBusy = false; Status(); }
             if (diagnosticSamples >= 120) diagnostics.Stop();

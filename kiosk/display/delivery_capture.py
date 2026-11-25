@@ -61,6 +61,15 @@ def validate_metadata(value):
     return value
 
 
+def validate_pages_metadata(value):
+    """Validate one signed v2 target metadata envelope for a data-only package."""
+    from kiosk.publication import authority
+    try:
+        return authority.validate_page_metadata(value)
+    except (TypeError, ValueError):
+        raise PackageError('page_metadata_refused') from None
+
+
 class Capture:
     def __init__(self, root, *, reuse_roots=(), audit=None):
         self.root = Path(root)
@@ -190,8 +199,52 @@ class Capture:
         if self.progress:
             self.progress(state, self.completed + partial)
 
+    def fetch_pages(self, assignment, transport, *, full_resync=False, progress=None,
+                    path_prefix=None, authenticated=None):
+        """Download and verify one exact data-only pages package; kiosk/tv stay empty."""
+        metadata = assignment['metadata']
+        publication = validate_pages_metadata(metadata)
+        self.completed, self.progress = 0, progress
+        self._progress('downloading')
+        identity = sha(encode({'metadata_sha256': assignment['metadata_sha256'],
+                               'revision_sha256': assignment['revision_sha256'],
+                               'device_id': assignment['device_id'],
+                               'generation': assignment['generation']}))
+        self.inspect()
+        journal_path = self.root / 'candidate.json'
+        journal = decode(journal_path.read_bytes()) if journal_path.exists() else None
+        if full_resync or not journal or journal.get('assignment_sha256') != identity:
+            self.reset()
+            journal = {'assignment_sha256': identity, 'offsets': {}}
+            _atomic_write(journal_path, encode(journal))
+        elif (self.root / 'owner.json').read_bytes() != encode({'owner': 'windows-delivery-v1'}):
+            raise PackageError('unowned_capture')
+        work = self.root / 'work'
+        for entry in publication['package']['files']:
+            relative = 'package/' + entry['path']
+            target = work / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            self.inspect()
+            if shutil.disk_usage(self.root).free < LIMITS['min_free_bytes'] + entry['size']:
+                raise PackageError('capture_disk_full')
+            if target.exists():
+                _plain_path(work, relative)
+                if self._valid(work, relative, entry):
+                    self.completed += entry['size']
+                    self._progress('downloading')
+                    continue
+            self._download(target, relative, entry, publication['package_id'], transport,
+                           journal, journal_path, path_prefix=path_prefix,
+                           authenticated=authenticated)
+            self.completed += entry['size']
+            self._progress('downloading')
+        self._progress('downloaded')
+        verify_pages_captured(work / 'package', metadata)
+        self._progress('verified')
+        return work / 'package'
+
     def _download(self, target, relative, entry, package, transport, journal, journal_path,
-                  *, path_prefix=None):
+                  *, path_prefix=None, authenticated=None):
         for attempt in range(2):
             actual = target.stat().st_size if target.exists() else 0
             saved = journal['offsets'].get(relative, 0)
@@ -207,8 +260,9 @@ class Capture:
             headers = {'Range': f'bytes={offset}-', 'If-Range': '"' + entry['sha256'] + '"'} if offset else {}
             base = path_prefix if path_prefix is not None else '/api/v2/publications/' + package
             path = base.rstrip('/') + '/' + quote(relative, safe='/')
+            request_authenticated = (path_prefix is None) if authenticated is None else bool(authenticated)
             with transport.response(path, headers=headers,
-                                    authenticated=path_prefix is None) as response:
+                                    authenticated=request_authenticated) as response:
                 status = response.status
                 if status == 416:
                     self.stats['restarts'].append('range_416')
@@ -302,3 +356,12 @@ def verify_captured(work, metadata):
                 (now - started) * 1000 > LIMITS['total_image_ms']):
             # Refuse after measured work; this cannot forcibly cancel a native decoder.
             raise PackageError('image_elapsed_budget')
+
+
+def verify_pages_captured(package, metadata):
+    """Verify the exact data-only pages package bytes against its signed metadata."""
+    from kiosk.publication import authority, page_release
+    from . import page_view
+    publication = authority.validate_page_metadata(metadata)
+    files = page_view.read_package_tree(package)
+    page_release.verify_inventory(publication, {'package': files, 'kiosk': {}, 'tv': {}})

@@ -225,6 +225,93 @@ class PrivateState:
                              'display': assignment.get('display', {'mode': 'local'})}
         self.save()
 
+    def page_context(self):
+        """Local v4 expectations; never inferred from a server response."""
+        anchor = self.data.get('bootstrap')
+        binding = self.data.get('binding')
+        publisher = self.data.get('publisher_anchor')
+        if not anchor or not binding or not publisher:
+            raise PackageError('page_admission_setup_required')
+        return {'group_id': anchor['group_id'], 'device_id': binding['device_id'],
+                'profile': binding['profile'], 'destination': 'windows-pages-v1',
+                'origin': anchor['origin'], 'root_spki': b64(publisher['root_spki_base64'], 1024),
+                'policy_floor': publisher.get('policy_floor', 0),
+                'heads': tuple(publisher.get('heads', []))}
+
+    def validate_page_assignment(self, assignment):
+        """Check a signed v4 page assignment without committing local facts."""
+        from kiosk.publication import authority as page_authority
+        fields(assignment, 'version group_id device_id profile generation revision_sha256 '
+                           'destination projection metadata_sha256 metadata display publisher')
+        if type(assignment['version']) is not int or assignment['version'] != 4:
+            raise PackageError('unsupported_assignment_version')
+        context = self.page_context()
+        if (assignment['group_id'] != context['group_id']
+                or assignment['device_id'] != context['device_id']
+                or assignment['profile'] != context['profile']
+                or assignment['destination'] != context['destination']):
+            raise PackageError('assignment_binding_refused')
+        positive(assignment['generation'])
+        digest(assignment['revision_sha256'])
+        digest(assignment['metadata_sha256'])
+        if assignment['publisher'] != assignment.get('publisher'):
+            raise PackageError('publisher_approval_refused')
+        try:
+            page_authority.page_assignment(
+                assignment['publisher'], assignment, context['root_spki'],
+                context['origin'], self.now(), policy_floor=context['policy_floor'],
+                known_heads=context['heads'])
+        except (ValueError, KeyError, TypeError):
+            raise PackageError('publisher_approval_refused') from None
+        identity = sha(encode({key: value for key, value in assignment.items()
+                               if key != 'publisher'}))
+        previous = self.data.get('assignment_highest')
+        if previous and (assignment['generation'] < previous['generation'] or
+                         assignment['generation'] == previous['generation'] and
+                         identity != previous['sha256']):
+            raise PackageError('assignment_rollback_or_conflict')
+        return identity
+
+    def accept_page(self, assignment):
+        """Persist one verified v4 association and advance replay floors atomically."""
+        from kiosk.publication import authority as page_authority
+        now = self.now()
+        credential = self.data['credential']
+        if (self.data.get('revoked') or now >= credential['expires_at']
+                or now >= self.data['trust']['expires_at']):
+            raise PackageError('admission_authority_expired')
+        identity = self.validate_page_assignment(assignment)
+        context = self.page_context()
+        try:
+            plan, _target, policy = page_authority.page_assignment(
+                assignment['publisher'], assignment, context['root_spki'],
+                context['origin'], now, policy_floor=context['policy_floor'],
+                known_heads=context['heads'])
+        except (ValueError, KeyError, TypeError):
+            raise PackageError('publisher_approval_refused') from None
+        publisher = self.data['publisher_anchor']
+        package = assignment['metadata']['publication']['package_id']
+        accepted = self.data.setdefault('accepted', {})
+        if package not in accepted and len(accepted) >= 1024:
+            raise PackageError('association_capacity')
+        self.data['assignment_highest'] = {'generation': assignment['generation'],
+                                           'sha256': identity}
+        publisher['heads'] = [plan['id']]
+        publisher['policy_floor'] = policy['version']
+        accepted[package] = {'group_id': assignment['group_id'],
+                             'device_id': assignment['device_id'],
+                             'request_sha256': sha(encode(self.data['binding'])),
+                             'generation': assignment['generation'],
+                             'metadata_sha256': assignment['metadata_sha256'],
+                             'package_id': package,
+                             'trust_sha256': self.data['trust']['payload_sha256'],
+                             'accepted_at': now, 'kind': 'pages',
+                             'projection': assignment['projection'],
+                             'destination': assignment['destination'],
+                             'revision_sha256': assignment['revision_sha256'],
+                             'display': assignment['display']}
+        self.save()
+
     def confirm_publisher_root(self, spki_base64, independently_verified_sha256):
         """Explicit local setup only; never populated from server/login responses."""
         spki=b64(spki_base64,1024)

@@ -27,7 +27,7 @@ public sealed class LocalView {
     public const string Origin = "https://kiosk.invalid";
     public readonly Dictionary<string, ViewFile> Files = new Dictionary<string, ViewFile>(StringComparer.Ordinal);
     readonly string root;
-    public readonly string Key, PackageIdentity, Mode;
+    public readonly string Key, PackageIdentity, Mode, Renderer, Kind;
 
     public static string PlainDirectory(string value) {
         string full = Path.GetFullPath(value);
@@ -61,6 +61,8 @@ public sealed class LocalView {
         if (path == "index.html") return "text/html; charset=utf-8";
         if (path == "events.js") return "text/javascript; charset=utf-8";
         if (path == "events.css") return "text/css; charset=utf-8";
+        if (path == "page_display.js" || path == "page_bootstrap.js") return "text/javascript; charset=utf-8";
+        if (path == "page_display.css") return "text/css; charset=utf-8";
         if (!path.StartsWith("static/uploads/", StringComparison.Ordinal)) return null;
         switch (Path.GetExtension(path).ToLowerInvariant()) {
             case ".jpg": case ".jpeg": return "image/jpeg";
@@ -79,13 +81,16 @@ public sealed class LocalView {
         if (new FileInfo(descriptor).Length > 2 * 1024 * 1024) throw new InvalidDataException("view_limit");
         var serializer = new JavaScriptSerializer { MaxJsonLength = 2 * 1024 * 1024, RecursionLimit = 32 };
         var view = serializer.Deserialize<ViewDescriptor>(File.ReadAllText(descriptor, Encoding.UTF8));
-        if (view == null || view.schema_version != 1 || view.renderer != "events-v1" ||
+        if (view == null || view.schema_version != 1 ||
+            (view.renderer != "events-v1" && view.renderer != "pages-v1") ||
             (view.mode != "kiosk" && view.mode != "tv") || String.IsNullOrEmpty(view.revision) ||
             view.files == null || view.files.Count < 3 || view.files.Count > 10000)
             throw new InvalidDataException("invalid_view");
         Key = Path.GetFileName(root);
         PackageIdentity = view.package_sha256 ?? "";
         Mode = view.mode;
+        Renderer = view.renderer;
+        Kind = view.renderer == "pages-v1" ? "pages" : "events";
         long total = 0;
         var portable = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (ViewFile entry in view.files) {
@@ -98,8 +103,16 @@ public sealed class LocalView {
             Files.Add(entry.path, entry);
             Read(entry.path);
         }
-        if (!Files.ContainsKey("index.html") || !Files.ContainsKey("events.js") || !Files.ContainsKey("events.css") ||
-            Files["events.js"].sha256 != "@RENDERER_JS_SHA256@" || Files["events.css"].sha256 != "@RENDERER_CSS_SHA256@")
+        if (Kind == "pages") {
+            if (!Files.ContainsKey("index.html") || !Files.ContainsKey("page_display.js") ||
+                !Files.ContainsKey("page_display.css") || !Files.ContainsKey("page_bootstrap.js") ||
+                Files["page_display.js"].sha256 != "@PAGE_RENDERER_JS_SHA256@" ||
+                Files["page_display.css"].sha256 != "@PAGE_RENDERER_CSS_SHA256@")
+                throw new InvalidDataException("renderer_mismatch");
+        } else if (!Files.ContainsKey("index.html") || !Files.ContainsKey("events.js") ||
+                   !Files.ContainsKey("events.css") ||
+                   Files["events.js"].sha256 != "@RENDERER_JS_SHA256@" ||
+                   Files["events.css"].sha256 != "@RENDERER_CSS_SHA256@")
             throw new InvalidDataException("renderer_mismatch");
     }
 

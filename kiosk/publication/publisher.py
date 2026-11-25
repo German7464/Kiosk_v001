@@ -7,6 +7,7 @@ at rest, not against malware running as the authorized Windows user.
 import base64
 from dataclasses import dataclass
 from pathlib import Path
+import re
 import secrets
 
 from kiosk.delivery.protocol import decode, encode, sha, text
@@ -23,6 +24,22 @@ class Review:
     token: str
     document: bytes
     captured: Path
+    packages: dict = None
+
+
+def _is_page_document(document):
+    return (isinstance(document, dict)
+            and document.get('version') == authority.PAGE_PLAN_VERSION
+            and isinstance(document.get('plan'), dict)
+            and document['plan'].get('version') == authority.PAGE_PLAN_VERSION
+            and 'revision' in document and 'targets' in document)
+
+
+def native_token(value):
+    """Strict short-lived Maintenance ticket format; never echo the value."""
+    if not isinstance(value, str) or re.fullmatch('[0-9a-f]{64}', value) is None:
+        raise ValueError('publisher_native_ticket_refused')
+    return value
 
 
 def verify_mapping(document, captured):
@@ -245,6 +262,116 @@ class LocalPublisher:
         self.pending[ticket.token]=sha(raw)
         return ticket
 
+    def _review_page(self,state,document,packages,now):
+        """Independently re-derive every projection and rehash every target package."""
+        from . import page_release
+        from kiosk.display import page_view
+        self._review_page_document(state,document,now)
+        if (not isinstance(packages,dict)
+                or set(packages)!={target['device_id'] for target in document['targets']}):
+            raise ValueError('publisher_review_target_set')
+        pin=page_view.renderer_pin()
+        for target in document['targets']:
+            renderer=target['metadata']['publication']['renderer']
+            if (renderer['js_sha256']!=pin['js_sha256'] or
+                    renderer['css_sha256']!=pin['css_sha256'] or
+                    renderer['build_id']!=pin['build_id']):
+                raise ValueError('publisher_review_renderer_mismatch')
+        files={}
+        for target in document['targets']:
+            tree=page_view.read_package_tree(packages[target['device_id']])
+            files[target['device_id']]={'package':tree,'kiosk':{},'tv':{}}
+        page_release.review(document,now=now,known_heads=state.get('publication_heads',[]),files=files)
+
+    def _review_page_document(self,state,document,now):
+        """Validate plan, ancestry and local scope before any target bytes arrive."""
+        device=self._permission(state,now)
+        plan=authority.validate_group_plan(document['plan'],now=now)
+        authority.check_ancestry(plan,state.get('publication_heads',[]),document.get('ancestry',[]))
+        if (plan['device_id']!=state['device_id'] or plan['user_id']!=device['user_id'] or
+                plan['group_id']!=state['group_id'] or plan['origin']!=state['origin'] or
+                plan['policy_version']!=state['policy_floor']):
+            raise ValueError('publisher_review_scope_refused')
+        if not isinstance(document.get('targets'),list) or not document['targets']:
+            raise ValueError('publisher_review_target_set')
+        if {target.get('device_id') for target in document['targets']} != \
+                {target['device_id'] for target in plan['targets']}:
+            raise ValueError('publisher_review_target_set')
+
+    def validate_page_document(self,document,now):
+        """Structural/scope review of a native-open response, before any download."""
+        state,_=self._read()
+        if not _is_page_document(document):
+            raise ValueError('publisher_page_document')
+        raw=encode(document)
+        if len(raw)>2*1024*1024:
+            raise ValueError('publisher_review_limit')
+        document=decode(raw)
+        self._review_page_document(state,document,now)
+        return document
+
+    def page_open_approval(self,token,content_origin,maintenance_origin,now):
+        """Explicit native open approval; binds only the exact ticket hash and origins."""
+        token=native_token(token)
+        state,key=self._read()
+        self._permission(state,now)
+        if content_origin!=state['origin']:
+            raise ValueError('publisher_content_origin_refused')
+        value=dict(token_sha256=sha(token.encode('ascii')),
+                   content_origin=content_origin,maintenance_origin=maintenance_origin)
+        return dict(approval=authority.signed(key,'page-review-open',value),chain=state['chain'])
+
+    def review_page(self,document,packages,now):
+        """Explicit native review of one immutable v2 page plan and exact target bytes."""
+        state,_=self._read()
+        packages={str(key):Path(value) for key,value in (packages or {}).items()}
+        if not _is_page_document(document):
+            raise ValueError('publisher_page_document')
+        raw=encode(document)
+        if len(raw)>2*1024*1024:
+            raise ValueError('publisher_review_limit')
+        self._review_page(state,decode(raw),packages,now)
+        self.pending.clear()
+        ticket=Review(secrets.token_hex(32),raw,Path('.'),packages)
+        self.pending[ticket.token]=sha(raw)
+        return ticket
+
+    def publish_page(self,ticket,now,*,token=None,maintenance_origin=None):
+        """Sign only the exact reviewed v2 plan; the v2 domain is never used by v1."""
+        if (not isinstance(ticket,Review) or ticket.packages is None or
+                self.pending.pop(ticket.token,None)!=sha(ticket.document)):
+            raise ValueError('publisher_review_required')
+        if token is not None:
+            token=native_token(token)
+        with PublicationStore(self.root)._lease():
+            state,key=self._read()
+            if state.get('pending_approval'):
+                raise ValueError('publisher_pending_approval_unresolved')
+            document=decode(ticket.document)
+            self._review_page(state,document,ticket.packages,now)
+            result=dict(approval=authority.page_signed(key,document['plan']),chain=state['chain'],
+                        policy=state['policy'],ancestry=list(document.get('ancestry',[])))
+            state['pending_approval']=dict(id=document['plan']['id'],approval=result['approval'],
+                                           chain=result['chain'],policy=result['policy'],
+                                           ancestry=result['ancestry'],kind='pages')
+            if token is not None:
+                state['pending_approval'].update(token=token,
+                                                 maintenance_origin=maintenance_origin)
+            _atomic_write(self.file,protect(encode(state)))
+            return result
+
+    def discard_pending(self,identity):
+        """Drop a definitively refused approval (for example a changed 409 plan)."""
+        from kiosk.delivery.protocol import digest
+        digest(identity)
+        with PublicationStore(self.root)._lease():
+            state,_=self._read()
+            pending=state.get('pending_approval')
+            if isinstance(pending,dict) and pending.get('id')==identity:
+                state.pop('pending_approval',None)
+                _atomic_write(self.file,protect(encode(state)))
+        return True
+
     def pending_approval(self):
         """Exact signed approval awaiting server acknowledgement (no re-signing)."""
         state,_=self._read()
@@ -268,7 +395,8 @@ class LocalPublisher:
         """One explicit native Publish action after preview. Reverify under the
         key lease immediately before signing; ticket is single-use on failure too.
         """
-        if not isinstance(ticket,Review) or self.pending.pop(ticket.token,None)!=sha(ticket.document):
+        if (not isinstance(ticket,Review) or ticket.packages is not None or
+                self.pending.pop(ticket.token,None)!=sha(ticket.document)):
             raise ValueError('publisher_review_required')
         with PublicationStore(self.root)._lease():
             state,key=self._read()

@@ -7,9 +7,11 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from kiosk.version import VERSION
+from kiosk.display import page_view
 
 
 def main():
@@ -21,15 +23,22 @@ def main():
     root = Path(__file__).resolve().parents[1]
     output = args.destination.absolute()
     output.mkdir(parents=True, exist_ok=False)
-    sources = [*sorted((root/'kiosk/display').glob('delivery_*.py')), root/'kiosk/display/native_crypto.py', root/'kiosk/display/coordinator.py', root/'kiosk/display/cache.py', Path(__file__)]
-    sources += [root/'kiosk/publication/authority.py']
+    pin = page_view.renderer_pin()
+    build_temp = tempfile.mkdtemp(prefix='.build-temp-', dir=output)
+    environment = dict(os.environ, TEMP=build_temp, TMP=build_temp)
+    sources = [*sorted((root/'kiosk/display').glob('delivery_*.py')), root/'kiosk/display/native_crypto.py',
+               root/'kiosk/display/coordinator.py', root/'kiosk/display/cache.py',
+               root/'kiosk/display/page_view.py', root/'kiosk/display/session.py', Path(__file__)]
+    sources += [root/'kiosk/publication/authority.py', root/'kiosk/publication/page_release.py']
+    assets = [root/'kiosk/static/js/page_display.js', root/'kiosk/static/css/page_display.css']
     if args.connect_ui:
         # Discovery is a top-level module (kiosk/discovery.py), not kiosk/display/discovery.py.
         sources += [root/'kiosk/display/connect.py', root/'kiosk/display/connect_ui.py',
                     root/'kiosk/display/admin.py',
                     root/'kiosk/discovery.py', root/'kiosk/display/qr_pairing.py',
                     root/'kiosk/display/qrcodegen.py', root/'kiosk/display/qrcodegen.LICENSE.txt']
-    before = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}
+    before = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
+              for p in sources + assets}
     source = output / 'client_entry.py'
     module = 'connect_ui' if args.connect_ui else 'delivery_client'
     name = 'KioskConnect' if args.connect_ui else 'KioskDelivery'
@@ -41,7 +50,8 @@ def main():
         command.append('--windowed')
         # Pillow's Tk bridge is imported lazily in the pairing window; keep it bundled.
         command += ['--hidden-import', 'PIL.ImageTk']
-    for relative in ['kiosk/publication/renderer.py', 'kiosk/publication/renderer_assets', 'kiosk/translations']:
+    for relative in ['kiosk/publication/renderer.py', 'kiosk/publication/renderer_assets', 'kiosk/translations',
+                     'kiosk/static/js/page_display.js', 'kiosk/static/css/page_display.css']:
         path = root / relative
         if not path.exists():
             raise RuntimeError('Required renderer input missing: ' + relative)
@@ -51,7 +61,8 @@ def main():
         command += ['--add-data', str(root/'kiosk/display/qrcodegen.LICENSE.txt') + ';kiosk/display']
     command.append(str(source))
     with (output/'build.log').open('wb') as log:
-        result = subprocess.run(command, cwd=root, stdout=log, stderr=subprocess.STDOUT, timeout=300)
+        result = subprocess.run(command, cwd=root, stdout=log, stderr=subprocess.STDOUT,
+                                timeout=300, env=environment)
     result.check_returncode()
     candidate = output/'shell'
     candidate.mkdir()
@@ -71,11 +82,13 @@ def main():
         raise RuntimeError('Windows .NET Framework compiler required for the update helper.')
     subprocess.run([str(compiler), '/nologo', '/target:exe', '/platform:x64',
                     '/out:' + str(output/'KioskUpdateHelper.exe'), str(root/'tools/update_helper.cs')],
-                   check=True, timeout=60)
-    after = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}
+                   check=True, timeout=60, env=environment)
+    after = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
+             for p in sources + assets}
     if after != before:
         raise RuntimeError('Source changed during build; reject mixed build evidence')
-    inventory = {'sources': before,
+    shutil.rmtree(build_temp, ignore_errors=True)
+    inventory = {'sources': before, 'page_renderer': pin,
                  'files': {p.relative_to(output).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                            for folder in (output/'dist', candidate) for p in sorted(folder.rglob('*')) if p.is_file()},
                  'python': sys.version, 'version': VERSION, 'native_build_reused': expected}

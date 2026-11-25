@@ -17,6 +17,70 @@ from .delivery_authority import PrivateState, bootstrap, positive
 from .delivery_capture import Capture, validate_metadata
 from .delivery_transport import MAX_RETRY_SECONDS, Transport, TransportError, retry_delay
 from .delivery_progress import Reporter
+from . import page_view
+
+
+PAGE_DESTINATION = 'windows-pages-v1'
+
+
+def page_expectation(native):
+    """Pinned local v4 expectations; renderer hashes never come from the response."""
+    context = native.page_context()
+    pin = page_view.renderer_pin()
+    return {'root_spki': context['root_spki'], 'trusted_origin': context['origin'],
+            'expected_group_id': context['group_id'],
+            'expected_device_id': context['device_id'],
+            'expected_profile': context['profile'],
+            'expected_destination': PAGE_DESTINATION,
+            'expected_js_sha256': pin['js_sha256'],
+            'expected_css_sha256': pin['css_sha256'],
+            'policy_floor': context['policy_floor'],
+            'known_heads': context['heads']}
+
+
+def check_page_assignment(native, assignment, now):
+    """Verify one v4 assignment's proof and local target before downloading bytes."""
+    from kiosk.publication import authority as page_authority
+    if not isinstance(assignment, dict) or assignment.get('version') != 4:
+        raise PackageError('page_release_assignment')
+    expected = page_expectation(native)
+    if (assignment.get('group_id') != expected['expected_group_id']
+            or assignment.get('device_id') != expected['expected_device_id']
+            or assignment.get('profile') != expected['expected_profile']
+            or assignment.get('destination') != expected['expected_destination']):
+        raise PackageError('page_release_local_identity')
+    try:
+        renderer = assignment['metadata']['publication']['renderer']
+    except (KeyError, TypeError):
+        raise PackageError('page_release_metadata') from None
+    if (renderer.get('js_sha256') != expected['expected_js_sha256']
+            or renderer.get('css_sha256') != expected['expected_css_sha256']
+            or renderer.get('build_id') != page_view.page_renderer_identity()):
+        raise PackageError('page_release_renderer_mismatch')
+    try:
+        plan, target, policy = page_authority.page_assignment(
+            assignment['publisher'], assignment, expected['root_spki'],
+            expected['trusted_origin'], now, policy_floor=expected['policy_floor'],
+            known_heads=expected['known_heads'])
+    except (TypeError, KeyError):
+        raise PackageError('page_release_assignment') from None
+    return plan, target, policy
+
+
+def admit_page_package(native, assignment, files):
+    """Full v4 admission: proof plus every outer and inner package byte."""
+    from kiosk.publication import page_release
+    expected = page_expectation(native)
+    return page_release.admit(
+        assignment['publisher'], assignment, expected['root_spki'],
+        expected['trusted_origin'], native.now(), files=files,
+        expected_group_id=expected['expected_group_id'],
+        expected_device_id=expected['expected_device_id'],
+        expected_profile=expected['expected_profile'],
+        expected_destination=expected['expected_destination'],
+        expected_js_sha256=expected['expected_js_sha256'],
+        expected_css_sha256=expected['expected_css_sha256'],
+        policy_floor=expected['policy_floor'], known_heads=expected['known_heads'])
 
 
 # The server enforces a minimum poll interval and answers earlier polls with 429
@@ -313,18 +377,28 @@ class Client:
     def assignment(self, transport):
         try:
             transport.json('/api/v2/client/capabilities', body={'version': 1, 'platform': 'windows',
-                'modes': ['tv', 'kiosk'], 'content': ['events'], 'resource_profile': PROFILE, 'renderer': renderer_identity()})
+                'modes': ['tv', 'kiosk'], 'content': ['events', 'pages'], 'resource_profile': PROFILE,
+                'renderer': renderer_identity(),
+                'display_protocols': ['display-profile-v1', 'display-profile-v2'],
+                'pages_renderer': page_view.page_renderer_identity()})
         except TransportError as exc:
             if exc.status not in (404, 405):
                 raise
-        query = urlencode({'renderer': renderer_identity(), 'resource_profile': PROFILE, 'display_protocol': 'display-profile-v1'})
+        query = urlencode({'renderer': renderer_identity(), 'resource_profile': PROFILE,
+                           'display_protocol': 'display-profile-v2',
+                           'pages_renderer': page_view.page_renderer_identity()})
         value = transport.json('/api/v2/client/assignment?' + query)
-        self.native.validate_assignment(value)
-        digest(value['publication']['package_id'])
+        if isinstance(value, dict) and value.get('version') == 4:
+            check_page_assignment(self.native, value, self.native.now())
+            publication = value['metadata']['publication']
+        else:
+            self.native.validate_assignment(value)
+            digest(value['publication']['package_id'])
+            validate_metadata(value['publication'])
+            publication = value['publication']
         self.progress_target = {key: value[key] for key in ('device_id', 'group_id', 'generation')}
         self.progress_target['version'] = 1
-        self.progress_target['package_id'] = value['publication']['package_id']
-        validate_metadata(value['publication'])
+        self.progress_target['package_id'] = publication['package_id']
         return value
 
     def synchronize(self, *, full_resync=False):
@@ -342,6 +416,8 @@ class Client:
                                     'incompatible' if incompatible else 'error',
                                     error='requires_update' if incompatible else 'candidate_refused')
             raise
+        if isinstance(assignment, dict) and assignment.get('version') == 4:
+            return self._synchronize_pages(transport, assignment, attempt, full_resync)
         # Only the fully validated assignment binds download telemetry. A changed
         # target snapshot cannot redirect reports to another publication.
         target = {key: assignment[key] for key in ('device_id', 'group_id', 'generation')}
@@ -353,6 +429,7 @@ class Client:
             # Reverify accepted package and locally pinned renderer without artifact GETs.
             self.native.accepted(package_id)
             self.native.accept(assignment)
+            page_view.set_active_kind(self.store, 'events', package_id)
             return package_id
         total = sum(entry['size'] for group in ('package', 'kiosk', 'tv') for entry in assignment['publication'][group]['files'])
         def report(state, completed=0):
@@ -367,6 +444,7 @@ class Client:
                 raise PackageError('assignment_changed_before_admission')
             self.native.accept(fresh)
             install_for_display(package, self.store, self.cache, mode='tv')
+            page_view.set_active_kind(self.store, 'events', package_id)
         except (PackageError, DeliveryError, OSError, ValueError, KeyError, TypeError) as exc:
             code = str(exc)
             error = ('connection' if isinstance(exc, TransportError) else
@@ -375,6 +453,49 @@ class Client:
                      'requires_update' if code.startswith('unsupported_') else
                      'integrity' if any(word in code for word in ('hash', 'binding', 'validator')) else 'candidate_refused')
             self.progress.offer(transport, target, attempt, 'incompatible' if error == 'requires_update' else 'error',
+                                self.capture.completed, total, error)
+            raise
+        return package_id
+
+    def _synchronize_pages(self, transport, assignment, attempt, full_resync):
+        """Admit, store and prepare one signed per-target data-only page package."""
+        target = self.progress_target
+        publication = assignment['metadata']['publication']
+        package_id = publication['package_id']
+        if page_view.active_page_package(self.store) == package_id:
+            self.native.accepted(package_id)
+            self.native.accept_page(assignment)
+            self.native.data['activated_display'] = {
+                'package_id': package_id, 'mode': assignment['display']['mode'], 'kind': 'pages'}
+            self.native.save()
+            return package_id
+        total = sum(entry['size'] for entry in publication['package']['files'])
+        def report(state, completed=0):
+            self.progress.offer(transport, target, attempt, state, completed, total)
+        report('waiting')
+        try:
+            package = self.capture.fetch_pages(assignment, transport, full_resync=full_resync,
+                                               progress=report)
+            transport = self._online_authority()
+            fresh = self.assignment(transport)
+            if encode(fresh) != encode(assignment):
+                raise PackageError('assignment_changed_before_admission')
+            files = page_view.read_package_tree(package)
+            admit_page_package(self.native, fresh,
+                               {'package': files, 'kiosk': {}, 'tv': {}})
+            self.native.accept_page(fresh)
+            page_view.install_page_for_display(package, fresh['metadata'], self.store,
+                                               self.cache, mode=fresh['display']['mode'])
+        except (PackageError, DeliveryError, OSError, ValueError, KeyError, TypeError) as exc:
+            code = str(exc)
+            error = ('connection' if isinstance(exc, TransportError) else
+                     'storage' if isinstance(exc, OSError) or code == 'capture_disk_full' else
+                     'assignment_changed' if code == 'assignment_changed_before_admission' else
+                     'requires_update' if code.startswith('unsupported_') or 'renderer' in code else
+                     'integrity' if any(word in code for word in ('hash', 'binding', 'validator')) else
+                     'candidate_refused')
+            self.progress.offer(transport, target, attempt,
+                                'incompatible' if error == 'requires_update' else 'error',
                                 self.capture.completed, total, error)
             raise
         return package_id
@@ -396,10 +517,27 @@ class Client:
         mode = self.native.accepted(package).get('display', {}).get('mode', 'local')
         return mode if mode in ('tv', 'kiosk') else fallback
 
+    def active_publication(self):
+        """Newest admitted publication; a broken pages pointer falls back to Events."""
+        try:
+            if page_view.active_kind(self.store) == 'pages':
+                package = page_view.active_page_package(self.store)
+                if package is not None:
+                    return {'kind': 'pages', 'package_id': package}
+        except PackageError:
+            pass
+        active = PublicationStore(self.store).active()
+        if active is None:
+            return None
+        return {'kind': 'events', 'package_id': active.name}
+
     def switch_to_active(self, run):
         try:
-            active = PublicationStore(self.store).active()
-            mode = self.assigned_mode(active.name, run.mode) if active else run.mode
+            active = self.active_publication()
+            if active is None:
+                raise PackageError('no_publication')
+            self.native.accepted(active['package_id'])
+            mode = self.assigned_mode(active['package_id'], run.mode)
             return run.switch_to_active(mode=mode)
         except (PackageError, OSError, ValueError, KeyError, TypeError):
             self.activation_failed()
@@ -420,7 +558,8 @@ class Client:
         association = self.native.accepted(package)
         if self.assigned_mode(package, run.mode) != run.mode:
             return None  # Preserve the previous usable display without crediting the new configuration.
-        self.native.data['activated_display'] = {'package_id': package, 'mode': run.mode}
+        self.native.data['activated_display'] = {'package_id': package, 'mode': run.mode,
+                                                 'kind': page_view.view_kind(run.view)}
         self.native.save()
         receipt_path = run.state / ('last-ready-' + run.mode + '.json')
         receipt = decode(receipt_path.read_bytes())
@@ -465,13 +604,15 @@ class Client:
     @contextmanager
     def display(self, mode='tv'):
         # Validate every fallback the existing coordinator may select before it can spawn.
-        store = PublicationStore(self.store)
-        active = store.active()
+        active = self.active_publication()
         if active is None:
             raise PackageError('no_publication')
         saved = self.native.data.get('activated_display', {})
-        mode = saved.get('mode', mode) if saved.get('package_id') == active.name else self.assigned_mode(active.name, mode)
-        self.native.accepted(active.name)
+        if saved.get('package_id') == active['package_id']:
+            mode = saved.get('mode', mode)
+        else:
+            mode = self.assigned_mode(active['package_id'], mode)
+        self.native.accepted(active['package_id'])
         from .coordinator import _confirmed_view
         previous = _confirmed_view(self.store, self.cache, self.state, mode)
         if previous is not None:
@@ -526,7 +667,10 @@ def main():
             import platform
             import ssl
             import sys
-            emit({'result': 'identity', 'renderer_build': renderer_identity(), 'python': sys.version,
+            pin = page_view.renderer_pin()
+            emit({'result': 'identity', 'renderer_build': renderer_identity(),
+                  'pages_renderer': pin['build_id'], 'pages_js_sha256': pin['js_sha256'],
+                  'pages_css_sha256': pin['css_sha256'], 'python': sys.version,
                   'platform': platform.platform(), 'tls_runtime': ssl.OPENSSL_VERSION,
                   'shell_sha256': sha(args.shell.read_bytes())})
             return 0
@@ -551,7 +695,7 @@ def main():
                 if not 5 <= args.interval <= 60:
                     raise PackageError('invalid_poll_interval')
                 delay = args.interval
-                if PublicationStore(client.store).active() is None:
+                if client.active_publication() is None:
                     client.synchronize()
                 with client.display(args.mode) as native:
                     emit({'result': 'ready', 'package_id': _view_identity(native.view), 'session': native.session})
@@ -560,8 +704,10 @@ def main():
                         try:
                             client.flush_ready()
                             client.synchronize()
-                            target = PublicationStore(client.store).active()
-                            client.native.accepted(target.name)
+                            target = client.active_publication()
+                            if target is None:
+                                raise PackageError('no_publication')
+                            client.native.accepted(target['package_id'])
                             client.switch_to_active(native)
                             client.queue_ready(native)
                             client.flush_ready()
