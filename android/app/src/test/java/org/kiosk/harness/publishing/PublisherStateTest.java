@@ -1,5 +1,7 @@
 package org.kiosk.harness.publishing;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import org.junit.Test;
@@ -55,5 +57,23 @@ public class PublisherStateTest {
         state.resetForRecovery();
         assertTrue(state.heads().isEmpty());
         assertEquals(0,state.policyFloor());
+    }
+
+    @Test public void maintenanceCaIsValidatedPersistedAndClearable()throws Exception{
+        Path folder=temp();
+        String ca;
+        try(InputStream stream=PublisherStateTest.class.getResourceAsStream("/stage6/maintenance-ca.pem")){
+            assertNotNull(stream);
+            ca=new String(stream.readAllBytes(),StandardCharsets.US_ASCII);
+        }
+        var state=new PublisherState(folder.toFile());
+        state.setMaintenanceCa(ca);
+        var reopened=new PublisherState(folder.toFile());
+        assertEquals(ca.trim(),reopened.maintenanceCa().trim());
+        try{state.setMaintenanceCa("not a certificate");fail("malformed CA must refuse");}
+        catch(java.io.IOException expected){}
+        assertEquals(ca.trim(),state.maintenanceCa().trim());
+        reopened.setMaintenanceCa("");
+        assertTrue(new PublisherState(folder.toFile()).maintenanceCa().isEmpty());
     }
 }

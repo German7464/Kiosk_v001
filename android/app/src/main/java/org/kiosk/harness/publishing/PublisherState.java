@@ -38,7 +38,10 @@ public final class PublisherState {
         byte[] payload=Files.readAllBytes(file.toPath());
         if(payload.length>LIMIT)throw new IOException("publisher_state_limit");
         Map<String,Object> value=json(payload,LIMIT);
-        keys(value,"version","policy_floor","heads","pending");
+        Set<String> required=Set.of("version","policy_floor","heads","pending");
+        Set<String> allowed=Set.of("version","policy_floor","heads","pending","maintenance_origin",
+            "maintenance_ca");
+        need(value.keySet().containsAll(required)&&allowed.containsAll(value.keySet()));
         need(num(value,"version")==1);
         need(count(value.get("policy_floor"))>=0);
         List<Object> heads=array(value.get("heads"));
@@ -46,6 +49,8 @@ public final class PublisherState {
         for(Object item:heads)hash(string(item));
         Map<String,Object> pending=object(value.get("pending"));
         if(!pending.isEmpty())keys(pending,"id","approval","chain","candidate");
+        if(value.containsKey("maintenance_origin"))NativePageProtocol.origin(string(value.get("maintenance_origin")));
+        if(value.containsKey("maintenance_ca"))MaintenanceTrust.certificate(string(value.get("maintenance_ca")));
         return value;
     }
 
@@ -76,6 +81,30 @@ public final class PublisherState {
     }
 
     public synchronized long policyFloor()throws Exception{return count(data.get("policy_floor"));}
+
+    /** Explicit trusted Maintenance origin; empty means the authority origin default. */
+    public synchronized String maintenanceOrigin()throws Exception{
+        Object value=data.get("maintenance_origin");
+        return value==null?"":string(value);
+    }
+
+    public synchronized void setMaintenanceOrigin(String origin)throws Exception{
+        if(origin==null||origin.isEmpty())data.remove("maintenance_origin");
+        else{NativePageProtocol.origin(origin);data.put("maintenance_origin",origin);}
+        save();
+    }
+
+    /** Pinned public Maintenance CA; empty means native page tickets are refused. */
+    public synchronized String maintenanceCa()throws Exception{
+        Object value=data.get("maintenance_ca");
+        return value==null?"":string(value);
+    }
+
+    public synchronized void setMaintenanceCa(String pem)throws Exception{
+        if(pem==null||pem.isEmpty())data.remove("maintenance_ca");
+        else{MaintenanceTrust.certificate(pem);data.put("maintenance_ca",pem);}
+        save();
+    }
 
     public synchronized Map<String,Object> pending()throws Exception{
         return new LinkedHashMap<>(object(data.get("pending")));

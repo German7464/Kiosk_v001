@@ -11,6 +11,9 @@ import org.kiosk.harness.FixtureCatalog;
 import org.kiosk.harness.core.LocalView;
 import org.kiosk.harness.packagecore.EventsPackage;
 import org.kiosk.harness.binding.*;
+import org.kiosk.harness.delivery.PageReleaseProtocol;
+import org.kiosk.harness.publishing.PublisherAuthority;
+import static org.kiosk.harness.delivery.DeliveryProtocol.str;
 
 /** Shared development publication store; legacy A/B adapter and explicitly authorized captured candidates. */
 public final class FixturePublicationStore {
@@ -54,7 +57,9 @@ public final class FixturePublicationStore {
         operation.hit(point);
     }
     private void atomic(Path file,String text,Checkpoint operation,String label) throws IOException {
-        byte[] bytes=text.getBytes(StandardCharsets.UTF_8);if(bytes.length>(label.equals("authority")||label.equals("admission")?DevelopmentGrant.LIMIT:4096))throw PrivateFiles.refusal("metadata_limit");
+        byte[] bytes=text.getBytes(StandardCharsets.UTF_8);
+        int limit=(label.equals("authority")||label.equals("admission")||label.startsWith("page_"))?DevelopmentGrant.LIMIT:4096;
+        if(bytes.length>limit)throw PrivateFiles.refusal("metadata_limit");
         Path temporary=file.resolveSibling("."+file.getFileName()+".tmp");
         checkpoint(operation,label+".before_write");
         try(FileOutputStream out=PrivateFiles.output(temporary)){out.write(bytes);out.flush();out.getFD().sync();}
@@ -66,7 +71,10 @@ public final class FixturePublicationStore {
     private PrivateFiles.Source source(Path revision,boolean view){
         try{
             var admitted=AdmissionRecord.load(root,revision.getFileName().toString());
-            if(admitted!=null){var r=admitted.request;return new PrivateFiles.Source(revision.resolve(view?"view":"package"),DevelopmentGrant.copyPins(view?r.tv().files():r.pkg().files()),privateReads::incrementAndGet);}
+            if(admitted!=null){
+                var pins=admitted.page!=null?(view?admitted.page.viewFiles():admitted.page.packageFiles()):(view?admitted.request.tv().files():admitted.request.pkg().files());
+                return new PrivateFiles.Source(revision.resolve(view?"view":"package"),DevelopmentGrant.copyPins(pins),privateReads::incrementAndGet);
+            }
             var grant=DevelopmentGrant.load(root,revision.getFileName().toString());
             if(grant!=null)return new PrivateFiles.Source(revision.resolve(view?"view":"package"),DevelopmentGrant.copyPins(view?grant.permit.tv.files():grant.permit.pkg.files()),privateReads::incrementAndGet);
             var f=PublicationFixtures.identity(revision.getFileName().toString());
@@ -76,6 +84,9 @@ public final class FixturePublicationStore {
     private void verifyPackage(String id) throws Exception {
         var admitted=AdmissionRecord.load(root,id);
         if(admitted!=null){
+            // Page records carry their own signed plan/metadata/package bindings. Offline reopen
+            // must not depend on the delivery verifier being online; it rechecks those bindings.
+            if(admitted.page!=null){verifyPagePackage(id,admitted);return;}
             var issuer=PreparedAdmission.require(admissionVerifiers);if(!issuer.issuerId().equals(admitted.issuer))throw PrivateFiles.refusal("admission_issuer_changed");
             var r=admitted.request;Path path=revision(id);
             PreparedAdmission.validate(source(path,false),new PrivateFiles.Source(path.resolve("view-kiosk"),DevelopmentGrant.copyPins(r.kiosk().files()),privateReads::incrementAndGet),
@@ -103,6 +114,12 @@ public final class FixturePublicationStore {
     private Selection view(String id,String mode) throws Exception {
         var admitted=AdmissionRecord.load(root,id);
         if(admitted!=null){PublicationFixtures.mode(mode);var r=admitted.request;
+            if(admitted.page!=null){
+                String expected=admitted.page.projection().startsWith("tv-")?"tv":"kiosk";
+                if(!expected.equals(mode))throw PrivateFiles.refusal("page_release_mode");
+                var s=source(revision(id),true);s.verifyPins();
+                return new Selection(id,LocalView.verifyPage(s,id,mode,admitted.page.js(),admitted.page.css()));
+            }
             var s=mode.equals("tv")?source(revision(id),true):new PrivateFiles.Source(revision(id).resolve("view-kiosk"),DevelopmentGrant.copyPins(r.kiosk().files()),privateReads::incrementAndGet);
             s.verifyPins();return new Selection(id,LocalView.verify(s,id,mode,r.renderer().trustedJsSha256(),r.renderer().trustedCssSha256()));
         }
@@ -304,6 +321,187 @@ public final class FixturePublicationStore {
             new PrivateFiles.Source(path.resolve("view"),DevelopmentGrant.copyPins(tv.files()),privateReads::incrementAndGet),pkg,renderer,kiosk,tv);
     }
     private boolean admissionSelected(){try{return AdmissionRecord.present(root,StoreMetadata.pointer(root.resolve("active.json")).current());}catch(Exception e){return false;}}
+    private record PageView(Map<String,byte[]> files,byte[] descriptor,Map<String,DevelopmentWitness.Pin> pins,String mode){}
+    private static final class MapSource implements LocalView.Source {
+        private final Map<String,byte[]> files;
+        MapSource(Map<String,byte[]> files){this.files=Map.copyOf(files);}
+        @Override public InputStream open(String path)throws IOException{
+            byte[] bytes=files.get(path);if(bytes==null)throw new IOException("unknown_page_view_resource");
+            return new ByteArrayInputStream(bytes);
+        }
+        @Override public Set<String> files(){return files.keySet();}
+    }
+    private static DevelopmentWitness.Pin pin(byte[] bytes){return new DevelopmentWitness.Pin(bytes.length,LocalView.digest(bytes));}
+    private static Map<String,byte[]> readAll(LocalView.Source source,long limit)throws Exception{
+        Map<String,byte[]> files=new TreeMap<>();
+        for(String path:source.files())files.put(path,LocalView.readBounded(source.open(path),limit));
+        return files;
+    }
+    private static Set<String> pageImages(Map<String,Object> content)throws Exception{
+        Set<String> images=new TreeSet<>();
+        for(Object item:org.kiosk.harness.delivery.DeliveryJson.array(content.get("events"))){
+            Map<String,Object> event=org.kiosk.harness.delivery.DeliveryJson.object(item);
+            for(String field:List.of("image_kiosk","image_tv","image_thumb")){
+                Object value=event.get(field);if(value==null)continue;
+                if(!(value instanceof String)||!((String)value).startsWith("/static/uploads/"))
+                    throw PrivateFiles.refusal("page_release_image_reference");
+                images.add(((String)value).substring(1));
+            }
+        }
+        return images;
+    }
+    private static String pageJson(Map<String,Object> value)throws Exception{
+        String text=new String(PublisherAuthority.canonical(value),StandardCharsets.UTF_8);
+        return text.replace("<","\\u003c").replace(">","\\u003e").replace("&","\\u0026")
+            .replace("\u2028","\\u2028").replace("\u2029","\\u2029");
+    }
+    private PageView buildPageView(PageReleaseProtocol.PageAdmission admission,PageReleaseProtocol.Files files,
+            Map<String,byte[]> assets)throws Exception{
+        String js=LocalView.digest(assets.get("page_display.js")),css=LocalView.digest(assets.get("page_display.css"));
+        if(!js.equals(PageReleaseProtocol.SHIPPED_JS_SHA256)||!css.equals(PageReleaseProtocol.SHIPPED_CSS_SHA256)
+            ||!PageReleaseProtocol.rendererBuildId(js,css).equals(admission.renderer()))
+            throw PrivateFiles.refusal("page_release_renderer_mismatch");
+        byte[] content=PublisherAuthority.canonical(admission.content());
+        if(!LocalView.digest(content).equals(admission.contentSha256()))
+            throw PrivateFiles.refusal("page_release_content_substitution");
+        Map<String,byte[]> view=new TreeMap<>();
+        view.put("page_display.js",assets.get("page_display.js"));view.put("page_display.css",assets.get("page_display.css"));
+        view.put("bootstrap.js",assets.get("bootstrap.js"));
+        String template=new String(assets.get("bootstrap.html"),StandardCharsets.UTF_8);
+        if(template.indexOf("__PAGE_DATA__")<0||template.indexOf("__PAGE_DATA__")!=template.lastIndexOf("__PAGE_DATA__"))
+            throw PrivateFiles.refusal("page_release_bootstrap");
+        view.put("index.html",template.replace("__PAGE_DATA__",pageJson(admission.content())).getBytes(StandardCharsets.UTF_8));
+        for(String image:pageImages(admission.content())){
+            byte[] bytes=files.packageFiles().get(image);
+            if(bytes==null)throw PrivateFiles.refusal("page_release_image_inventory");
+            view.put(image,bytes);
+        }
+        Map<String,DevelopmentWitness.Pin> pins=new TreeMap<>();
+        org.json.JSONArray rows=new org.json.JSONArray();
+        for(var entry:view.entrySet()){
+            DevelopmentWitness.Pin value=pin(entry.getValue());pins.put(entry.getKey(),value);
+            rows.put(new org.json.JSONObject().put("path",entry.getKey()).put("size",value.size()).put("sha256",value.sha256()));
+        }
+        String mode=admission.projection().startsWith("tv-")?"tv":"kiosk";
+        org.json.JSONObject descriptor=new org.json.JSONObject().put("schema_version",2).put("kind","pages")
+            .put("renderer","pages-v1").put("revision",admission.revision()).put("package_sha256",admission.packageId())
+            .put("mode",mode).put("files",rows);
+        byte[] descriptorBytes=descriptor.toString().getBytes(StandardCharsets.UTF_8);
+        pins.put("view.json",pin(descriptorBytes));
+        return new PageView(view,descriptorBytes,Map.copyOf(pins),mode);
+    }
+    private void verifyPagePackage(String id,AdmissionRecord admitted)throws Exception{
+        var page=admitted.page;Path path=revision(id);
+        if(!"android-pages-v1".equals(page.destination())
+            ||!PageReleaseProtocol.SHIPPED_JS_SHA256.equals(page.js())
+            ||!PageReleaseProtocol.SHIPPED_CSS_SHA256.equals(page.css())
+            ||!PageReleaseProtocol.rendererBuildId(page.js(),page.css()).equals(page.renderer()))
+            throw PrivateFiles.refusal("page_release_renderer_mismatch");
+        byte[] metadataBytes=LocalView.readBounded(PrivateFiles.open(path.resolve("metadata.json")),LocalView.DESCRIPTOR_LIMIT);
+        if(!LocalView.digest(metadataBytes).equals(page.metadataSha256()))throw PrivateFiles.refusal("page_release_metadata_substitution");
+        Map<String,Object> metadata=org.kiosk.harness.delivery.DeliveryJson.object(
+            org.kiosk.harness.delivery.DeliveryJson.parse(metadataBytes,LocalView.DESCRIPTOR_LIMIT));
+        if(!java.util.Arrays.equals(metadataBytes,PublisherAuthority.canonical(metadata)))
+            throw PrivateFiles.refusal("page_release_metadata");
+        Map<String,Object> publication=PageReleaseProtocol.validateMetadata(metadata);
+        if(!str(metadata,"destination").equals(page.destination()))throw PrivateFiles.refusal("page_release_assignment");
+        PageReleaseProtocol.checkLocalRenderer(metadata,page.js(),page.css());
+        var packageSource=source(path,false);packageSource.verifyPins();
+        PageReleaseProtocol.Files files=new PageReleaseProtocol.Files(readAll(packageSource,PageReleaseProtocol.MAX_FILE),Map.of(),Map.of());
+        Map<String,Object> plan=org.kiosk.harness.delivery.DeliveryJson.object(
+            org.kiosk.harness.delivery.DeliveryJson.parse(page.plan().getBytes(StandardCharsets.UTF_8),PageReleaseProtocol.MAX_DOCUMENT));
+        Map<String,Object> target=org.kiosk.harness.delivery.DeliveryJson.object(
+            org.kiosk.harness.delivery.DeliveryJson.parse(page.target().getBytes(StandardCharsets.UTF_8),PageReleaseProtocol.MAX_DOCUMENT));
+        if(!page.plan().equals(new String(PublisherAuthority.canonical(plan),StandardCharsets.UTF_8))
+            ||!page.target().equals(new String(PublisherAuthority.canonical(target),StandardCharsets.UTF_8)))
+            throw PrivateFiles.refusal("page_release_assignment");
+        PageReleaseProtocol.PageAdmission dossier=new PageReleaseProtocol.PageAdmission(plan,target,Map.of(),metadata,
+            publication,null,page.packageId(),page.revision(),page.destination(),page.projection(),page.renderer(),
+            page.contentSha256(),page.metadataSha256());
+        PageReleaseProtocol.recheck(dossier,files,page.js(),page.css());
+        if(!page.packageId().equals(str(publication,"package_id"))||!page.revision().equals(str(metadata,"revision_sha256"))
+            ||!page.revision().equals(str(publication,"revision"))
+            ||!page.rawManifest().equals(str(publication,"raw_manifest_sha256"))
+            ||!page.destination().equals(str(metadata,"destination"))
+            ||!page.renderer().equals(str(org.kiosk.harness.delivery.DeliveryJson.object(publication.get("renderer")),"build_id"))
+            ||!page.contentSha256().equals(str(metadata,"content_sha256"))
+            ||!page.projection().equals(str(target,"projection")))
+            throw PrivateFiles.refusal("page_release_assignment");
+    }
+    /** One leased page-release install. No pointer becomes active until every byte reopens cleanly. */
+    public Selection installPageRelease(PageReleaseProtocol.PageAdmission admission,PageReleaseProtocol.Files files,
+            LocalView.Source rendererAssets,Checkpoint operation)throws IOException{
+        return leased(()->{
+            if(admission==null||admission.content()==null||files==null)throw PrivateFiles.refusal("page_release_assignment");
+            if(!"android-pages-v1".equals(admission.destination())||admission.target()==null)
+                throw PrivateFiles.refusal("page_release_assignment");
+            Map<String,byte[]> assets=readAll(rendererAssets,LocalView.DESCRIPTOR_LIMIT);
+            if(!assets.keySet().equals(PageViewAssets.FILES))throw PrivateFiles.refusal("page_renderer_inventory");
+            PageReleaseProtocol.recheck(admission,files,PageReleaseProtocol.SHIPPED_JS_SHA256,
+                PageReleaseProtocol.SHIPPED_CSS_SHA256);
+            PageView view=buildPageView(admission,files,assets);
+            byte[] metadata=PublisherAuthority.canonical(admission.metadata());
+            if(!LocalView.digest(metadata).equals(admission.metadataSha256()))
+                throw PrivateFiles.refusal("page_release_metadata_substitution");
+            Map<String,DevelopmentWitness.Pin> packagePins=new TreeMap<>();
+            long packageBytes=0;
+            for(var entry:files.packageFiles().entrySet()){var value=pin(entry.getValue());packagePins.put(entry.getKey(),value);packageBytes+=value.size();}
+            long viewBytes=0;for(var value:view.pins().values())viewBytes+=value.size();
+            long budgetBytes=2*PageReleaseProtocol.MAX_TOTAL+32L*1024*1024;
+            int budgetFiles=2*PageReleaseProtocol.MAX_INVENTORY+16;
+            String id=admission.packageId();long bytes=packageBytes+viewBytes+metadata.length+8192;
+            int count=packagePins.size()+view.pins().size()+6;
+            if(bytes>budgetBytes||count>budgetFiles)throw PrivateFiles.refusal("admission_budget");
+            AdmissionRecord.Page page=new AdmissionRecord.Page("native-page-release-v2",id,admission.revision(),
+                str(admission.publication(),"raw_manifest_sha256"),admission.renderer(),PageReleaseProtocol.SHIPPED_JS_SHA256,
+                PageReleaseProtocol.SHIPPED_CSS_SHA256,admission.destination(),admission.projection(),admission.contentSha256(),
+                admission.metadataSha256(),new String(PublisherAuthority.canonical(admission.plan()),StandardCharsets.UTF_8),
+                new String(PublisherAuthority.canonical(admission.target()),StandardCharsets.UTF_8),
+                "stage6-page-release-v2",Map.copyOf(packagePins),Map.copyOf(view.pins()),
+                budgetBytes,budgetFiles,16L*1024*1024);
+            String encoded=AdmissionRecord.encodePage(page);
+            String fingerprint=LocalView.digest((id+"\n"+admission.revision()+"\n"+admission.metadataSha256()+"\n"
+                +admission.destination()+"\n"+admission.projection()+"\n"+admission.renderer()+"\n"+encoded).getBytes(StandardCharsets.UTF_8));
+            Path incoming=root.resolve(".page-incoming"),destination=revision(id);
+            for(String old:List.of(".incoming",".kiosk-incoming",".development-incoming",".admission-incoming"))
+                if(Files.exists(root.resolve(old),LinkOption.NOFOLLOW_LINKS))throw PrivateFiles.refusal("incomplete_operation");
+            String previous;
+            try{previous=resolvedPackage();}
+            catch(IOException unavailable){
+                if(!"no_valid_publication".equals(unavailable.getMessage()))throw unavailable;
+                previous=StoreMetadata.pointer(root.resolve("active.json")).current();
+            }
+            if(Files.exists(incoming,LinkOption.NOFOLLOW_LINKS)&&!new String(PrivateFiles.metadata(incoming.resolve("operation")),StandardCharsets.UTF_8).equals(fingerprint))
+                throw PrivateFiles.refusal("incomplete_operation");
+            if(!Files.exists(destination,LinkOption.NOFOLLOW_LINKS)){
+                long space=root.toFile().getUsableSpace();if(space<page.minFreeBytes()||bytes>space-page.minFreeBytes())throw PrivateFiles.refusal("store_disk_full");
+                checkpoint(operation,"page.space_checked");PrivateFiles.directory(incoming);
+                if(!Files.exists(incoming.resolve("operation")))atomic(incoming.resolve("operation"),fingerprint,operation,"page_journal");
+                List<PublicationFixtures.Pin> all=new ArrayList<>();
+                for(var value:packagePins.values())all.add(new PublicationFixtures.Pin(value.size(),value.sha256()));
+                for(var value:view.pins().values())all.add(new PublicationFixtures.Pin(value.size(),value.sha256()));
+                boundTree(incoming,all,all.size()+2);
+                copy(new MapSource(files.packageFiles()),incoming.resolve("package"),DevelopmentGrant.copyPins(packagePins),operation,"page_package");
+                Map<String,byte[]> viewWithDescriptor=new TreeMap<>(view.files());viewWithDescriptor.put("view.json",view.descriptor());
+                copy(new MapSource(viewWithDescriptor),incoming.resolve("view"),DevelopmentGrant.copyPins(view.pins()),operation,"page_view");
+                atomic(incoming.resolve("metadata.json"),new String(metadata,StandardCharsets.UTF_8),operation,"page_metadata");
+                atomic(incoming.resolve("admission-required"),AdmissionRecord.PAGE_MARKER,operation,"page_marker");
+                atomic(incoming.resolve("admission.json"),encoded,operation,"page_admission");
+                checkpoint(operation,"page.stage_verified");PrivateFiles.directory(root.resolve("revisions"));PrivateFiles.rename(incoming,destination);
+            }else{
+                var saved=AdmissionRecord.load(root,id);
+                if(saved==null||saved.page==null||!saved.page.metadataSha256().equals(page.metadataSha256())
+                    ||!saved.page.packageId().equals(id)||!saved.page.projection().equals(page.projection()))
+                    throw PrivateFiles.refusal("admission_layout_conflict");
+            }
+            Selection result=verify(id,view.mode());checkpoint(operation,"page.preflight_complete");
+            if(!id.equals(previous)){
+                if(previous!=null)atomic(root.resolve("active.backup.json"),new StoreMetadata.Pointer(previous,null).encode(),operation,"backup");
+                atomic(root.resolve("active.json"),new StoreMetadata.Pointer(id,previous).encode(),operation,"pointer");
+            }
+            return result;
+        });
+    }
     /** No permit parameter: the configured native verifier and full local checks always execute here. */
     public Selection installPrepared(CapturedCandidate capture,PreparedAdmission.Request r,Checkpoint operation)throws IOException{
         return leased(()->{

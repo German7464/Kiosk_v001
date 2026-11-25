@@ -24,6 +24,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="kiosk" android:host="roaming" android:pathPrefix="/login" />
                 <data android:scheme="kiosk" android:host="roaming" android:pathPrefix="/publish" />
+                <data android:scheme="kiosk" android:host="roaming" android:pathPrefix="/page" />
             </intent-filter>
         </activity>
         <activity android:name=".StoredHarnessActivity" android:exported="true">

@@ -1,4 +1,11 @@
 plugins { id 'com.android.application' }
+def stage6GeneratedAssets = layout.buildDirectory.dir('generated/stage6Assets')
+def stage6Renderer = [
+    js: rootProject.file('../kiosk/static/js/page_display.js'),
+    css: rootProject.file('../kiosk/static/css/page_display.css'),
+    jsSha256: '3528358ae2bb2f8a85d2c5f58fed6ba8b1c98ea37d842931460657e6f063e20d',
+    cssSha256: 'd3fd8af903cacb3e5e5d33df69663002bfb3a9157f432997e448c8d8266a54cf'
+]
 android {
     namespace = 'org.kiosk.harness'
     compileSdk = 35
@@ -43,10 +50,41 @@ android {
     // selected explicitly for its isolated WebView/network-security test APK.
     testBuildType = providers.gradleProperty('kioskTestBuildType').getOrElse('debug')
     sourceSets {
+        main.assets.srcDir stage6GeneratedAssets.get().asFile
         test.java.srcDir 'src/sharedTest/java'
         androidTest.java.srcDir 'src/sharedTest/java'
         androidTest.assets.srcDir rootProject.file('testdata')
     }
+}
+tasks.register('stage6RendererAssets', Copy) {
+    into stage6GeneratedAssets.map { it.dir('views/pages-v1') }
+    from(stage6Renderer.js) { rename { 'page_display.js' } }
+    from(stage6Renderer.css) { rename { 'page_display.css' } }
+}
+tasks.register('verifyStage6Renderer') {
+    dependsOn 'stage6RendererAssets'
+    doLast {
+        def digest = { File file ->
+            def hash = java.security.MessageDigest.getInstance('SHA-256')
+            file.withInputStream { stream ->
+                byte[] block = new byte[16384]
+                int count
+                while ((count = stream.read(block)) != -1) hash.update(block, 0, count)
+            }
+            hash.digest().collect { String.format(Locale.ROOT, '%02x', it & 0xff) }.join()
+        }
+        def generated = stage6GeneratedAssets.get().dir('views/pages-v1').asFile
+        if (digest(new File(generated, 'page_display.js')) != stage6Renderer.jsSha256) {
+            throw new GradleException('page_display.js does not match the pinned renderer build')
+        }
+        if (digest(new File(generated, 'page_display.css')) != stage6Renderer.cssSha256) {
+            throw new GradleException('page_display.css does not match the pinned renderer build')
+        }
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'stage6RendererAssets', 'verifyStage6Renderer' }
+tasks.configureEach {
+    if (name ==~ /merge.*Assets/) dependsOn 'stage6RendererAssets'
 }
 dependencies {
     testImplementation 'junit:junit:4.13.2'

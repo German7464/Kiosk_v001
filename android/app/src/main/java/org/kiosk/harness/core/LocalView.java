@@ -25,6 +25,7 @@ public final class LocalView {
     public static final int DESCRIPTOR_LIMIT = 2 * 1024 * 1024;
     public static final long FILE_LIMIT = 64L * 1024 * 1024;
     public static final long TOTAL_LIMIT = 128L * 1024 * 1024;
+    private static final long PAGE_TOTAL_LIMIT = 192L * 1024 * 1024 + DESCRIPTOR_LIMIT + 1024 * 1024;
     private final Source source;
     private final Map<String, Entry> inventory;
     public final String mode, packageIdentity;
@@ -83,6 +84,57 @@ public final class LocalView {
         } catch (IOException e) { throw failure(); }
         catch (Exception e) { throw failure(); }
     }
+    /** Page-release v2 view generated only from shipped renderer assets and data bytes. */
+    public static LocalView verifyPage(Source source, String expectedPackageId, String expectedMode,
+                                       String trustedJs, String trustedCss) throws IOException {
+        try {
+            byte[] bytes = readBounded(source.open("view.json"), DESCRIPTOR_LIMIT);
+            String json = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();
+            JsonSyntax.validate(json);
+            JSONObject descriptor = new JSONObject(json);
+            if (!integer(descriptor.get("schema_version")) || descriptor.getLong("schema_version") != 2
+                || !"pages".equals(descriptor.get("kind"))
+                || !"pages-v1".equals(descriptor.get("renderer"))
+                || !(descriptor.get("revision") instanceof String) || descriptor.getString("revision").isEmpty()
+                || !("kiosk".equals(expectedMode) || "tv".equals(expectedMode))
+                || !expectedMode.equals(descriptor.get("mode"))
+                || !expectedPackageId.matches("[0-9a-f]{64}")
+                || !expectedPackageId.equals(descriptor.get("package_sha256"))) throw failure();
+            JSONArray files = descriptor.getJSONArray("files");
+            if (files.length() < 4 || files.length() > 10004) throw failure();
+            Map<String, Entry> entries = new HashMap<>();
+            Set<String> portable = new HashSet<>();
+            long total = 0;
+            for (int i = 0; i < files.length(); i++) {
+                JSONObject item = files.getJSONObject(i);
+                if (item.length() != 3 || !(item.get("path") instanceof String)
+                    || !integer(item.get("size")) || !(item.get("sha256") instanceof String)) throw failure();
+                String path = item.getString("path"), hash = item.getString("sha256");
+                long size = item.getLong("size");
+                if (!safePath(path) || mime(path) == null || !portable.add(path.toLowerCase(Locale.ROOT))
+                    || size < 0 || size > FILE_LIMIT || total > PAGE_TOTAL_LIMIT - size
+                    || !hash.matches("[0-9a-f]{64}")) throw failure();
+                if (path.startsWith("static/uploads/")) {
+                    if (!pageImage(path)) throw failure();
+                } else if (!Set.of("index.html", "bootstrap.js", "page_display.js", "page_display.css").contains(path)) {
+                    throw failure();
+                }
+                total += size;
+                entries.put(path, new Entry(size, hash));
+            }
+            if (!entries.keySet().containsAll(Set.of("index.html", "bootstrap.js", "page_display.js", "page_display.css"))
+                || !entries.get("page_display.js").hash.equals(trustedJs)
+                || !entries.get("page_display.css").hash.equals(trustedCss)) throw failure();
+            Set<String> exact = new HashSet<>(entries.keySet());
+            exact.add("view.json");
+            if (!exact.equals(source.files())) throw failure();
+            LocalView view = new LocalView(source, entries, expectedMode, expectedPackageId);
+            for (String path : entries.keySet()) view.read(path);
+            return view;
+        } catch (IOException e) { throw failure(); }
+        catch (Exception e) { throw failure(); }
+    }
     private static boolean integer(Object value) { return value instanceof Integer || value instanceof Long; }
     public boolean contains(String path) { return inventory.containsKey(path); }
     public byte[] read(String path) throws IOException {
@@ -122,8 +174,8 @@ public final class LocalView {
     }
     public static String mime(String path) {
         if (path.equals("index.html")) return "text/html";
-        if (path.equals("events.js")) return "text/javascript";
-        if (path.equals("events.css")) return "text/css";
+        if (path.equals("events.js") || path.equals("page_display.js") || path.equals("bootstrap.js")) return "text/javascript";
+        if (path.equals("events.css") || path.equals("page_display.css")) return "text/css";
         if (!path.startsWith("static/uploads/")) return null;
         int dot = path.lastIndexOf('.');
         if (dot < 0) return null;
@@ -136,6 +188,15 @@ public final class LocalView {
             case ".ico": return "image/x-icon";
             default: return null;
         }
+    }
+    private static boolean pageImage(String path) {
+        if (!path.startsWith("static/uploads/")) return false;
+        int dot = path.lastIndexOf('.');
+        if (dot < 0) return false;
+        return switch (path.substring(dot).toLowerCase(Locale.ROOT)) {
+            case ".png", ".jpg", ".jpeg", ".webp", ".gif" -> true;
+            default -> false;
+        };
     }
     private static IOException failure() { return new IOException("invalid_local_view"); }
 }

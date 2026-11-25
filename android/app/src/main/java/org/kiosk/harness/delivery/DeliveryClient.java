@@ -406,6 +406,67 @@ public final class DeliveryClient implements PreparedAdmission.SourceVerifier {
         state.put("assignment_generation",next.generation()).put("assignment_metadata",next.metadata()).put("assignment_display",config);save();return next;
     }
     public record Download(CapturedCandidate capture,PreparedAdmission.Request request){}
+    public record PageDownload(PageReleaseProtocol.PageAdmission admission,PageReleaseProtocol.Files files){}
+    /** V4 page path. Legacy capability POST and v1 assignment/renderer stay unchanged. */
+    public synchronized PageDownload downloadPageRelease()throws Exception {
+        renewCredentialIfDue();
+        NativeTransport.PeerPin peer=onlineTrust();
+        long trustExpires=state.optLong("trust_expires",0);
+        if(trustExpires>0&&certainNow()>=trustExpires)throw new IOException("authority_expired");
+        String renderer=PageReleaseProtocol.rendererBuildId(PageReleaseProtocol.SHIPPED_JS_SHA256,
+            PageReleaseProtocol.SHIPPED_CSS_SHA256);
+        var response=call("/api/v2/client/assignment?renderer="+BUILD+"&resource_profile="+PROFILE
+            +"&display_protocol=display-profile-v2&pages_renderer="+renderer,null,true,peer);
+        if(response.status()!=200){reportIncompatible(response);
+            if(response.status()==409)throw new IOException("display_assignment_refused");need(false);}
+        Map<String,Object> assignment=DeliveryJson.object(DeliveryJson.parse(response.body(),2*1024*1024));
+        need(num(assignment,"version")==PageReleaseProtocol.ASSIGNMENT_VERSION);
+        JSONObject publisher=state.optJSONObject("publisher_anchor");
+        if(publisher==null)refuse("publisher_setup_required");
+        Map<String,Object> proof=obj(assignment,"publisher");
+        Set<String> heads=new HashSet<>();JSONArray saved=publisher.getJSONArray("heads");
+        for(int i=0;i<saved.length();i++)heads.add(saved.getString(i));
+        Map<String,Object> metadata=obj(assignment,"metadata"),publication=obj(metadata,"publication");
+        long total=0;Map<String,byte[]> packageFiles=new LinkedHashMap<>();
+        String base="/api/v2/publications/"+str(publication,"package_id")+"/package/";
+        for(Object item:DeliveryJson.array(DeliveryJson.object(publication.get("package")).get("files"))){
+            Map<String,Object> entry=DeliveryJson.object(item);String path=str(entry,"path");long size=num(entry,"size");
+            total=Math.addExact(total,size);need(size>=0&&size<=PageReleaseProtocol.MAX_FILE&&total<=PageReleaseProtocol.MAX_TOTAL);
+            String escaped=new java.net.URI(null,null,"/"+path,null).getRawPath().substring(1);
+            try(InputStream stream=transport.artifact(base+escaped,secret(),size,peer)){
+                byte[] bytes=LocalView.readBounded(stream,size);need(bytes.length==size);packageFiles.put(path,bytes);
+            }catch(Exception failure){throw new IOException("artifact_refused");}
+        }
+        PageReleaseProtocol.Files files=new PageReleaseProtocol.Files(packageFiles,Map.of(),Map.of());
+        PageReleaseProtocol.PageAdmission admission=PageReleaseProtocol.admit(proof,assignment,
+            org.kiosk.harness.publishing.PublisherAuthority.publicKey(publisher.getString("root_spki")),
+            anchor.origin(),clock.now(),files,anchor.group(),state.getString("device"),PROFILE,"android-pages-v1",
+            PageReleaseProtocol.SHIPPED_JS_SHA256,PageReleaseProtocol.SHIPPED_CSS_SHA256,
+            publisher.optLong("policy_floor",0),heads);
+        recordPageAssociation(assignment,admission);
+        return new PageDownload(admission,files);
+    }
+    /** Exact accepted v4 variant for activation receipts and mode selection. */
+    private void recordPageAssociation(Map<String,Object> assignment,PageReleaseProtocol.PageAdmission admission)throws Exception{
+        String packageId=admission.packageId();JSONObject associations=state.optJSONObject("accepted");
+        if(associations==null)associations=new JSONObject();
+        need(associations.length()<64||associations.has(packageId));
+        Map<String,Object> display=obj(assignment,"display");
+        String mode=str(display,"mode");
+        need(mode.equals(admission.projection().substring(0,admission.projection().indexOf('-'))));
+        associations.put(packageId,new JSONObject().put("facts",admission.contentSha256())
+            .put("budgets","page-release-v2").put("generation",num(assignment,"generation"))
+            .put("metadata",str(assignment,"metadata_sha256")).put("display_mode",mode)
+            .put("display_profile",str(display,"profile_id")).put("display_revision",num(display,"revision"))
+            .put("group",anchor.group()).put("device",state.getString("device")));
+        JSONObject publisher=state.optJSONObject("publisher_anchor");
+        if(publisher!=null){
+            long floor=publisher.optLong("policy_floor",0),version=num(admission.policy(),"version");
+            if(version>=floor)publisher.put("policy_floor",version)
+                .put("heads",new JSONArray().put(str(admission.plan(),"id")));
+        }
+        state.put("accepted",associations);save();
+    }
     private void reportIncompatible(NativeTransport.Response response){
         try{
             if(progressUnavailable||(progress!=null&&progress.unsupported()))return;

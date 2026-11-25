@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.kiosk.harness.core.LocalView;
 import org.kiosk.harness.delivery.DeliveryClient;
+import org.kiosk.harness.delivery.PageReleaseProtocol;
 import static org.kiosk.harness.delivery.DeliveryJson.*;
 import static org.kiosk.harness.delivery.DeliveryProtocol.*;
 
@@ -34,6 +35,10 @@ public final class PublishActivity extends Activity {
     private Map<String,Object> grant;
     private long policyVersion;
     private Map<String,Object> document;
+    private Map<String,Object> pageDocument;
+    private Map<String,PageReleaseProtocol.Files> pageFiles;
+    private String pageToken, pageContentOrigin, pageMaintenanceOrigin;
+    private long pageExpires;
     private byte[] publicData;
     private int documentToken;
     private String pendingLink;
@@ -66,6 +71,12 @@ public final class PublishActivity extends Activity {
         Button recoveryButton = new Button(this);
         recoveryButton.setText("Recovery: replace publisher root");
         root.addView(recoveryButton);
+        Button maintenanceButton = new Button(this);
+        maintenanceButton.setText("Set trusted Maintenance origin");
+        root.addView(maintenanceButton);
+        Button maintenanceCaButton = new Button(this);
+        maintenanceCaButton.setText("Set trusted Maintenance CA");
+        root.addView(maintenanceCaButton);
         Button requestButton = new Button(this);
         requestButton.setText("Export add-device request (same user)");
         root.addView(requestButton);
@@ -96,13 +107,17 @@ public final class PublishActivity extends Activity {
         load.setOnClickListener(view -> openId(candidate.getText().toString().trim()));
         importButton.setOnClickListener(view -> pickAuthority(false));
         recoveryButton.setOnClickListener(view -> pickAuthority(true));
+        maintenanceButton.setOnClickListener(view -> setMaintenanceOrigin());
+        maintenanceCaButton.setOnClickListener(view -> setMaintenanceCa());
         requestButton.setOnClickListener(view -> exportRequest());
         publish.setOnClickListener(view -> sign());
         retry.setOnClickListener(view -> retryPending());
         discard.setOnClickListener(view -> discardPending());
         cancel.setOnClickListener(view -> {
             loadToken.incrementAndGet();
-            document = null; publicData = null;
+            document = null; pageDocument = null; pageFiles = null; publicData = null;
+            pageToken = null; pageContentOrigin = null; pageMaintenanceOrigin = null;
+            pageExpires = 0;
             confirmed.setChecked(false); publish.setEnabled(false);
             show("Review cancelled. Nothing was signed.");
         });
@@ -136,11 +151,13 @@ public final class PublishActivity extends Activity {
                 show("Install publisher authority for this device, then reopen the link.");
                 return;
             }
-            if (!str(authority,"origin").equals(fragment.get("origin"))) {
-                throw new IOException("publisher_origin_refused");
-            }
             String path = uri.getPath();
-            if ("/publish".equals(path)) {
+            if ("/page".equals(path)) {
+                applyNativeTicket(fragment);
+            } else if ("/publish".equals(path)) {
+                if (!str(authority,"origin").equals(fragment.get("origin"))) {
+                    throw new IOException("publisher_origin_refused");
+                }
                 String plan = fragment.get("plan");
                 if (plan == null) throw new IOException("publisher_link_refused");
                 runOnUiThread(() -> { candidate.setText(plan); openId(plan); });
@@ -151,6 +168,60 @@ public final class PublishActivity extends Activity {
             }
         } catch (Exception failure) {
             show("Link refused: " + failure.getMessage());
+        }
+    }
+
+    /**
+     * Native Stage 6 handoff. The ticket token is accepted only in the URL fragment,
+     * only for the locally configured Maintenance origin, and never displayed.
+     */
+    private void applyNativeTicket(Map<String,String> fragment) {
+        try {
+            NativePageProtocol.Handoff handoff = NativePageProtocol.handoff(fragment, now());
+            String token = handoff.token();
+            String contentOrigin = handoff.contentOrigin();
+            String maintenanceOrigin = handoff.maintenanceOrigin();
+            need(state != null && !state.maintenanceCa().isEmpty());
+            need(str(authority,"origin").equals(contentOrigin));
+            need(maintenanceEndpoint().equals(maintenanceOrigin));
+            final int ticket = loadToken.incrementAndGet();
+            document = null; pageDocument = null; pageFiles = null; publicData = null;
+            pageToken = token; pageContentOrigin = contentOrigin; pageMaintenanceOrigin = maintenanceOrigin;
+            pageExpires = handoff.expires();
+            publish.setEnabled(false);
+            worker.execute(() -> openNativePage(ticket, token, contentOrigin, maintenanceOrigin));
+        } catch (Exception failure) {
+            pageToken = null; pageContentOrigin = null; pageMaintenanceOrigin = null;
+            pageExpires = 0;
+            show("Native page link refused: " + failure.getMessage());
+        }
+    }
+
+    /** Open the frozen v2 document, then fetch exact signed bytes from each target route. */
+    private void openNativePage(int ticket, String token, String contentOrigin, String maintenanceOrigin) {
+        try {
+            Map<String,Object> value = NativePageProtocol.openValue(token, contentOrigin, maintenanceOrigin);
+            Map<String,Object> approval = PublisherEnvelope.sign(key, "page-review-open", value);
+            CandidateClient client = new CandidateClient(maintenanceOrigin, token, state.maintenanceCa());
+            Map<String,Object> opened = client.nativeOpen(approval, array(authority.get("chain")));
+            if (ticket != loadToken.get()) return;
+            Map<String,Object> plan = PublisherReview.reviewPageDocument(opened, now(), state.heads(),
+                    PageReleaseProtocol.SHIPPED_JS_SHA256, PageReleaseProtocol.SHIPPED_CSS_SHA256);
+            if (ticket != loadToken.get()) return;
+            verifyPageAuthority(plan);
+            Map<String,PageReleaseProtocol.Files> files = client.nativePageArtifacts(opened);
+            if (ticket != loadToken.get()) return;
+            Map<String,Object> facts = PublisherReview.pageReviewSummary(opened, files, now(), state.heads(),
+                    PageReleaseProtocol.SHIPPED_JS_SHA256, PageReleaseProtocol.SHIPPED_CSS_SHA256);
+            if (ticket != loadToken.get()) return;
+            need(str(facts,"publisher_device_id").equals(PublisherAuthority.keyId(key.publicKey())));
+            document = null; pageDocument = opened; pageFiles = files; publicData = null; documentToken = ticket;
+            show(pageSummary(facts));
+            runOnUiThread(() -> { confirmed.setChecked(false); publish.setEnabled(true); });
+        } catch (Exception failure) {
+            if (ticket != loadToken.get()) return;
+            pageDocument = null; pageFiles = null;
+            show("Native page refused: " + failure.getMessage());
         }
     }
 
@@ -192,7 +263,10 @@ public final class PublishActivity extends Activity {
             }
             Map<String,Object> pending = state.pending();
             if (!pending.isEmpty()) {
-                text.append("\nA signed approval is stored and awaiting submission. Use Retry.");
+                text.append(pagePending(pending)
+                        ? "\nA signed page approval is stored, but the ticket is not persisted. "
+                                + "Open a fresh native handoff link to retry it, or Discard."
+                        : "\nA signed approval is stored and awaiting submission. Use Retry.");
                 runOnUiThread(() -> { retry.setEnabled(true); discard.setEnabled(true); });
             }
             show(text.toString());
@@ -426,24 +500,69 @@ public final class PublishActivity extends Activity {
         if (identity.startsWith("kiosk://")) { applyLink(identity); return; }
         if (!identity.matches("[a-f0-9]{64}")) { show("Enter the exact candidate link or id."); return; }
         final int token = loadToken.incrementAndGet();
-        document = null; publicData = null; publish.setEnabled(false);
+        document = null; pageDocument = null; pageFiles = null; publicData = null; publish.setEnabled(false);
         worker.execute(() -> {
             try {
                 CandidateClient client = new CandidateClient(authority);
                 Map<String,Object> loaded = client.candidate(identity);
+                // Stage 6 pages are never opened through the v1 candidate transport.
+                if (pageCandidate(loaded)) throw new IOException("publisher_native_ticket_required");
                 byte[] data = client.publicData(identity);
                 Map<String,Object> plan = PublisherReview.verify(loaded, data, now(),
                         state.heads(), key.publicKey());
                 if (token != loadToken.get()) return;
-                document = loaded; publicData = data; documentToken = token;
+                document = loaded; pageDocument = null; pageFiles = null; publicData = data; documentToken = token;
                 show(summary(plan, loaded));
                 runOnUiThread(() -> { confirmed.setChecked(false); publish.setEnabled(true); });
             } catch (Exception failure) {
                 if (token != loadToken.get()) return;
-                document = null;
+                document = null; pageDocument = null; pageFiles = null; publicData = null;
                 show("Candidate refused: " + failure.getMessage());
             }
         });
+    }
+
+    private static boolean pageCandidate(Map<String,Object> value)throws Exception{
+        if (!(value.get("version") instanceof NumberToken) || num(value,"version") != 2) return false;
+        return value.get("plan") instanceof Map && value.get("revision") instanceof Map
+                && value.get("targets") instanceof List && value.get("ancestry") instanceof List;
+    }
+
+    /** Exact immutable v2 facts after every target package byte and projection was re-derived. */
+    private String pageSummary(Map<String,Object> facts)throws Exception{
+        StringBuilder text = new StringBuilder();
+        String plan = str(facts,"plan_id"), revision = str(facts,"revision_sha256");
+        text.append("Page plan ").append(plan.substring(0,16).toUpperCase(Locale.ROOT))
+                .append(" — group ").append(str(facts,"group_id"))
+                .append(" — user ").append(str(facts,"user_id"))
+                .append(" — publisher ").append(str(facts,"publisher_device_id").substring(0,16)).append("…\n");
+        text.append("Revision ").append(revision).append(" — policy v").append(num(facts,"policy_version"))
+                .append(" — expires ").append(num(facts,"expires")).append('\n');
+        List<Object> included = array(facts.get("included")), excluded = array(facts.get("excluded"));
+        text.append("Included ").append(included.size()).append(":\n");
+        for (Object item : included) { Map<String,Object> entry = object(item);
+            text.append("  ").append(str(entry,"id")).append(" v").append(num(entry,"version"))
+                    .append(" by ").append(str(entry,"author")).append('\n'); }
+        text.append("Excluded ").append(excluded.size()).append(":\n");
+        for (Object item : excluded) { Map<String,Object> entry = object(item);
+            text.append("  ").append(str(entry,"id")).append(" v").append(num(entry,"version"))
+                    .append(" by ").append(str(entry,"author")).append(" — ").append(str(entry,"reason")).append('\n'); }
+        text.append("Targets:\n");
+        for (Object item : array(facts.get("targets"))) { Map<String,Object> target = object(item);
+            text.append("  ").append(str(target,"device_id")).append(" — ").append(str(target,"projection"))
+                    .append(" — ").append(str(target,"destination")).append(" — ")
+                    .append(str(target,"profile_id")).append(" v").append(num(target,"profile_version"))
+                    .append(" ").append(str(target,"mode")).append('\n');
+            text.append("    content ").append(str(target,"content_sha256"))
+                    .append("\n    metadata ").append(str(target,"metadata_sha256"))
+                    .append("\n    package ").append(str(target,"package_id"))
+                    .append("\n    manifest ").append(str(target,"raw_manifest_sha256"))
+                    .append("\n    renderer ").append(str(target,"renderer")).append('\n'); }
+        text.append("Renderer assets ")
+                .append(org.kiosk.harness.delivery.PageReleaseProtocol.SHIPPED_JS_SHA256.substring(0,16)).append("… / ")
+                .append(org.kiosk.harness.delivery.PageReleaseProtocol.SHIPPED_CSS_SHA256.substring(0,16)).append("… (pinned locally)\n");
+        text.append("Exact data-only package bytes were fetched and hashed. One Publish signs exactly this plan.\n");
+        return text.toString();
     }
 
     private long now() { return System.currentTimeMillis() / 1000L; }
@@ -472,7 +591,8 @@ public final class PublishActivity extends Activity {
     }
 
     private void sign() {
-        if (document == null || documentToken != loadToken.get() || key == null || state == null) {
+        if ((document == null && pageDocument == null) || (pageDocument != null && pageFiles == null)
+                || documentToken != loadToken.get() || key == null || state == null) {
             show("Load and verify the exact candidate before publishing.");
             return;
         }
@@ -491,12 +611,36 @@ public final class PublishActivity extends Activity {
             return;
         }
         publish.setEnabled(false);
-        final Map<String,Object> reviewed = document;
+        final Map<String,Object> reviewed = document, reviewedPage = pageDocument;
+        final Map<String,PageReleaseProtocol.Files> reviewedFiles = pageFiles;
+        final String nativeToken = pageToken;
+        final String nativeContentOrigin = pageContentOrigin;
+        final String nativeMaintenanceOrigin = pageMaintenanceOrigin;
+        final long nativeExpires = pageExpires;
+        final boolean consented = confirmed.isChecked();
         final byte[] data = publicData;
         final int token = loadToken.get();
         worker.execute(() -> {
             try {
                 need(token == loadToken.get());
+                if (reviewedPage != null) {
+                    need(nativeToken != null && nativeContentOrigin != null && nativeMaintenanceOrigin != null);
+                    Map<String,Object> plan = PublisherReview.reviewPage(reviewedPage, reviewedFiles, now(), state.heads(),
+                            PageReleaseProtocol.SHIPPED_JS_SHA256, PageReleaseProtocol.SHIPPED_CSS_SHA256);
+                    need(token == loadToken.get());
+                    verifyPageAuthority(plan);
+                    need(token == loadToken.get());
+                    requireNativeTicket(nativeToken, nativeContentOrigin, nativeMaintenanceOrigin,
+                            nativeExpires);
+                    Map<String,Object> approval = PublisherEnvelope.signPage(key, plan);
+                    String identity = str(plan,"id");
+                    Map<String,Object> body = NativePageProtocol.approveBody(identity, approval,
+                            array(authority.get("chain")), consented);
+                    state.recordPending(identity,approval,array(authority.get("chain")),
+                            LocalView.digest(PublisherAuthority.canonical(reviewedPage)));
+                    submitNativePage(body, identity, nativeToken);
+                    return;
+                }
                 Map<String,Object> plan = PublisherReview.verify(reviewed, data, now(),
                         state.heads(), key.publicKey());
                 need(token == loadToken.get());
@@ -515,10 +659,23 @@ public final class PublishActivity extends Activity {
         });
     }
 
+    /** Recheck installed policy/grant possession, exact local identity and page scope. */
+    private void verifyPageAuthority(Map<String,Object> plan)throws Exception{
+        if(storedBundle==null)throw new IOException("publisher_authority_missing");
+        verifyBundle(storedBundle,state.policyFloor());
+        need(str(plan,"group_id").equals(str(authority,"group_id"))
+            &&str(plan,"origin").equals(str(authority,"origin"))
+            &&str(plan,"user_id").equals(str(grant,"user_id"))
+            &&str(plan,"device_id").equals(PublisherAuthority.keyId(key.publicKey()))
+            &&num(plan,"policy_version")==policyVersion);
+        need(PageReleaseProtocol.scopeAllows(grant,plan));
+    }
+
     private void discardPending() {
         worker.execute(() -> {
             try {
                 state.clearPending();
+                clearPageSession();
                 runOnUiThread(() -> { retry.setEnabled(false); discard.setEnabled(false); });
                 show("Stored approval discarded. Nothing was submitted; review again to publish.");
             } catch (Exception failure) {
@@ -532,12 +689,187 @@ public final class PublishActivity extends Activity {
             try {
                 Map<String,Object> pending = state.pending();
                 if (pending.isEmpty()) throw new IOException("publisher_retry_empty");
-                Map<String,Object> body = new LinkedHashMap<>();
-                body.put("id",str(pending,"id")); body.put("approval",obj(pending,"approval"));
-                body.put("chain",array(pending.get("chain")));
-                submit(body,str(pending,"id"));
+                String identity = str(pending,"id");
+                Map<String,Object> approval = obj(pending,"approval");
+                List<Object> chain = array(pending.get("chain"));
+                if (pageToken != null) {
+                    String ticket = NativePageProtocol.retryTicket(pageToken);
+                    Map<String,Object> body = NativePageProtocol.approveBody(identity, approval, chain, true);
+                    submitNativePage(body, identity, ticket);
+                } else if ("page-publication".equals(approvalKind(approval))) {
+                    throw new IOException("native_page_ticket_required");
+                } else {
+                    Map<String,Object> body = new LinkedHashMap<>();
+                    body.put("id",identity); body.put("approval",approval);
+                    body.put("chain",chain);
+                    submit(body,identity);
+                }
             } catch (Exception failure) {
                 show("Retry refused: " + failure.getMessage());
+            }
+        });
+    }
+
+    /** The token is never persisted; a reopened native handoff supplies a fresh ticket. */
+    private static String approvalKind(Map<String,Object> envelope)throws Exception{
+        Map<String,Object> outer = object(parse(b64(str(envelope,"payload"),32768),32768));
+        return str(outer,"kind");
+    }
+
+    private static boolean pagePending(Map<String,Object> pending){
+        try{return "page-publication".equals(approvalKind(obj(pending,"approval")));}
+        catch(Exception malformed){return false;}
+    }
+
+    private void requireNativeTicket(String token,String contentOrigin,String maintenanceOrigin,
+            long expires)throws Exception{
+        NativePageProtocol.openValue(token, contentOrigin, maintenanceOrigin);
+        need(expires > now());
+        need(str(authority,"origin").equals(contentOrigin));
+        need(maintenanceEndpoint().equals(maintenanceOrigin));
+    }
+
+    private void submitNativePage(Map<String,Object> body,String identity,String token) {
+        try {
+            need(pageMaintenanceOrigin != null);
+            String maintenanceCa = state.maintenanceCa();
+            need(!maintenanceCa.isEmpty());
+            CandidateClient client = new CandidateClient(pageMaintenanceOrigin, token, maintenanceCa);
+            Map<String,Object> result = client.nativeApprove(body);
+            state.commit(identity,policyVersion);
+            Object distribution = result.get("distribution");
+            String report = "Maintenance accepted this exact device-signed plan. "
+                    + "Activation is acknowledged only by the display client.";
+            if (distribution instanceof Map) {
+                Map<String,Object> status = object(distribution);
+                if ("ready".equals(str(status,"state"))) {
+                    report += " Distribution ready for " + num(status,"targets") + " target(s).";
+                } else {
+                    report += " Distribution pending: " + str(status,"error")
+                            + ". Exact retry stays available while this ticket is valid.";
+                }
+            }
+            runOnUiThread(() -> { retry.setEnabled(false); discard.setEnabled(false); publish.setEnabled(false); });
+            clearPageSession();
+            show(report);
+        } catch (Exception failure) {
+            String message = failure.getMessage() == null ? "" : failure.getMessage();
+            int status = httpStatus(message);
+            if (status == 409 || terminalStatus(status)) {
+                try { state.clearPending(); } catch (Exception ignored) {}
+                clearPageSession();
+                runOnUiThread(() -> {
+                    retry.setEnabled(false); discard.setEnabled(false); publish.setEnabled(false);
+                });
+                show("Maintenance refused this review (" + message + "). The reviewed plan changed "
+                        + "or the ticket is no longer valid; reopen a new native handoff ticket.");
+                return;
+            }
+            runOnUiThread(() -> { retry.setEnabled(true); discard.setEnabled(true); });
+            show("Approval signed and stored, but Maintenance submission failed: " + message
+                    + ". Use Retry; the exact signed approval is reused while this ticket is valid.");
+        }
+    }
+
+    private void clearPageSession() {
+        document = null; pageDocument = null; pageFiles = null; publicData = null;
+        pageToken = null; pageContentOrigin = null; pageMaintenanceOrigin = null;
+        pageExpires = 0;
+    }
+
+    /** A definitive refusal can never become the same accepted plan. */
+    private static boolean terminalStatus(int status) {
+        return status == 400 || status == 401 || status == 403 || status == 404
+                || status == 410 || status == 422;
+    }
+
+    private static int httpStatus(String message) {
+        int at = message == null ? -1 : message.indexOf("publisher_http_");
+        if (at < 0) return 0;
+        int start = at + "publisher_http_".length();
+        int end = start;
+        while (end < message.length() && Character.isDigit(message.charAt(end))) end++;
+        try {
+            return Integer.parseInt(message.substring(start, end));
+        } catch (Exception malformed) {
+            return 0;
+        }
+    }
+
+    /** Combined mode defaults to the configured authority origin; separated mode is explicit. */
+    private String maintenanceEndpoint()throws Exception{
+        String configured = state == null ? "" : state.maintenanceOrigin();
+        return configured.isEmpty() ? str(authority,"origin") : configured;
+    }
+
+    private void setMaintenanceOrigin() {
+        if (state == null) { show("Publisher key is not ready."); return; }
+        worker.execute(() -> {
+            try {
+                String current = state.maintenanceOrigin();
+                runOnUiThread(() -> {
+                    EditText input = new EditText(this);
+                    input.setSingleLine(true);
+                    input.setHint("https://maintenance.example:443 (empty clears)");
+                    input.setText(current);
+                    new AlertDialog.Builder(this).setTitle("Trusted Maintenance origin")
+                            .setMessage("Enter the exact HTTPS origin used only for native page tickets. "
+                                    + "The origin is never inferred from a link or server response.")
+                            .setView(input).setNegativeButton("Cancel", null)
+                            .setPositiveButton("Save", (dialog, which) -> worker.execute(() -> {
+                                try {
+                                    String value = input.getText().toString().trim();
+                                    if (!value.isEmpty()) NativePageProtocol.origin(value);
+                                    state.setMaintenanceOrigin(value);
+                                    show(value.isEmpty()
+                                            ? "Maintenance origin cleared; combined mode uses the publisher authority origin."
+                                            : "Trusted Maintenance origin saved.");
+                                } catch (Exception failure) {
+                                    show("Maintenance origin refused: " + failure.getMessage());
+                                }
+                            })).show();
+                });
+            } catch (Exception failure) {
+                show("Publisher state unavailable: " + failure.getMessage());
+            }
+        });
+    }
+
+    /** One public CA PEM pins the native Maintenance origin; a system/user CA is not used. */
+    private void setMaintenanceCa() {
+        if (state == null) { show("Publisher key is not ready."); return; }
+        worker.execute(() -> {
+            try {
+                String current = state.maintenanceCa();
+                runOnUiThread(() -> {
+                    EditText input = new EditText(this);
+                    input.setSingleLine(false);
+                    input.setMinLines(4);
+                    input.setHint("-----BEGIN CERTIFICATE-----\n... (empty clears)");
+                    input.setText(current);
+                    new AlertDialog.Builder(this).setTitle("Trusted Maintenance CA")
+                            .setMessage("Paste exactly one public CA certificate PEM. Native page "
+                                    + "tickets trust only this CA, never a user-installed CA. "
+                                    + "Compare the SHA256 shown after saving through an independent channel.")
+                            .setView(input).setNegativeButton("Cancel", null)
+                            .setPositiveButton("Save", (dialog, which) -> worker.execute(() -> {
+                                try {
+                                    String value = input.getText().toString().trim();
+                                    if (value.isEmpty()) {
+                                        state.setMaintenanceCa("");
+                                        show("Maintenance CA cleared; native page tickets are refused.");
+                                    } else {
+                                        String fingerprint = MaintenanceTrust.fingerprint(value);
+                                        state.setMaintenanceCa(value);
+                                        show("Trusted Maintenance CA saved. SHA256 " + fingerprint + ".");
+                                    }
+                                } catch (Exception failure) {
+                                    show("Maintenance CA refused: " + failure.getMessage());
+                                }
+                            })).show();
+                });
+            } catch (Exception failure) {
+                show("Publisher state unavailable: " + failure.getMessage());
             }
         });
     }
@@ -560,7 +892,7 @@ public final class PublishActivity extends Activity {
                 }
             }
             runOnUiThread(() -> { retry.setEnabled(false); discard.setEnabled(false); publish.setEnabled(false); });
-            document = null;
+            document = null; pageDocument = null; pageFiles = null; publicData = null;
             show(report);
         } catch (Exception failure) {
             runOnUiThread(() -> { retry.setEnabled(true); discard.setEnabled(true); });

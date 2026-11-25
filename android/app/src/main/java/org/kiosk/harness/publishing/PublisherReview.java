@@ -159,5 +159,99 @@ public final class PublisherReview {
         return PublisherEnvelope.sign(key,"publication",plan);
     }
 
+    /** Independent v2 review: closure, exact bytes, target projection and pinned renderer. */
+    public static Map<String,Object> reviewPage(Map<String,Object> document,
+            Map<String,org.kiosk.harness.delivery.PageReleaseProtocol.Files> files,long now,Set<String> heads,
+            String rendererJs,String rendererCss)throws Exception{
+        Map<String,Object> plan=org.kiosk.harness.delivery.PageReleaseProtocol.review(document,now,heads,files);
+        for(Object item:array(document.get("targets"))){
+            Map<String,Object> target=object(item);
+            org.kiosk.harness.delivery.PageReleaseProtocol.checkLocalRenderer(obj(target,"metadata"),rendererJs,rendererCss);
+        }
+        return plan;
+    }
+
+    /**
+     * Structural v2 review for a native publisher that has the immutable document but no
+     * transport bytes. The frozen revision, dependency closure, every target projection,
+     * signed metadata and pinned renderer are re-derived; the client verifies bytes on activation.
+     */
+    public static Map<String,Object> reviewPageDocument(Map<String,Object> document,long now,Set<String> heads,
+            String rendererJs,String rendererCss)throws Exception{
+        Map<String,Object> plan=org.kiosk.harness.delivery.PageReleaseProtocol.review(document,now,heads,null);
+        for(Object item:array(document.get("targets"))){
+            Map<String,Object> target=object(item);
+            org.kiosk.harness.delivery.PageReleaseProtocol.checkLocalRenderer(obj(target,"metadata"),rendererJs,rendererCss);
+        }
+        return plan;
+    }
+
+    /** Exact package bytes for one target; the full document is re-derived first. */
+    public static Map<String,Object> reviewPageTarget(Map<String,Object> document,String deviceId,
+            org.kiosk.harness.delivery.PageReleaseProtocol.Files files,long now,Set<String> heads,
+            String rendererJs,String rendererCss)throws Exception{
+        return org.kiosk.harness.delivery.PageReleaseProtocol.reviewTarget(document,deviceId,now,heads,
+            files,rendererJs,rendererCss);
+    }
+
+    /** Exact immutable facts for the single explicit page Publish; no draft text or paths. */
+    public static Map<String,Object> pageReviewSummary(Map<String,Object> document,
+            Map<String,org.kiosk.harness.delivery.PageReleaseProtocol.Files> files,long now,Set<String> heads,
+            String rendererJs,String rendererCss)throws Exception{
+        return pageReviewFacts(document,reviewPage(document,files,now,heads,rendererJs,rendererCss));
+    }
+
+    /** Same immutable summary without requiring every target package in memory. */
+    public static Map<String,Object> pageReviewSummary(Map<String,Object> document,long now,Set<String> heads,
+            String rendererJs,String rendererCss)throws Exception{
+        return pageReviewFacts(document,reviewPageDocument(document,now,heads,rendererJs,rendererCss));
+    }
+
+    private static Map<String,Object> pageReviewFacts(Map<String,Object> document,Map<String,Object> plan)throws Exception{
+        Map<String,Object> revisionPlan=obj(obj(document,"revision"),"plan");
+        List<Object> included=new ArrayList<>(),excluded=new ArrayList<>();
+        for(Object item:array(revisionPlan.get("included"))){Map<String,Object> entry=object(item);
+            Map<String,Object> row=new LinkedHashMap<>();row.put("id",str(entry,"id"));
+            row.put("version",num(entry,"version"));row.put("author",str(entry,"author"));included.add(row);}
+        for(Object item:array(revisionPlan.get("excluded"))){Map<String,Object> entry=object(item);
+            Map<String,Object> row=new LinkedHashMap<>();row.put("id",str(entry,"id"));
+            row.put("version",num(entry,"version"));row.put("author",str(entry,"author"));
+            row.put("reason",str(entry,"reason"));excluded.add(row);}
+        Map<String,Map<String,Object>> planTargets=new LinkedHashMap<>();
+        for(Object item:array(plan.get("targets"))){Map<String,Object> target=object(item);
+            planTargets.put(str(target,"device_id"),target);}
+        List<Object> targets=new ArrayList<>();
+        for(Object item:array(document.get("targets"))){Map<String,Object> target=object(item);
+            Map<String,Object> signed=planTargets.get(str(target,"device_id"));
+            need(signed!=null);
+            Map<String,Object> configuration=obj(target,"configuration"),metadata=obj(target,"metadata");
+            Map<String,Object> publication=obj(metadata,"publication"),renderer=obj(publication,"renderer");
+            Map<String,Object> row=new LinkedHashMap<>();row.put("device_id",str(target,"device_id"));
+            row.put("projection",str(target,"projection"));row.put("destination",str(target,"destination"));
+            row.put("profile_id",str(configuration,"profile_id"));row.put("profile_version",num(configuration,"revision"));
+            row.put("mode",str(configuration,"mode"));row.put("configuration_sha256",str(signed,"configuration_sha256"));
+            row.put("metadata_sha256",str(signed,"metadata_sha256"));row.put("content_sha256",str(metadata,"content_sha256"));
+            row.put("renderer",str(signed,"renderer"));row.put("package_id",str(publication,"package_id"));
+            row.put("raw_manifest_sha256",str(publication,"raw_manifest_sha256"));
+            row.put("renderer_js_sha256",str(renderer,"js_sha256"));
+            row.put("renderer_css_sha256",str(renderer,"css_sha256"));targets.add(row);}
+        Map<String,Object> summary=new LinkedHashMap<>();summary.put("plan_id",str(plan,"id"));
+        summary.put("revision_sha256",str(plan,"revision_sha256"));summary.put("policy_version",num(plan,"policy_version"));
+        summary.put("group_id",str(plan,"group_id"));summary.put("user_id",str(plan,"user_id"));
+        summary.put("publisher_device_id",str(plan,"device_id"));summary.put("issued",num(plan,"issued"));
+        summary.put("expires",num(plan,"expires"));summary.put("parents",array(plan.get("parents")));
+        summary.put("included",included);
+        summary.put("excluded",excluded);summary.put("targets",targets);return summary;
+    }
+
+    /** One explicit page Publish: review exact bytes, then sign exactly this v2 plan. */
+    public static Map<String,Object> approvePage(PublisherKey key,Map<String,Object> document,
+            Map<String,org.kiosk.harness.delivery.PageReleaseProtocol.Files> files,long now,Set<String> heads,
+            String rendererJs,String rendererCss)throws Exception{
+        Map<String,Object> plan=reviewPage(document,files,now,heads,rendererJs,rendererCss);
+        need(str(plan,"device_id").equals(PublisherAuthority.keyId(key.publicKey())));
+        return PublisherEnvelope.signPage(key,plan);
+    }
+
     public static byte[] utf8(String value){return value.getBytes(StandardCharsets.UTF_8);}
 }

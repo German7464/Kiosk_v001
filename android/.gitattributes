@@ -1,3 +1,4 @@
 app/src/main/assets/** -text
 app/src/androidTest/assets/** -text
 testdata/** -text
+app/src/test/resources/delivery-v2/bootstrap.json -text

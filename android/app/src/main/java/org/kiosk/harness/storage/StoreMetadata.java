@@ -32,7 +32,13 @@ final class StoreMetadata {
     }
     static String receipt(String id,String mode,Path root)throws Exception{
         var admitted=AdmissionRecord.load(root,id);
-        if(admitted!=null){var r=admitted.request;var files=mode.equals("tv")?r.tv().files():r.kiosk().files();PublicationFixtures.mode(mode);
+        if(admitted!=null){
+            if(admitted.page!=null){
+                String expected=admitted.page.projection().startsWith("tv-")?"tv":"kiosk";
+                if(!expected.equals(mode))throw PrivateFiles.refusal("page_release_mode");
+                return "{\"schema\":2,\"id\":\""+id+"\",\"mode\":\""+mode+"\",\"view\":\""+admitted.page.viewFiles().get("view.json").sha256()+"\",\"renderer\":\""+admitted.page.renderer()+"\"}";
+            }
+            var r=admitted.request;var files=mode.equals("tv")?r.tv().files():r.kiosk().files();PublicationFixtures.mode(mode);
             return "{\"schema\":1,\"id\":\""+id+"\",\"mode\":\""+mode+"\",\"view\":\""+files.get("view.json").sha256()+"\",\"renderer\":\""+r.renderer().identity()+"\"}";
         }
         var grant=DevelopmentGrant.load(root,id);if(grant==null)return receipt(id,mode);
