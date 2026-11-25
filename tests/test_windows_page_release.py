@@ -17,6 +17,7 @@ from kiosk.delivery.protocol import LIMITS, PROFILE, decode, encode, sha
 from kiosk.display import page_view
 from kiosk.display.delivery_authority import PrivateState
 from kiosk.display.delivery_capture import Capture
+import kiosk.display.delivery_client as delivery_client
 from kiosk.display.delivery_client import check_page_assignment, admit_page_package
 from kiosk.display.native_crypto import protect
 from kiosk.publication import authority as a
@@ -931,6 +932,75 @@ class NativeMaintenanceTests(unittest.TestCase):
         self.assertIsNone(self.publisher.pending_approval())
         self.assertEqual(transport.approvals, [])
 
+
+class CapabilityHandshakeTests(unittest.TestCase):
+    """The shipped Windows capability body must satisfy the server validator."""
+
+    class Native:
+        def __init__(self):
+            self.validated = None
+
+        def now(self):
+            return NOW
+
+        def validate_assignment(self, value):
+            self.validated = value
+
+    class Client:
+        def __init__(self):
+            self.native = CapabilityHandshakeTests.Native()
+            self.progress_target = None
+
+    def transport(self, assignment):
+        from urllib.parse import parse_qs, urlsplit
+        from kiosk.delivery.profiles import capability
+
+        class FakeTransport:
+            def __init__(self):
+                self.calls, self.body, self.query = [], None, None
+
+            def json(self, path, body=None):
+                self.calls.append(path)
+                if path == '/api/v2/client/capabilities':
+                    capability(body)
+                    self.body = body
+                    return {'version': 1, 'state': 'recorded'}
+                assert path.startswith('/api/v2/client/assignment?')
+                self.query = parse_qs(urlsplit(path).query)
+                return assignment
+
+        return FakeTransport()
+
+    def test_seven_key_capability_and_v2_assignment(self):
+        transport = self.transport({'version': 4, 'device_id': 'screen-windows',
+                                    'group_id': 'group', 'generation': 1,
+                                    'metadata': {'publication': {'package_id': 'a' * 64}}})
+        client = self.Client()
+        with patch.object(delivery_client, 'check_page_assignment') as checked:
+            result = delivery_client.Client.assignment(client, transport)
+        self.assertEqual(result['version'], 4)
+        self.assertEqual(set(transport.body), {
+            'version', 'platform', 'modes', 'content', 'resource_profile',
+            'renderer', 'pages_renderer'})
+        self.assertEqual(transport.body['content'], ['events'])
+        self.assertEqual(transport.query['display_protocol'], ['display-profile-v2'])
+        self.assertEqual(transport.query['pages_renderer'],
+                         [page_view.renderer_pin()['build_id']])
+        self.assertEqual(transport.query['resource_profile'], [PROFILE])
+        checked.assert_called_once()
+        self.assertEqual(client.progress_target['device_id'], 'screen-windows')
+
+    def test_capability_handshake_keeps_v1_events_assignment(self):
+        assignment = {'version': 1, 'group_id': 'group', 'device_id': 'device',
+                      'generation': 1, 'profile': PROFILE,
+                      'publication': {'package_id': 'a' * 64}}
+        transport = self.transport(assignment)
+        client = self.Client()
+        with patch.object(delivery_client, 'validate_metadata') as metadata:
+            result = delivery_client.Client.assignment(client, transport)
+        self.assertEqual(result, assignment)
+        self.assertIs(client.native.validated, assignment)
+        metadata.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()

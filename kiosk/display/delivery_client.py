@@ -377,9 +377,8 @@ class Client:
     def assignment(self, transport):
         try:
             transport.json('/api/v2/client/capabilities', body={'version': 1, 'platform': 'windows',
-                'modes': ['tv', 'kiosk'], 'content': ['events', 'pages'], 'resource_profile': PROFILE,
+                'modes': ['tv', 'kiosk'], 'content': ['events'], 'resource_profile': PROFILE,
                 'renderer': renderer_identity(),
-                'display_protocols': ['display-profile-v1', 'display-profile-v2'],
                 'pages_renderer': page_view.page_renderer_identity()})
         except TransportError as exc:
             if exc.status not in (404, 405):
