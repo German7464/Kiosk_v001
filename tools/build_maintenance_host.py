@@ -37,7 +37,7 @@ def main():
     sources += [ROOT / 'kiosk/publication/authority.py'] + sorted((ROOT / 'kiosk/trust').glob('*.py'))
     sources += [ROOT / name for name in ('kiosk/display/cache.py', 'kiosk/display/delivery_capture.py',
                                         'kiosk/delivery/state.py', 'kiosk/delivery/profiles.py',
-                                        'kiosk/delivery/publication.py')]
+                                        'kiosk/delivery/publication.py', 'kiosk/delivery/routes.py')]
     before = {p.relative_to(ROOT).as_posix(): digest(p) for p in sources}
     entry = output / 'host_entry.py'
     entry.write_text('from kiosk.maintenance.host import main\nraise SystemExit(main())\n',

@@ -1,0 +1,7 @@
+# Renderer IDs commit to the exact bytes shipped to existing clients.
+/kiosk/publication/renderer_assets/events.html text eol=lf
+/kiosk/publication/renderer_assets/events.js text eol=crlf
+/kiosk/publication/renderer_assets/events.css text eol=crlf
+/kiosk/translations/*.json text eol=crlf
+/kiosk/static/js/page_display.js text eol=lf
+/kiosk/static/css/page_display.css text eol=lf

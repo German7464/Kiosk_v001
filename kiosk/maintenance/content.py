@@ -17,6 +17,7 @@ from urllib.parse import urlsplit
 from kiosk.delivery.protocol import decode, encode
 
 MAX_RESPONSE = 8 * 1024 * 1024
+MAX_ARTIFACT = 64 * 1024 * 1024
 
 
 class ContentRefused(ValueError):
@@ -40,9 +41,11 @@ class ContentClient:
         self.context.minimum_version = ssl.TLSVersion.TLSv1_2
         self.timeout = timeout
 
-    def _request(self, method, path, payload=None, *, headers=None, allow_fenced=False):
+    def _request(self, method, path, payload=None, *, headers=None, allow_fenced=False,
+                 binary=False, limit=None):
         body = b'' if payload is None else encode(payload)
-        if len(body) > MAX_RESPONSE:
+        limit = MAX_RESPONSE if limit is None else int(limit)
+        if len(body) > limit:
             raise ContentRefused('request_limit', 413)
         digest = hashlib.sha256(body).hexdigest()
         now = str(int(time.time()))
@@ -64,21 +67,23 @@ class ContentClient:
         try:
             connection.request(method, path, body=body or None, headers=headers)
             response = connection.getresponse()
-            raw = response.read(MAX_RESPONSE + 1)
-            if len(raw) > MAX_RESPONSE:
+            data = response.read(limit + 1)
+            if len(data) > limit:
                 raise ContentRefused('response_limit', 413)
             if 300 <= response.status < 400:
                 raise ContentRefused('redirect_refused', response.status)
             if response.status >= 400:
                 code = 'content_http_refused'
                 try:
-                    value = decode(raw)
+                    value = decode(data)
                     if isinstance(value, dict) and isinstance(value.get('error'), str):
                         code = value['error']
                 except ValueError:
                     pass
                 raise ContentRefused(code, response.status)
-            return decode(raw) if raw else {}
+            if binary:
+                return data
+            return decode(data) if data else {}
         except (OSError, http.client.HTTPException):
             raise ContentRefused('content_unavailable') from None
         finally:
@@ -139,3 +144,30 @@ class ContentClient:
     def activate(self, generation, fence, origin):
         return self._request('POST', '/service/v1/activate',
                              {'generation': generation, 'fence': fence, 'origin': origin})
+
+    # -- Stage 6 page publication -------------------------------------------
+    def page_targets(self, secret):
+        return self._request('GET', '/service/v1/page/targets',
+                             headers={'X-Kiosk-Content-Session': secret})['targets']
+
+    def page_prepare(self, secret, parents=None):
+        return self._request('POST', '/service/v1/page/prepare',
+                             {'secret': secret, 'parents': list(parents or [])})
+
+    def page_candidate(self, secret, identity):
+        return self._request('GET', f'/service/v1/page/candidate/{identity}',
+                             headers={'X-Kiosk-Content-Session': secret})['document']
+
+    def page_artifact(self, secret, identity, device_id, name):
+        return self._request('GET', f'/service/v1/page/package/{identity}/{device_id}/{name}',
+                             headers={'X-Kiosk-Content-Session': secret},
+                             binary=True, limit=MAX_ARTIFACT)
+
+    def page_approve(self, secret, identity, approval, chain, receipt, acceptance_key):
+        return self._request('POST', '/service/v1/page/approve', dict(
+            secret=secret, id=identity, approval=approval, chain=chain,
+            receipt=receipt, acceptance_key=acceptance_key))
+
+    def page_status(self, secret, identity):
+        return self._request('GET', f'/service/v1/page/status/{identity}',
+                             headers={'X-Kiosk-Content-Session': secret})

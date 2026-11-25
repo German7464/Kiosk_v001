@@ -14,7 +14,7 @@ import time
 import threading
 from functools import wraps
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, Response, current_app, jsonify, request
 
 from kiosk.delivery.protocol import DeliveryError, PROFILE, decode, encode, fields, sha
 from .workspace import WorkspaceError
@@ -290,6 +290,123 @@ def require_acceptance(document, receipt, approval):
             value['approval_sha256'] != hashlib.sha256(canonical(approval)).hexdigest()):
         raise WorkspaceError('acceptance_receipt_refused', 403)
     return value
+
+
+def require_page_acceptance(document, receipt, approval):
+    """Verify the trusted side's version-2 page acceptance evidence."""
+    configured = current_app.config.get('MAINTENANCE_ACCEPTANCE_KEY')
+    if not configured:
+        raise WorkspaceError('acceptance_not_configured', 503)
+    import base64
+    from kiosk.publication import authority as publication
+    spki = base64.b64decode(configured)
+    try:
+        value = publication.verified(receipt, spki, 'acceptance')
+        fields(value, 'version kind plan_id revision_sha256 dependencies_sha256 targets_sha256 '
+                      'approver_user approver_device policy_version approval_sha256 '
+                      'commit_nonce issued')
+    except (ValueError, KeyError, TypeError):
+        raise WorkspaceError('acceptance_receipt_refused', 403) from None
+    plan = document['plan']
+    if (value['version'] != 2 or value['kind'] != 'page-acceptance'
+            or value['plan_id'] != plan['id']
+            or value['revision_sha256'] != plan['revision_sha256']
+            or value['dependencies_sha256'] != plan['dependencies_sha256']
+            or value['targets_sha256'] != sha(encode(plan['targets']))
+            or value['approver_user'] != plan['user_id']
+            or value['approver_device'] != plan['device_id']
+            or value['policy_version'] != plan['policy_version']
+            or value['approval_sha256'] != sha(encode(approval))):
+        raise WorkspaceError('acceptance_receipt_refused', 403)
+    return value
+
+
+# -- Stage 6 page publication ----------------------------------------------
+# Stable trusted-service routes. Drafts and candidates are reachable only with a
+# valid service MAC plus the owner's content session; a guessed publication ID
+# from an unauthenticated or different user is indistinguishable from missing.
+@service.get('/page/targets')
+@guarded
+def page_targets():
+    secret = request.headers.get('X-Kiosk-Content-Session', '')
+    store().authenticate(secret)
+    return jsonify(version=1, targets=delivery().page_targets())
+
+
+@service.post('/page/prepare')
+@guarded
+def page_prepare():
+    value, _ = body()
+    fields(value, 'secret parents')
+    store().authenticate(value['secret'])
+    from .page_materialize import PageMaterializeError, prepare_page_publication
+    targets = delivery().page_targets()
+    try:
+        document = prepare_page_publication(
+            store(), delivery(), value['secret'], targets, value['parents'],
+            current_app.config['PUBLIC_UPLOAD_DIR'])
+    except PageMaterializeError as error:
+        raise WorkspaceError(error.code, 409) from None
+    return jsonify(version=1, id=document['plan']['id'], document=document,
+                   targets=targets, settings_version=store().page_settings_version())
+
+
+@service.get('/page/candidate/<identity>')
+@guarded
+def page_candidate(identity):
+    secret = request.headers.get('X-Kiosk-Content-Session', '')
+    return jsonify(version=1, document=store().page_candidate(secret, identity))
+
+
+@service.get('/page/package/<identity>/<device_id>/<path:name>')
+@guarded
+def page_package(identity, device_id, name):
+    secret = request.headers.get('X-Kiosk-Content-Session', '')
+    document = store().page_candidate(secret, identity)
+    from kiosk.publication import authority as publication
+    target = next((item for item in document['targets']
+                   if item['device_id'] == device_id), None)
+    if target is None:
+        raise WorkspaceError('file_not_found', 404)
+    metadata = target['metadata']
+    package = publication.validate_page_metadata(metadata)
+    entry = next((item for item in package['package']['files']
+                  if item['path'] == name), None)
+    if entry is None:
+        raise WorkspaceError('file_not_found', 404)
+    from kiosk.delivery.publication import page_catalog
+    root = page_catalog(delivery(), metadata) / 'package'
+    payload = (root / entry['path']).read_bytes()
+    if len(payload) != entry['size'] or sha(payload) != entry['sha256']:
+        raise WorkspaceError('publication_integrity', 503)
+    return Response(payload, mimetype='application/octet-stream',
+                    headers={'Content-Length': str(len(payload))})
+
+
+@service.post('/page/approve')
+@guarded
+def page_approve():
+    value, _ = body()
+    fields(value, 'secret id approval chain receipt acceptance_key')
+    document = store().page_candidate(value['secret'], value['id'])
+    require_page_acceptance(document, value['receipt'], value['approval'])
+    configured = current_app.config.get('MAINTENANCE_ACCEPTANCE_KEY', '')
+    if not configured or value['acceptance_key'] != configured:
+        raise WorkspaceError('acceptance_key_mismatch', 403)
+    from .distribution import promote_page
+    result = promote_page(store(), delivery(), value['id'], value['approval'],
+                          value['chain'], value['receipt'], value['acceptance_key'],
+                          store().now())
+    return jsonify(version=1, state='ready', distribution=result,
+                   plan_id=value['id'])
+
+
+@service.get('/page/status/<identity>')
+@guarded
+def page_status(identity):
+    secret = request.headers.get('X-Kiosk-Content-Session', '')
+    store().page_candidate(secret, identity)
+    return jsonify(version=1, activation=delivery().page_activation(identity))
 
 
 @service.post('/approve')

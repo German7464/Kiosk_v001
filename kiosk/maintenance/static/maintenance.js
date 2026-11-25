@@ -332,6 +332,20 @@ function renderReview(review) {
   box.appendChild(publish);
 }
 
+function renderNativeTicket(ticket) {
+  const box = el('native-ticket-view');
+  box.replaceChildren();
+  detail(box, 'Content origin', ticket.content_origin);
+  detail(box, 'Maintenance origin', ticket.maintenance_origin);
+  detail(box, 'Expires', date(ticket.expires));
+  detail(box, 'Handoff', 'The token stays in the link fragment and is never sent to this server.');
+  const link = document.createElement('a');
+  link.href = ticket.handoff;
+  link.rel = 'noopener';
+  link.textContent = 'Open native page approval';
+  box.appendChild(link);
+}
+
 // -- API-driven flows ------------------------------------------------------
 
 let refreshSequence = 0;
@@ -647,6 +661,18 @@ el('review').addEventListener('click', async () => {
     message('Exact frozen candidate reviewed. Publish signs only this candidate.');
     state.reviewId = result.id;
     renderReview(result.review);
+  } catch (error) { message(error.message); }
+});
+
+el('page-native-ticket').addEventListener('click', async () => {
+  if (!has('content.publish')) {
+    message('Publishing pages requires the content.publish permission.');
+    return;
+  }
+  try {
+    const result = await api('/api/page/native-ticket', { parents: [] });
+    renderNativeTicket(result);
+    message('Native handoff prepared. Open it in the trusted Windows or Android publisher.');
   } catch (error) { message(error.message); }
 });
 

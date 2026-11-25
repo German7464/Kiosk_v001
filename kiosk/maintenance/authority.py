@@ -290,6 +290,65 @@ class MaintenanceAuthority:
         return dict(approval=a.signed(granted['key'], 'publication', plan),
                     chain=granted['chain'])
 
+    # -- explicit v2 page publication signing --------------------------------
+    def authorize_page_plan(self, db, user_id, plan, targets, now=None):
+        """Recheck one exact frozen v2 page plan against the current grant."""
+        now = self.now() if now is None else int(now)
+        granted = self.grant(db, user_id)
+        grant = granted['grant']
+        try:
+            a.validate_group_plan(plan, now=now)
+        except (TypeError, ValueError):
+            raise MaintenanceError('publication_plan_refused', 409) from None
+        if (plan['group_id'] != self.group_id or plan['origin'] != self.origin
+                or plan['user_id'] != user_id
+                or plan['device_id'] != key_id(granted['key'])):
+            raise MaintenanceError('publication_scope_refused', 403)
+        current = a.policy(granted['policy'], self.root, self.group_id, self.origin, now)
+        if plan['policy_version'] != current['version']:
+            raise MaintenanceError('publication_policy_changed', 409)
+        if plan['issued'] < grant['issued'] or plan['expires'] > grant['expires']:
+            raise MaintenanceError('publication_authority_expired', 403)
+        scope = grant.get('scope')
+        if scope is not None:
+            if plan['group_id'] not in scope['groups']:
+                raise MaintenanceError('publication_scope_refused', 403)
+            if not {target['device_id'] for target in plan['targets']} <= set(scope['targets']):
+                raise MaintenanceError('publication_targets_outside_scope', 403)
+        if targets is not None and [target['device_id'] for target in targets] != \
+                [target['device_id'] for target in plan['targets']]:
+            raise MaintenanceError('publication_targets_changed', 409)
+        return granted
+
+    def sign_page_publication(self, db, user_id, plan, targets, now=None):
+        granted = self.authorize_page_plan(db, user_id, plan, targets, now)
+        return dict(approval=a.page_signed(granted['key'], plan),
+                    chain=granted['chain'])
+
+    def sign_page_receipt(self, plan, approval, policy_version, commit_nonce, now=None):
+        """Version-2 page acceptance evidence over the existing acceptance key.
+
+        The value is domain-separated by its explicit ``version``/``kind`` and is
+        never interchangeable with a v1 Events acceptance receipt. It records
+        that this exact signed plan was accepted for commit; it is not another
+        human approval and authorizes no additional target.
+        """
+        now = self.now() if now is None else int(now)
+        key = self._acceptance_key()
+        value = dict(version=2, kind='page-acceptance', plan_id=plan['id'],
+                     revision_sha256=plan['revision_sha256'],
+                     dependencies_sha256=plan['dependencies_sha256'],
+                     targets_sha256=sha(encode(plan['targets'])),
+                     approver_user=plan['user_id'], approver_device=plan['device_id'],
+                     policy_version=int(policy_version),
+                     approval_sha256=sha(encode(approval)), commit_nonce=commit_nonce,
+                     issued=now)
+        return dict(receipt=a.signed(key, 'acceptance', value), value=value,
+                    acceptance_key=_b64(spki_der(key)))
+
+    def verify_page_receipt(self, envelope):
+        return a.verified(envelope, spki_der(self._acceptance_key()), 'acceptance')
+
     # -- acceptance receipts -------------------------------------------------
     def _acceptance_key(self):
         path = self.secrets_dir / 'acceptance.key'

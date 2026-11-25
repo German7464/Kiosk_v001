@@ -135,7 +135,15 @@ def trust():
 @device_delivery.get('/client/assignment')
 @guarded
 def assignment():
-    return jsonify(state().assignment(device(), request.args.get('renderer'), request.args.get('resource_profile'), request.args.get('display_protocol')))
+    owner = device()
+    page = state().page_assignment(owner, request.args.get('display_protocol'),
+                                   request.args.get('pages_renderer'),
+                                   request.args.get('resource_profile'))
+    if page is not None:
+        return jsonify(page)
+    return jsonify(state().assignment(owner, request.args.get('renderer'),
+                                      request.args.get('resource_profile'),
+                                      request.args.get('display_protocol')))
 
 
 @device_delivery.get('/client/progress')
@@ -173,8 +181,29 @@ def artifact(package_id, group, name):
     # Artifact fetches are restricted to the current assignment, not any known hash.
     with state().connection(write=False) as db:
         row = db.execute('SELECT * FROM assignments WHERE profile=? AND package_id=?', (owner['profile'], package_id)).fetchone()
-    if row is None:
+        page = db.execute('SELECT * FROM page_assignments WHERE device_id=? AND package_id=?',
+                          (owner['device_id'], package_id)).fetchone()
+    if row is None and page is None:
         raise DeliveryError('assignment_changed', 409)
+    if page is not None:
+        # A v4 page catalog contains only the data-only package group; kiosk/tv
+        # are empty and executable views are never exposed.
+        if group != 'package':
+            raise DeliveryError('file_not_found', 404)
+        from .publication import page_variant
+        root, metadata = page_variant(state(), page['package_id'], page['metadata_hash'])
+        if (metadata.get('publication', {}).get('package_id') != package_id
+                or metadata.get('destination') != page['destination']
+                or metadata.get('revision_sha256') != page['revision_sha256']
+                or metadata.get('publication', {}).get('renderer', {}).get('build_id')
+                != page['renderer']):
+            raise DeliveryError('publication_integrity', 503)
+        entry = next((item for item in metadata['publication']['package']['files']
+                      if item['path'] == name), None)
+        if entry is None:
+            raise DeliveryError('file_not_found', 404)
+        return current_app.extensions['device_delivery_transfers'].response(
+            _plain_path(root / 'package', name), entry)
     with state().connection(write=False) as db:
         configured = db.execute('SELECT reason FROM publication_configs WHERE generation=? AND device_id=?', (row['generation'], owner['device_id'])).fetchone()
     if configured and configured['reason'] != 'compatible':

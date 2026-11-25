@@ -84,6 +84,33 @@ class DeliveryState(ProfileState):
                   profile TEXT NOT NULL, generation INTEGER NOT NULL, plan_id TEXT NOT NULL,
                   body BLOB NOT NULL, acceptance_key TEXT NOT NULL, created INTEGER NOT NULL,
                   PRIMARY KEY(profile, generation));
+                CREATE TABLE IF NOT EXISTS page_plan_commits (
+                  plan_id TEXT PRIMARY KEY, generation INTEGER NOT NULL UNIQUE,
+                  revision_sha256 TEXT NOT NULL, targets_sha256 TEXT NOT NULL,
+                  created INTEGER NOT NULL);
+                CREATE TABLE IF NOT EXISTS page_plan_targets (
+                  plan_id TEXT NOT NULL, device_id TEXT NOT NULL, generation INTEGER NOT NULL,
+                  package_id TEXT NOT NULL, metadata_hash TEXT NOT NULL,
+                  PRIMARY KEY(plan_id, device_id));
+                CREATE TABLE IF NOT EXISTS page_assignments (
+                  device_id TEXT PRIMARY KEY, generation INTEGER NOT NULL,
+                  plan_id TEXT NOT NULL, package_id TEXT NOT NULL,
+                  metadata_hash TEXT NOT NULL, revision_sha256 TEXT NOT NULL,
+                  destination TEXT NOT NULL, projection TEXT NOT NULL,
+                  renderer TEXT NOT NULL, configuration BLOB NOT NULL, created INTEGER NOT NULL);
+                CREATE TABLE IF NOT EXISTS page_assignment_history (
+                  device_id TEXT NOT NULL, generation INTEGER NOT NULL,
+                  plan_id TEXT NOT NULL, package_id TEXT NOT NULL,
+                  metadata_hash TEXT NOT NULL, revision_sha256 TEXT NOT NULL,
+                  destination TEXT NOT NULL, projection TEXT NOT NULL,
+                  renderer TEXT NOT NULL, configuration BLOB NOT NULL, created INTEGER NOT NULL,
+                  PRIMARY KEY(device_id, generation));
+                CREATE TABLE IF NOT EXISTS page_publisher_proofs (
+                  device_id TEXT NOT NULL, generation INTEGER NOT NULL, body BLOB NOT NULL,
+                  PRIMARY KEY(device_id, generation));
+                CREATE TABLE IF NOT EXISTS page_acceptance_receipts (
+                  plan_id TEXT PRIMARY KEY, generation INTEGER NOT NULL, body BLOB NOT NULL,
+                  acceptance_key TEXT NOT NULL, created INTEGER NOT NULL);
             ''')
             db.executescript(SCHEMA)
 
@@ -285,8 +312,15 @@ class DeliveryState(ProfileState):
 
     def progress_target(self, device):
         with self.connection(write=False) as db:
+            page = db.execute('SELECT generation,package_id FROM page_assignments '
+                              'WHERE device_id=?', (device['device_id'],)).fetchone()
             row = db.execute('SELECT * FROM assignments WHERE profile=?', (device['profile'],)).fetchone()
             configured = db.execute('SELECT * FROM publication_configs WHERE generation=? AND device_id=?', (row['generation'], device['device_id'])).fetchone() if row else None
+        if page is not None:
+            return {'version': 1, 'device_id': device['device_id'],
+                    'group_id': self.configuration()['group_id'],
+                    'generation': page['generation'], 'package_id': page['package_id'],
+                    'kind': 'page'}
         if row is None:
             raise DeliveryError('no_assignment', 404)
         return {'version': 1, 'device_id': device['device_id'],
@@ -305,9 +339,15 @@ class DeliveryState(ProfileState):
             owner = db.execute('SELECT * FROM devices WHERE device_id=?', (device['device_id'],)).fetchone()
             if owner is None or owner['revoked'] or owner['expires'] <= int(self.clock()) or owner['credential_id'] != device['credential_id']:
                 raise DeliveryError('invalid_credential', 401)
-            target = db.execute('SELECT * FROM assignments WHERE profile=?', (device['profile'],)).fetchone()
-            if target is None or target['generation'] != body['generation'] or target['package_id'] != body['package_id']:
-                raise DeliveryError('assignment_changed', 409)
+            page = db.execute('SELECT * FROM page_assignments WHERE device_id=?',
+                              (device['device_id'],)).fetchone()
+            if page is not None:
+                if page['generation'] != body['generation'] or page['package_id'] != body['package_id']:
+                    raise DeliveryError('assignment_changed', 409)
+            else:
+                target = db.execute('SELECT * FROM assignments WHERE profile=?', (device['profile'],)).fetchone()
+                if target is None or target['generation'] != body['generation'] or target['package_id'] != body['package_id']:
+                    raise DeliveryError('assignment_changed', 409)
             old = db.execute('SELECT body FROM device_progress WHERE device_id=?', (device['device_id'],)).fetchone()
             result = 'recorded'
             if old:
@@ -325,6 +365,250 @@ class DeliveryState(ProfileState):
                     DO UPDATE SET body=excluded.body,received=excluded.received''',
                            (device['device_id'], payload, int(self.clock())))
         return {'version': 1, 'sequence': body['sequence'], 'state': result}
+
+    # -- v4 page publication --------------------------------------------------
+    @staticmethod
+    def _page_schema(schema):
+        """Table prefix for the page tables; empty on a delivery-only connection.
+
+        The atomic page commit attaches the delivery database to the workspace
+        connection, so the delivery tables live under the ``delivery`` schema.
+        Ordinary delivery reads use the main schema.
+        """
+        return f'{schema}.' if schema else ''
+
+    def _page_eligible(self, db, now, schema=''):
+        """Eligible non-local displays with server-managed projection/destination.
+
+        Orientation and platform are server configuration, never request input.
+        A profile without an explicit orientation keeps the landscape default.
+        """
+        prefix = self._page_schema(schema)
+        orphan = db.execute(
+            f"""SELECT 1 FROM {prefix}device_profiles s
+                LEFT JOIN {prefix}devices d ON d.device_id=s.device_id
+                LEFT JOIN {prefix}display_profiles p ON p.id=s.profile_id
+                WHERE d.device_id IS NULL OR p.id IS NULL LIMIT 1""").fetchone()
+        if orphan:
+            raise DeliveryError('profile_reference_invalid', 503)
+        rows = db.execute(
+            f"""SELECT d.device_id,p.id AS profile_id,p.revision,p.mode,
+                       coalesce(o.orientation,'landscape') AS orientation,c.body AS capabilities
+                FROM {prefix}devices d
+                LEFT JOIN {prefix}device_profiles s ON s.device_id=d.device_id
+                JOIN {prefix}display_profiles p ON p.id=coalesce(s.profile_id,'events-default')
+                LEFT JOIN {prefix}display_orientations o ON o.profile_id=p.id
+                LEFT JOIN {prefix}device_capabilities c ON c.device_id=d.device_id
+                WHERE d.revoked=0 AND d.expires>? ORDER BY d.device_id""", (now,)).fetchall()
+        result = {}
+        for row in rows:
+            if row['mode'] == 'local' or row['capabilities'] is None:
+                continue
+            capabilities = decode(bytes(row['capabilities']))
+            if row['mode'] not in capabilities['modes']:
+                continue
+            orientation = row['orientation']
+            if orientation not in ('landscape', 'portrait'):
+                orientation = 'landscape'
+            projection = f"{row['mode']}-{orientation}"
+            destination = ('windows-pages-v1' if capabilities['platform'] == 'windows'
+                           else 'android-pages-v1')
+            config = {'version': 1, 'profile_id': row['profile_id'],
+                      'revision': row['revision'], 'mode': row['mode']}
+            result[row['device_id']] = dict(
+                config=config, orientation=orientation, projection=projection,
+                destination=destination, configuration_sha256=sha(encode(config)))
+        return result
+
+    def page_targets(self):
+        """The exact server-managed target list a v2 plan must bind."""
+        with self.connection(write=False) as db:
+            desired = self._page_eligible(db, int(self.clock()))
+        return [dict(device_id=device_id,
+                     profile_id=entry['config']['profile_id'],
+                     profile_version=entry['config']['revision'],
+                     mode=entry['config']['mode'],
+                     orientation=entry['orientation'],
+                     projection=entry['projection'],
+                     destination=entry['destination'],
+                     configuration=entry['config'],
+                     configuration_sha256=entry['configuration_sha256'])
+                for device_id, entry in sorted(desired.items())]
+
+    def page_distribute(self, db, document, proof, receipt, acceptance_key, now, *, schema=''):
+        """Commit one signed v2 plan to exact per-device assignments.
+
+        ``db`` may be the workspace connection with the delivery database
+        attached; the caller holds the combined write transaction. The original
+        target set is retained even when devices later join, leave or are
+        revoked. An exact retry returns the original generation without
+        re-evaluating the current display set.
+        """
+        from kiosk.publication import authority, page_release
+        page_release.validate_document(document, now=now)
+        plan = document['plan']
+        targets = document['targets']
+        approved = {target['device_id']: target for target in targets}
+        prefix = self._page_schema(schema)
+        targets_sha = sha(encode(plan['targets']))
+        existing = db.execute(
+            f'SELECT * FROM {prefix}page_plan_commits WHERE plan_id=?',
+            (plan['id'],)).fetchone()
+        if existing is not None:
+            if (existing['revision_sha256'] != plan['revision_sha256']
+                    or existing['targets_sha256'] != targets_sha):
+                raise DeliveryError('page_plan_conflict', 409)
+            stored = db.execute(
+                f'SELECT body FROM {prefix}page_acceptance_receipts WHERE plan_id=?',
+                (plan['id'],)).fetchone()
+            if stored is not None and bytes(stored['body']) != encode(receipt):
+                raise DeliveryError('page_acceptance_conflict', 409)
+            rows = db.execute(
+                f'SELECT * FROM {prefix}page_plan_targets WHERE plan_id=?',
+                (plan['id'],)).fetchall()
+            if {row['device_id'] for row in rows} != set(approved):
+                raise DeliveryError('page_assignment_conflict', 409)
+            for row in rows:
+                target = approved[row['device_id']]
+                metadata = target['metadata']
+                if (row['package_id'] != metadata['publication']['package_id']
+                        or row['metadata_hash'] != sha(encode(metadata))):
+                    raise DeliveryError('page_assignment_conflict', 409)
+                assignment = db.execute(
+                    f'SELECT * FROM {prefix}page_assignments WHERE device_id=?',
+                    (row['device_id'],)).fetchone()
+                if (assignment is None
+                        or assignment['generation'] != existing['generation']
+                        or assignment['plan_id'] != plan['id']
+                        or assignment['package_id'] != row['package_id']
+                        or assignment['metadata_hash'] != row['metadata_hash']):
+                    raise DeliveryError('page_assignment_conflict', 409)
+            return {'generation': existing['generation'], 'plan_id': plan['id'],
+                    'targets': len(approved),
+                    'packages': {target['device_id']: target['metadata']['publication']['package_id']
+                                 for target in targets}}
+        desired = self._page_eligible(db, now, schema)
+        if set(approved) != set(desired):
+            raise DeliveryError('page_targets_changed', 409)
+        for device_id, target in approved.items():
+            entry = desired[device_id]
+            if (target['configuration'] != entry['config']
+                    or target['projection'] != entry['projection']
+                    or target['destination'] != entry['destination']
+                    or sha(encode(target['configuration'])) != entry['configuration_sha256']):
+                raise DeliveryError('page_targets_changed', 409)
+            authority.validate_page_metadata(target['metadata'])
+        generation = (db.execute(
+            f'SELECT max(generation) FROM {prefix}page_plan_commits').fetchone()[0] or 0) + 1
+        db.execute(
+            f'INSERT INTO {prefix}page_plan_commits VALUES (?,?,?,?,?)',
+            (plan['id'], generation, plan['revision_sha256'], targets_sha, now))
+        for target in targets:
+            device_id = target['device_id']
+            metadata = target['metadata']
+            publication = authority.validate_page_metadata(metadata)
+            package_id, metadata_hash = (metadata['publication']['package_id'],
+                                         sha(encode(metadata)))
+            values = (device_id, generation, plan['id'], package_id, metadata_hash,
+                      plan['revision_sha256'], target['destination'], target['projection'],
+                      publication['renderer']['build_id'], encode(target['configuration']), now)
+            db.execute(
+                f'INSERT INTO {prefix}page_plan_targets VALUES (?,?,?,?,?)',
+                (plan['id'], device_id, generation, package_id, metadata_hash))
+            db.execute(
+                f'''INSERT INTO {prefix}page_assignments
+                    (device_id,generation,plan_id,package_id,metadata_hash,revision_sha256,
+                     destination,projection,renderer,configuration,created)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(device_id) DO UPDATE SET generation=excluded.generation,
+                        plan_id=excluded.plan_id,package_id=excluded.package_id,
+                        metadata_hash=excluded.metadata_hash,revision_sha256=excluded.revision_sha256,
+                        destination=excluded.destination,projection=excluded.projection,
+                        renderer=excluded.renderer,configuration=excluded.configuration,
+                        created=excluded.created''', values)
+            db.execute(
+                f'''INSERT OR REPLACE INTO {prefix}page_assignment_history
+                    (device_id,generation,plan_id,package_id,metadata_hash,revision_sha256,
+                     destination,projection,renderer,configuration,created)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)''', values)
+            db.execute(
+                f'INSERT OR REPLACE INTO {prefix}page_publisher_proofs VALUES (?,?,?)',
+                (device_id, generation, encode(proof)))
+        db.execute(
+            f'INSERT OR REPLACE INTO {prefix}page_acceptance_receipts VALUES (?,?,?,?,?)',
+            (plan['id'], generation, encode(receipt), str(acceptance_key or ''), now))
+        return {'generation': generation, 'plan_id': plan['id'], 'targets': len(targets),
+                'packages': {target['device_id']: target['metadata']['publication']['package_id']
+                             for target in targets}}
+
+    def page_assignment(self, device, display_protocol, pages_renderer, resource_profile):
+        """Return the exact v4 variant for this device, or None to fall back.
+
+        Only an assigned device variant is served. A client that does not
+        present the v2 display protocol and the pinned page renderer keeps the
+        existing v1/v3 path. A pinned renderer mismatch is an update refusal, not
+        a silent downgrade.
+        """
+        if display_protocol != 'display-profile-v2' or not pages_renderer:
+            return None
+        with self.connection(write=False) as db:
+            row = db.execute('SELECT * FROM page_assignments WHERE device_id=?',
+                             (device['device_id'],)).fetchone()
+            if row is None:
+                return None
+            proof = db.execute(
+                'SELECT body FROM page_publisher_proofs WHERE device_id=? AND generation=?',
+                (device['device_id'], row['generation'])).fetchone()
+        if proof is None:
+            raise DeliveryError('publisher_target_not_approved', 409)
+        try:
+            digest(pages_renderer)
+        except DeliveryError:
+            raise DeliveryError('requires_update', 409) from None
+        if pages_renderer != row['renderer'] or resource_profile != PROFILE:
+            raise DeliveryError('requires_update', 409)
+        from .publication import page_variant
+        _, metadata = page_variant(self, row['package_id'], row['metadata_hash'])
+        if (metadata.get('publication', {}).get('package_id') != row['package_id']
+                or metadata.get('destination') != row['destination']
+                or metadata.get('revision_sha256') != row['revision_sha256']
+                or metadata.get('publication', {}).get('renderer', {}).get('build_id')
+                != row['renderer']):
+            raise DeliveryError('publication_integrity', 503)
+        config = self.configuration()
+        return {'version': 4, 'group_id': config['group_id'],
+                'device_id': device['device_id'], 'profile': device['profile'],
+                'generation': row['generation'],
+                'revision_sha256': row['revision_sha256'],
+                'destination': row['destination'], 'projection': row['projection'],
+                'metadata_sha256': row['metadata_hash'], 'metadata': metadata,
+                'display': decode(bytes(row['configuration'])),
+                'publisher': decode(bytes(proof['body']))}
+
+    def page_activation(self, plan_id):
+        """Count only client activation receipts for the exact plan generation."""
+        digest(plan_id)
+        with self.connection(write=False) as db:
+            commit = db.execute('SELECT * FROM page_plan_commits WHERE plan_id=?',
+                                (plan_id,)).fetchone()
+            if commit is None:
+                return None
+            targets = db.execute('SELECT * FROM page_plan_targets WHERE plan_id=?',
+                                (plan_id,)).fetchall()
+            receipts = db.execute('SELECT device_id,body FROM receipts').fetchall()
+        activated = set()
+        for row in receipts:
+            try:
+                value = decode(bytes(row['body']))
+            except (TypeError, ValueError):
+                continue
+            if (value.get('generation') == commit['generation']
+                    and any(value.get('package_id') == target['package_id']
+                            and row['device_id'] == target['device_id'] for target in targets)):
+                activated.add(row['device_id'])
+        return {'plan_id': plan_id, 'generation': commit['generation'],
+                'targets': len(targets), 'activated': len(activated),
+                'pending': max(0, len(targets) - len(activated))}
 
     def _meta_floor(self, db):
         row = db.execute('SELECT value FROM meta WHERE key=?', (TIME_FLOOR_KEY,)).fetchone()
@@ -625,20 +909,35 @@ class DeliveryState(ProfileState):
                 if bytes(old['body']) != payload:
                     raise DeliveryError('receipt_conflict', 409)
                 return {'version': 1, 'receipt_id': body['receipt_id'], 'state': 'recorded'}
-            # Historical queued receipts remain admissible only for an actual retained publication.
-            record = self.root / 'publications' / body['package_id'] / 'delivery.json'
-            if not record.is_file():
-                raise DeliveryError('unknown_publication', 409)
             assignment = db.execute('SELECT package_id FROM assignment_history WHERE profile=? AND generation=?',
                                     (device['profile'], body['generation'])).fetchone()
+            page = None
             if assignment is None or body['package_id'] != assignment['package_id']:
-                raise DeliveryError('unknown_assignment', 409)
-            display = db.execute('SELECT body,reason FROM publication_configs WHERE generation=? AND device_id=?', (body['generation'], device['device_id'])).fetchone()
-            if display:
-                if display['reason'] != 'compatible':
-                    raise DeliveryError('incompatible_assignment', 409)
-                mode = decode(bytes(display['body']))['mode']
-                if mode != 'local' and mode != body['mode']:
+                page = db.execute(
+                    'SELECT * FROM page_assignment_history WHERE device_id=? AND generation=?',
+                    (device['device_id'], body['generation'])).fetchone()
+                if page is None or page['package_id'] != body['package_id']:
+                    raise DeliveryError('unknown_assignment', 409)
+            if assignment is not None and body['package_id'] == assignment['package_id']:
+                # Historical queued receipts remain admissible only for an actual
+                # retained v1 publication.
+                record = self.root / 'publications' / body['package_id'] / 'delivery.json'
+                if not record.is_file():
+                    raise DeliveryError('unknown_publication', 409)
+                display = db.execute('SELECT body,reason FROM publication_configs WHERE generation=? AND device_id=?', (body['generation'], device['device_id'])).fetchone()
+                if display:
+                    if display['reason'] != 'compatible':
+                        raise DeliveryError('incompatible_assignment', 409)
+                    mode = decode(bytes(display['body']))['mode']
+                    if mode != 'local' and mode != body['mode']:
+                        raise DeliveryError('ready_mode_mismatch', 409)
+            else:
+                # A v4 page receipt must match one exact frozen per-device
+                # variant. It never authorizes the v1 Events package or a
+                # different target's catalog.
+                from .publication import page_variant
+                page_variant(self, page['package_id'], page['metadata_hash'])
+                if body['mode'] != page['projection'].split('-', 1)[0]:
                     raise DeliveryError('ready_mode_mismatch', 409)
             count = db.execute('SELECT count(*) FROM receipts WHERE device_id=?', (device['device_id'],)).fetchone()[0]
             if count >= MAX_RECEIPTS_PER_DEVICE:

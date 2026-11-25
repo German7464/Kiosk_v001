@@ -13,8 +13,9 @@ import secrets
 import time
 from functools import wraps
 from pathlib import Path
+from urllib.parse import quote
 
-from flask import Flask, current_app, g, jsonify, render_template, request, session
+from flask import Flask, Response, current_app, g, jsonify, render_template, request, session
 
 from kiosk.core.request_security import AuthenticationLimiter
 from kiosk.delivery.protocol import DeliveryError, decode, encode, fields, sha, text
@@ -22,9 +23,35 @@ from kiosk.display.qr_pairing import qr_png_bytes
 from . import accounts, authority as authority_module, cycle, keystore, permissions, review as review_module, sessions
 from .content import ContentClient, ContentRefused
 from .store import MaintenanceError, MaintenanceStore
+from kiosk.publication import authority as publisher_authority
 
 MAX_JSON = 1024 * 1024
-EXEMPT_CSRF = {'service.page', 'service.health', 'service.relocate_redeem', 'service.tls_renew'}
+EXEMPT_CSRF = {'service.page', 'service.health', 'service.relocate_redeem', 'service.tls_renew',
+               'service.page_native_open', 'service.page_native_package',
+               'service.page_native_approve'}
+NATIVE_TICKET_SECONDS = 5 * 60
+MAX_NATIVE_TICKETS = 64
+MAX_NATIVE_TICKETS_USER = 8
+NATIVE_TICKET_SCHEMA = '''
+CREATE TABLE IF NOT EXISTS page_native_tickets (
+    token_sha256 TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    parents BLOB NOT NULL,
+    created INTEGER NOT NULL,
+    expires INTEGER NOT NULL,
+    state TEXT NOT NULL,
+    device_id TEXT,
+    chain BLOB,
+    chain_sha256 TEXT,
+    plan_id TEXT,
+    approval_sha256 TEXT,
+    receipt BLOB,
+    acceptance_key TEXT,
+    distribution BLOB,
+    updated INTEGER NOT NULL
+);
+'''
 
 
 def _now():
@@ -115,6 +142,86 @@ def require(permission=None, *, trusted=True, group=None):
     return row
 
 
+def _native_token():
+    header = request.headers.get('Authorization', '')
+    if not header.startswith('Bearer '):
+        raise MaintenanceError('native_credential_required', 401)
+    token = header[7:]
+    if (len(token) != 64 or not token.isascii()
+            or any(char not in '0123456789abcdef' for char in token)):
+        raise MaintenanceError('native_credential_required', 401)
+    return token
+
+
+def _native_token_sha(token):
+    return hashlib.sha256(token.encode('ascii')).hexdigest()
+
+
+def _native_ticket(db, token, now):
+    digest = _native_token_sha(token)
+    row = db.execute('SELECT * FROM page_native_tickets WHERE token_sha256=?',
+                     (digest,)).fetchone()
+    if row is not None:
+        if row['expires'] <= now:
+            raise MaintenanceError('native_ticket_expired', 410)
+        return row
+    raise MaintenanceError('native_ticket_required', 401)
+
+
+def _native_session(db, ticket, now):
+    row = db.execute('SELECT * FROM sessions WHERE id=?',
+                     (ticket['session_id'],)).fetchone()
+    if (row is None or row['state'] != 'active' or row['user_id'] != ticket['user_id']
+            or sessions._invalid(db, row, now) is not None
+            or not sessions._ancestors_valid(db, row, now)):
+        raise MaintenanceError('native_session_required', 401)
+    if not row['trusted']:
+        raise MaintenanceError('trusted_session_required', 403)
+    permissions.require(db, ticket['user_id'], permissions.CONTENT_PUBLISH,
+                        _authority().group_id)
+    # Preserve the existing browser require() authority gates for native work.
+    issuer = current_app.extensions.get('maintenance_tls_authority')
+    if issuer is not None:
+        issuer.require_current()
+    from .authority_delivery import pending
+    if pending(_store()):
+        raise MaintenanceError('authority_delivery_pending', 503)
+
+
+def _native_parents(value):
+    if not isinstance(value, list) or len(value) > 32:
+        raise MaintenanceError('page_release_parent_limit', 400)
+    result = []
+    for item in value:
+        if (not isinstance(item, str) or len(item) != 64 or not item.isascii()
+                or any(char not in '0123456789abcdef' for char in item)):
+            raise MaintenanceError('page_release_parent_limit', 400)
+        result.append(item)
+    if len(set(result)) != len(result):
+        raise MaintenanceError('page_release_parent_ambiguity', 409)
+    return result
+
+
+def _publisher_chain(db, chain, user_id):
+    """Verify a native chain and leaf possession against the independent root."""
+    row = db.execute('SELECT * FROM publisher_policy').fetchone()
+    if row is None:
+        raise MaintenanceError('publisher_policy_missing', 503)
+    envelope = decode(bytes(row['envelope']))
+    now = _now()
+    try:
+        current = publisher_authority.policy(
+            envelope, _authority().root, _authority().group_id,
+            _authority().origin, now, floor=row['version'])
+        grant, signer = publisher_authority.permission(
+            chain, _authority().root, current, now)
+    except (TypeError, KeyError, ValueError):
+        raise MaintenanceError('native_chain_refused', 403) from None
+    if grant['user_id'] != user_id:
+        raise MaintenanceError('native_user_refused', 403)
+    return envelope, current, grant, signer
+
+
 def _guard(function):
     @wraps(function)
     def call(*args, **kwargs):
@@ -151,6 +258,16 @@ def create_maintenance_app(settings):
     app.config['MAX_CONTENT_LENGTH'] = MAX_JSON
     clock = app.config.get('CLOCK') or time.time
     store = MaintenanceStore(app.config['MAINTENANCE_DATABASE'], clock=clock)
+    # The reviewed allowlist keeps store.py unchanged; this additive table is
+    # created once through the same protected connection and contains no secret.
+    with store.connection() as db:
+        db.execute(NATIVE_TICKET_SCHEMA)
+        columns = {row['name'] for row in db.execute(
+            'PRAGMA table_info(page_native_tickets)')}
+        for name, declaration in (('receipt', 'BLOB'), ('acceptance_key', 'TEXT')):
+            if name not in columns:
+                db.execute('ALTER TABLE page_native_tickets ADD COLUMN '
+                           + name + ' ' + declaration)
     public = decode(Path(app.config['MAINTENANCE_ROOT_PUBLIC']).read_bytes())
     policy = decode(Path(app.config['MAINTENANCE_ROOT_POLICY']).read_bytes())
     app.extensions['maintenance_clock'] = clock
@@ -742,6 +859,321 @@ def create_maintenance_app(settings):
         secret = _content().session(row['user_id'], granted['chain'])
         cache[row['id']] = secret
         return secret
+
+    def _page_files(secret, document):
+        """Fetch every exact catalog byte for independent v2 review."""
+        files = {}
+        plan_id = document['plan']['id']
+        for target in document['targets']:
+            package = {}
+            for entry in target['metadata']['publication']['package']['files']:
+                package[entry['path']] = _content().page_artifact(
+                    secret, plan_id, target['device_id'], entry['path'])
+            files[target['device_id']] = {'package': package, 'kiosk': {}, 'tv': {}}
+        return files
+
+    def _page_view(row, document, targets, files, settings_version=0):
+        return review_module.validate_page(
+            document, targets=targets, user_id=row['user_id'],
+            group_id=_authority().group_id, origin=_authority().origin,
+            now=_now(), files=files, settings_version=settings_version)
+
+    @app.post('/api/page/review', endpoint='service.page_review')
+    @_guard
+    def page_review():
+        value = body()
+        fields(value, 'parents')
+        row = require(permission=permissions.CONTENT_PUBLISH)
+        secret = _content_secret(row)
+        targets = _content().page_targets(secret)
+        with store.connection(write=False) as db:
+            granted = _authority().grant(db, row['user_id'])
+        scope = granted['grant'].get('scope')
+        if scope is not None and not {item['device_id'] for item in targets} <= \
+                set(scope['targets']):
+            raise MaintenanceError('publication_targets_outside_scope', 403)
+        prepared = _content().page_prepare(secret, value['parents'])
+        document = prepared['document']
+        files = _page_files(secret, document)
+        view = _page_view(row, document, targets, files,
+                          prepared.get('settings_version', 0))
+        identity = secrets.token_hex(32)
+        digest = review_module.ticket_digest(document, targets, row['user_id'])
+        expires = min(int(document['plan']['expires']), _now() + 15 * 60)
+        with store.connection() as db:
+            db.execute('INSERT INTO reviews VALUES (?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL)',
+                       (identity, row['id'], row['user_id'], document['plan']['id'], digest,
+                        encode(document), encode(targets), _now(), expires, 'reviewed'))
+        return jsonify(version=1, id=identity, review=view,
+                       expires=expires, csrf=csrf_token())
+
+    @app.get('/api/page/review/<identity>', endpoint='service.page_review_get')
+    @_guard
+    def get_page_review(identity):
+        row = require(permission=permissions.CONTENT_PUBLISH)
+        text(identity)
+        with store.connection(write=False) as db:
+            item = db.execute('SELECT * FROM reviews WHERE id=?', (identity,)).fetchone()
+        if item is None:
+            raise MaintenanceError('review_not_found', 404)
+        if item['user_id'] != row['user_id']:
+            raise MaintenanceError('review_scope_refused', 403)
+        document = decode(bytes(item['body']))
+        if document.get('version') != 2:
+            raise MaintenanceError('review_kind_refused', 409)
+        targets = _json_list(item['targets'])
+        secret = _content_secret(row)
+        files = _page_files(secret, document)
+        view = _page_view(row, document, targets, files)
+        return jsonify(version=1, id=identity, state=item['state'], review=view,
+                       expires=item['expires'])
+
+    @app.post('/api/page/native-ticket', endpoint='service.page_native_ticket')
+    @_guard
+    def page_native_ticket():
+        value = body()
+        fields(value, 'parents')
+        row = require(permission=permissions.CONTENT_PUBLISH)
+        parents = _native_parents(value['parents'])
+        now = _now()
+        token = secrets.token_hex(32)
+        expires = min(now + NATIVE_TICKET_SECONDS, int(row['expires']),
+                      int(row['idle_deadline']))
+        if expires <= now:
+            raise MaintenanceError('session_required', 401)
+        with store.connection() as db:
+            db.execute('DELETE FROM page_native_tickets WHERE expires < ?', (now,))
+            active = db.execute('SELECT COUNT(*) FROM page_native_tickets '
+                                'WHERE expires>?', (now,)).fetchone()[0]
+            mine = db.execute('SELECT COUNT(*) FROM page_native_tickets '
+                              'WHERE expires>? AND user_id=?',
+                              (now, row['user_id'])).fetchone()[0]
+            if active >= MAX_NATIVE_TICKETS or mine >= MAX_NATIVE_TICKETS_USER:
+                raise MaintenanceError('native_ticket_capacity', 429)
+            db.execute(
+                'INSERT INTO page_native_tickets '
+                '(token_sha256,session_id,user_id,parents,created,expires,state,updated) '
+                'VALUES (?,?,?,?,?,?,?,?)',
+                (_native_token_sha(token), row['id'], row['user_id'], encode(parents),
+                 now, expires, 'issued', now))
+        content_origin, maintenance_origin = _authority().origin, app.config['MAINTENANCE_ORIGIN']
+        handoff = ('kiosk://roaming/page#version=1&token=' + token
+                   + '&expires=' + str(expires)
+                   + '&content_origin=' + quote(content_origin, safe='')
+                   + '&maintenance_origin=' + quote(maintenance_origin, safe=''))
+        return jsonify(version=1, token=token, expires=expires,
+                       content_origin=content_origin,
+                       maintenance_origin=maintenance_origin,
+                       handoff=handoff)
+
+    @app.post('/api/page/native/open', endpoint='service.page_native_open')
+    @_guard
+    def page_native_open():
+        value = body()
+        fields(value, 'approval chain')
+        token = _native_token()
+        now = _now()
+        with store.connection() as db:
+            ticket = _native_ticket(db, token, now)
+            _native_session(db, ticket, now)
+            policy_envelope, _, _, signer = _publisher_chain(
+                db, value['chain'], ticket['user_id'])
+            device_id = publisher_authority.key_id(signer)
+            expected = dict(token_sha256=_native_token_sha(token),
+                            content_origin=_authority().origin,
+                            maintenance_origin=app.config['MAINTENANCE_ORIGIN'])
+            try:
+                opened = publisher_authority.verified(
+                    value['approval'], signer, 'page-review-open')
+            except (TypeError, KeyError, ValueError):
+                raise MaintenanceError('native_open_refused', 403) from None
+            if opened != expected:
+                raise MaintenanceError('native_open_refused', 403)
+            if ticket['state'] in ('opened', 'committing', 'approved'):
+                if (ticket['device_id'] != device_id
+                        or bytes(ticket['chain']) != encode(value['chain'])):
+                    raise MaintenanceError('native_ticket_bound', 409)
+                secret = _content().session(ticket['user_id'], value['chain'])
+                document = _content().page_candidate(secret, ticket['plan_id'])
+            else:
+                secret = _content().session(ticket['user_id'], value['chain'])
+                prepared = _content().page_prepare(
+                    secret, _json_list(ticket['parents']))
+                document = prepared['document']
+                plan = document.get('plan') or {}
+                if (document.get('version') != 2
+                        or plan.get('user_id') != ticket['user_id']
+                        or plan.get('device_id') != device_id
+                        or plan.get('group_id') != _authority().group_id
+                        or plan.get('origin') != _authority().origin):
+                    raise MaintenanceError('native_scope_refused', 403)
+                db.execute(
+                    'UPDATE page_native_tickets SET state=?,device_id=?,chain=?,'
+                    'chain_sha256=?,plan_id=?,updated=? WHERE token_sha256=?',
+                    ('opened', device_id, encode(value['chain']),
+                     sha(encode(value['chain'])), plan['id'], now,
+                     ticket['token_sha256']))
+        return jsonify(version=1, document=document)
+
+    @app.get('/api/page/native/package/<device_id>/<path:name>',
+             endpoint='service.page_native_package')
+    @_guard
+    def page_native_package(device_id, name):
+        text(device_id)
+        token = _native_token()
+        now = _now()
+        with store.connection(write=False) as db:
+            ticket = _native_ticket(db, token, now)
+            _native_session(db, ticket, now)
+            if ticket['state'] not in ('opened', 'approved') or not ticket['plan_id']:
+                raise MaintenanceError('native_ticket_open_required', 409)
+            chain, plan_id = _json_list(ticket['chain']), ticket['plan_id']
+        secret = _content().session(ticket['user_id'], chain)
+        document = _content().page_candidate(secret, plan_id)
+        target = next((item for item in document['targets']
+                       if item['device_id'] == device_id), None)
+        if target is None:
+            raise MaintenanceError('file_not_found', 404)
+        entry = next((item for item in target['metadata']['publication']['package']['files']
+                      if item['path'] == name), None)
+        if entry is None:
+            raise MaintenanceError('file_not_found', 404)
+        payload = _content().page_artifact(secret, plan_id, device_id, name)
+        if len(payload) != entry['size'] or sha(payload) != entry['sha256']:
+            raise MaintenanceError('publication_integrity', 503)
+        return Response(payload, mimetype='application/octet-stream',
+                        headers={'Content-Length': str(len(payload))})
+
+    @app.post('/api/page/native/approve', endpoint='service.page_native_approve')
+    @_guard
+    def page_native_approve():
+        value = body()
+        fields(value, 'id approval chain')
+        token = _native_token()
+        now = _now()
+        approval_sha = sha(encode(value['approval']))
+        chain_raw = encode(value['chain'])
+        # Phase 1: a short read transaction verifies the ticket, active session,
+        # caller chain and native leaf. No Content call runs under this lock.
+        with store.connection(write=False) as db:
+            ticket = _native_ticket(db, token, now)
+            _native_session(db, ticket, now)
+            if ticket['state'] not in ('opened', 'committing', 'approved'):
+                raise MaintenanceError('native_ticket_open_required', 409)
+            if not ticket['plan_id']:
+                raise MaintenanceError('native_ticket_open_required', 409)
+            if value['id'] != ticket['plan_id']:
+                raise MaintenanceError('native_ticket_required', 409)
+            if bytes(ticket['chain']) != chain_raw:
+                raise MaintenanceError('native_ticket_bound', 409)
+            policy_envelope, _, _, signer = _publisher_chain(
+                db, value['chain'], ticket['user_id'])
+            if ticket['device_id'] != publisher_authority.key_id(signer):
+                raise MaintenanceError('native_ticket_bound', 409)
+            saved_approval = ticket['approval_sha256']
+            saved_receipt = ticket['receipt']
+            saved_key = ticket['acceptance_key']
+            distribution = (decode(bytes(ticket['distribution']))
+                            if ticket['distribution'] is not None else None)
+            if ticket['state'] == 'approved' and distribution is not None:
+                if saved_approval == approval_sha:
+                    return jsonify(version=1, state='approved',
+                                   distribution=distribution)
+                raise MaintenanceError('native_approval_changed', 409)
+            if saved_approval is not None and saved_approval != approval_sha:
+                raise MaintenanceError('native_approval_changed', 409)
+        receipt = None
+        acceptance_key = None
+        if saved_receipt is not None and saved_key is not None:
+            receipt = decode(bytes(saved_receipt))
+            acceptance_key = saved_key
+        else:
+            # Phase 2: remote candidate, independent byte re-derivation and the
+            # exact signed plan check. The Maintenance receipt is persisted in
+            # the next short transaction before any Content approval is sent.
+            secret = _content().session(ticket['user_id'], value['chain'])
+            document = _content().page_candidate(secret, ticket['plan_id'])
+            try:
+                plan, _ = publisher_authority.page_approval(
+                    value['approval'], value['chain'], policy_envelope,
+                    _authority().root, _authority().group_id, _authority().origin,
+                    now, known_heads=(), ancestry=document.get('ancestry', []))
+            except (TypeError, KeyError, ValueError):
+                raise MaintenanceError('native_approval_refused', 403) from None
+            if plan != document.get('plan'):
+                raise MaintenanceError('native_plan_changed', 409)
+            targets = _content().page_targets(secret)
+            if ([item['device_id'] for item in targets]
+                    != [item['device_id'] for item in plan['targets']]):
+                raise MaintenanceError('native_targets_changed', 409)
+            files = _page_files(secret, document)
+            review_module.validate_page(
+                document, targets=targets, user_id=ticket['user_id'],
+                group_id=_authority().group_id, origin=_authority().origin,
+                now=now, files=files)
+            signed = _authority().sign_page_receipt(
+                plan, value['approval'], plan['policy_version'],
+                secrets.token_hex(32), now)
+            with store.connection() as db:
+                current = _native_ticket(db, token, now)
+                _native_session(db, current, now)
+                if current['approval_sha256'] is not None:
+                    if current['approval_sha256'] != approval_sha:
+                        raise MaintenanceError('native_approval_changed', 409)
+                    if current['receipt'] is None:
+                        raise MaintenanceError('native_approval_changed', 409)
+                    receipt = decode(bytes(current['receipt']))
+                    acceptance_key = current['acceptance_key']
+                else:
+                    receipt = signed['receipt']
+                    acceptance_key = signed['acceptance_key']
+                    db.execute(
+                        'UPDATE page_native_tickets SET state=?,approval_sha256=?,'
+                        'receipt=?,acceptance_key=?,updated=? WHERE token_sha256=?',
+                        ('committing', approval_sha, encode(receipt), acceptance_key,
+                         now, current['token_sha256']))
+        # Phase 3: forward the exact durable response and never hold a
+        # Maintenance transaction across the Content commit. A lost response is
+        # safe: the retry reuses this same receipt and Content returns its
+        # original generation.
+        secret = _content().session(ticket['user_id'], value['chain'])
+        try:
+            result = _content().page_approve(
+                secret, ticket['plan_id'], value['approval'], value['chain'],
+                receipt, acceptance_key)
+        except ContentRefused as error:
+            if error.status in (409, 410):
+                raise MaintenanceError('native_plan_changed', 409) from None
+            raise
+        distribution = result['distribution']
+        with store.connection() as db:
+            current = _native_ticket(db, token, now)
+            _native_session(db, current, now)
+            if current['approval_sha256'] != approval_sha:
+                raise MaintenanceError('native_approval_changed', 409)
+            db.execute(
+                'UPDATE page_native_tickets SET state=?,'
+                'distribution=?,updated=? WHERE token_sha256=?',
+                ('approved', encode(distribution), now, current['token_sha256']))
+        return jsonify(version=1, state='approved', distribution=distribution)
+
+    @app.post('/api/page/publish', endpoint='service.page_publish')
+    @_guard
+    def page_publish():
+        # Browser-only Stage 6 signing is disabled: the shared interface is the
+        # native ticket/open/package/approve journey. The accepted v1
+        # /api/publish path below is unchanged.
+        raise MaintenanceError('native_approval_required', 409)
+
+    @app.get('/api/page/review/<identity>/status', endpoint='service.page_review_status')
+    @_guard
+    def page_review_status(identity):
+        row = require(trusted=False)
+        with store.connection(write=False) as db:
+            item = db.execute('SELECT * FROM reviews WHERE id=?', (identity,)).fetchone()
+        if item is None or item['user_id'] != row['user_id']:
+            raise MaintenanceError('review_not_found', 404)
+        return jsonify(version=1, state=item['state'], commit=item['commit_reference'])
 
     @app.get('/api/drafts', endpoint='service.drafts')
     @_guard

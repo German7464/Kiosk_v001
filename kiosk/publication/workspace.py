@@ -12,8 +12,9 @@ from pathlib import Path
 
 from kiosk.delivery.protocol import decode, digest, encode, sha, text
 from kiosk.features import events
-from . import authority, pages
+from . import authority, page_release, pages
 from .mapping import SETTINGS_LIMIT, settings as mapped_settings
+from kiosk.trust.crypto import key_id
 
 IDLE_SECONDS = 15 * 60
 SESSION_SECONDS = 4 * 3600
@@ -575,6 +576,104 @@ class Workspace:
                 raise WorkspaceError('target_preview_unavailable', 409) from None
             return dict(page=projected, events=public['events'], tags=public['tags'])
 
+    def _page_heads(self, db):
+        """Only v2 plans belong to the page-release ancestry line."""
+        result = []
+        for row in db.execute('SELECT id FROM heads ORDER BY id'):
+            plan = db.execute('SELECT snapshot FROM plans WHERE id=? AND approval IS NOT NULL',
+                              (row['id'],)).fetchone()
+            if plan is not None and decode(plan['snapshot']).get('version') == 2:
+                result.append(row['id'])
+        return result
+
+    def page_release_context(self, secret, parents=None):
+        """Freeze inputs for one v2 candidate without writing a plan or pointer."""
+        if not self.stage6_pages:
+            raise WorkspaceError('page_workspace_unavailable', 404)
+        if parents is not None and not isinstance(parents, (list, tuple)):
+            raise WorkspaceError('page_release_parent_limit')
+        with self.db() as db:
+            device, session = self._session(db, secret)
+            self._require_active_write(db)
+            plan, snapshot = self._page_plan(db, device.get('scope'))
+            revision = dict(plan=plan, objects=snapshot)
+            page_release.validate_revision(revision)
+            policy, policy_envelope = self._policy(db)
+            chain = decode(bytes(session['chain']))['chain']
+            granted, signer = self._device(db, chain)
+            if granted['user_id'] != device['user_id']:
+                raise WorkspaceError('publisher_scope_refused', 403)
+            now = self.now()
+            expires = min(granted['expires'], policy['expires'],
+                          now + authority.MAX_PLAN_SECONDS)
+            if expires <= now:
+                raise WorkspaceError('publication_authority_expired', 403)
+            authorization = dict(group_id=self.group_id, origin=self.origin,
+                                 user_id=granted['user_id'], device_id=key_id(signer),
+                                 policy_version=policy['version'], issued=now,
+                                 expires=expires)
+            # Parents are server-managed: every new revision descends from all
+            # current approved v2 heads. A caller-supplied ancestor is merged in
+            # and still verified by hash in page_release/authority.
+            known_heads = self._page_heads(db)
+            lineage = sorted(set(str(item) for item in (parents or ())) | set(known_heads))
+            return dict(revision=revision, authorization=authorization,
+                        ancestry=self._ancestry(db, tuple(lineage)),
+                        known_heads=known_heads, parents=lineage)
+
+    def store_page_candidate(self, secret, document):
+        """Persist an exact v2 plan only if the frozen revision is still current."""
+        if not isinstance(document, dict) or document.get('version') != 2:
+            raise WorkspaceError('page_release_document_version')
+        with self.db() as db:
+            device, session = self._session(db, secret)
+            self._require_active_write(db)
+            now = self.now()
+            page_release.validate_document(document, now=now,
+                                           known_heads=self._page_heads(db))
+            plan, snapshot = self._page_plan(db, device.get('scope'))
+            if document['revision'] != dict(plan=plan, objects=snapshot):
+                raise WorkspaceError('prepared_snapshot_changed', 409)
+            if (document['plan']['group_id'] != self.group_id
+                    or document['plan']['origin'] != self.origin
+                    or document['plan']['user_id'] != device['user_id']):
+                raise WorkspaceError('publisher_scope_refused', 403)
+            chain = decode(bytes(session['chain']))['chain']
+            _, signer = self._device(db, chain)
+            if document['plan']['device_id'] != key_id(signer):
+                raise WorkspaceError('publisher_scope_refused', 403)
+            row = db.execute('SELECT * FROM plans WHERE id=?', (plan_id := document['plan']['id'],)).fetchone()
+            raw = encode(document)
+            if row is not None:
+                if bytes(row['snapshot']) != raw:
+                    raise WorkspaceError('plan_identity_conflict', 409)
+                return document
+            if len(encode(document)) > 2 * 1024 * 1024:
+                raise WorkspaceError('plan_size_limit', 413)
+            db.execute('INSERT INTO plans VALUES (?,?,NULL,?)', (plan_id, raw, now))
+            return document
+
+    def page_candidate(self, secret, identity):
+        """Only the authenticated owner may read an exact v2 candidate."""
+        text(identity)
+        with self.db() as db:
+            device, _ = self._session(db, secret)
+            row = db.execute('SELECT * FROM plans WHERE id=?', (identity,)).fetchone()
+            if row is None:
+                raise WorkspaceError('plan_not_found', 404)
+            document = decode(row['snapshot'])
+            plan = document.get('plan') if isinstance(document, dict) else None
+            if (document.get('version') != 2 or not isinstance(plan, dict)
+                    or plan.get('user_id') != device['user_id']
+                    or plan.get('group_id') != self.group_id
+                    or plan.get('origin') != self.origin):
+                raise WorkspaceError('plan_not_found', 404)
+            return document
+
+    def page_settings_version(self):
+        with self.db() as db:
+            return self._settings(db)[0]
+
     def _page_plan(self, db, scope):
         current = {row['id']: row for row in db.execute('SELECT * FROM objects ORDER BY id')}
         published = {
@@ -752,7 +851,8 @@ class Workspace:
             now=self.now()
             plan=dict(group_id=self.group_id,origin=self.origin,user_id=device['user_id'],
                       device_id=authority.key_id(signer),policy_version=current['version'],
-                      issued=now,expires=min(device['expires'],current['expires']),
+                      issued=now,expires=min(device['expires'],current['expires'],
+                                             now+authority.MAX_PLAN_SECONDS),
                       publication_sha256=sha(encode(publication)),dependencies_sha256=sha(encode(snapshot)),
                       renderer=publication['renderer']['build_id'],targets=targets,parents=parents)
             plan['id']=sha(encode(plan))
@@ -804,12 +904,20 @@ class Workspace:
             result = []
             for row in rows:
                 document = decode(row['snapshot'])
-                result.append(dict(id=row['id'], created=row['created'],
-                                   user_id=document['plan']['user_id'],
-                                   device_id=document['plan']['device_id'],
-                                   publication_sha256=document['plan']['publication_sha256'],
-                                   targets=document['plan']['targets'],
-                                   content_version=document.get('content_version')))
+                plan = document['plan']
+                item = dict(id=row['id'], created=row['created'],
+                            user_id=plan['user_id'], device_id=plan['device_id'],
+                            targets=plan['targets'])
+                if document.get('version') == 2:
+                    item.update(version=2, revision_sha256=plan['revision_sha256'],
+                                dependencies_sha256=plan['dependencies_sha256'],
+                                parents=plan['parents'])
+                else:
+                    item.update(version=1,
+                                publication_sha256=plan['publication_sha256'],
+                                dependencies_sha256=plan['dependencies_sha256'],
+                                content_version=document.get('content_version'))
+                result.append(item)
             return result
 
     def preserve_report(self):
@@ -879,9 +987,11 @@ class Workspace:
             row=db.execute('SELECT * FROM plans WHERE id=?',(identity,)).fetchone()
             if row is None:
                 raise WorkspaceError('plan_not_found',404)
+            document=decode(row['snapshot'])
+            if document.get('version') == 2:
+                return self._approve_page(db, row, document, envelope, chain)
             current,policy=self._policy(db)
             heads=[r['id'] for r in db.execute('SELECT id FROM heads ORDER BY id')]
-            document=decode(row['snapshot'])
             plan,_=authority.approval(envelope,chain,policy,self.root_spki,self.group_id,self.origin,self.now(),
                                       known_heads=heads,ancestry=document.get('ancestry',[]))
             if plan!=document['plan']:
@@ -907,3 +1017,72 @@ class Workspace:
             for identity,obj in document['objects'].items():
                 db.execute('UPDATE objects SET published_version=? WHERE id=?',(obj['version'],identity))
             return document
+
+    def _approve_page(self, db, row, document, envelope, chain):
+        """Recheck a v2 graph, signer, ancestry and target lineage before storing."""
+        if not self.stage6_pages:
+            raise WorkspaceError('page_workspace_unavailable', 404)
+        current, policy_envelope = self._policy(db)
+        heads = self._page_heads(db)
+        try:
+            plan, _ = authority.page_approval(
+                envelope, chain, policy_envelope, self.root_spki, self.group_id,
+                self.origin, self.now(), known_heads=heads,
+                ancestry=document.get('ancestry', []))
+        except (TypeError, KeyError, ValueError) as error:
+            code = str(error) if isinstance(error, ValueError) else 'publisher_plan'
+            status = 403 if code in ('publisher_scope_refused', 'publisher_revoked',
+                                     'publisher_approval_scope') else 409
+            raise WorkspaceError(code, status) from None
+        if plan != document['plan']:
+            raise WorkspaceError('prepared_plan_changed', 409)
+        proof = encode(dict(approval=envelope, chain=chain,
+                            policy=policy_envelope,
+                            ancestry=document.get('ancestry', [])))
+        if row['approval'] is not None:
+            if bytes(row['approval']) != proof:
+                raise WorkspaceError('plan_approval_conflict', 409)
+            return document
+        if self.now() - row['created'] >= 15 * 60:
+            raise WorkspaceError('prepared_review_expired', 410)
+        granted, signer = self._device(db, chain)
+        if (plan['user_id'] != granted['user_id']
+                or plan['device_id'] != key_id(signer)):
+            raise WorkspaceError('publisher_approval_scope', 403)
+        plan_now, snapshot_now = self._page_plan(db, granted.get('scope'))
+        if dict(plan=plan_now, objects=snapshot_now) != document['revision']:
+            raise WorkspaceError('prepared_revision_changed', 409)
+        # Recheck every active snapshot row against the newest working row in
+        # this same commit transaction. An older published revision is valid
+        # only while it is still the newest row; a newer excluded draft of that
+        # object invalidates the review even when the draft stays out of the
+        # candidate. Historical rows are checked against their exact retained
+        # revision, and ``_ready`` is invoked only for newly included versions.
+        included = {entry['id'] for entry in plan_now['included']}
+        for identity, obj in document['revision']['objects'].items():
+            actual = db.execute('SELECT * FROM objects WHERE id=?',
+                                (identity,)).fetchone()
+            historical = db.execute(
+                'SELECT * FROM revisions WHERE id=? AND version=?',
+                (identity, obj['version'])).fetchone()
+            if (actual is None or historical is None
+                    or actual['version'] != obj['version']
+                    or decode(historical['payload']) != obj['payload']
+                    or decode(historical['dependencies']) != obj['dependencies']
+                    or historical['author'] != obj['author']):
+                raise WorkspaceError('prepared_revision_changed', 409)
+            if identity in included:
+                if (not actual['ready']
+                        or decode(actual['payload']) != obj['payload']
+                        or decode(actual['dependencies']) != obj['dependencies']):
+                    raise WorkspaceError('prepared_revision_changed', 409)
+                self._ready(db, actual)
+            elif actual['published_version'] != obj['version']:
+                raise WorkspaceError('prepared_revision_changed', 409)
+        db.execute('UPDATE plans SET approval=? WHERE id=?', (proof, plan['id']))
+        db.execute('DELETE FROM heads')
+        db.execute('INSERT INTO heads VALUES (?)', (plan['id'],))
+        for identity, obj in document['revision']['objects'].items():
+            db.execute('UPDATE objects SET published_version=? WHERE id=?',
+                       (obj['version'], identity))
+        return document

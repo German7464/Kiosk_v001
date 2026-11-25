@@ -5,18 +5,28 @@ DEFAULT = 'events-default'
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS display_profiles (
  id TEXT PRIMARY KEY, name TEXT NOT NULL, mode TEXT NOT NULL, revision INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS display_orientations (
+ profile_id TEXT PRIMARY KEY, orientation TEXT NOT NULL CHECK(orientation IN ('landscape','portrait')));
 CREATE TABLE IF NOT EXISTS device_profiles (device_id TEXT PRIMARY KEY, profile_id TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS device_capabilities (device_id TEXT PRIMARY KEY, body BLOB NOT NULL);
 CREATE TABLE IF NOT EXISTS publication_configs (
  generation INTEGER NOT NULL, device_id TEXT NOT NULL, body BLOB NOT NULL, reason TEXT NOT NULL,
  PRIMARY KEY(generation,device_id));
 CREATE TABLE IF NOT EXISTS publication_config_sets (generation INTEGER PRIMARY KEY, identity BLOB NOT NULL);
-INSERT OR IGNORE INTO display_profiles VALUES ('events-default','Events — local mode (legacy)','local',1);
+INSERT OR IGNORE INTO display_profiles (id,name,mode,revision)
+VALUES ('events-default','Events — local mode (legacy)','local',1);
 """
 
 
 def capability(body):
-    fields(body, 'version platform modes content resource_profile renderer')
+    names = set(body) if isinstance(body, dict) else set()
+    if names == {'version', 'platform', 'modes', 'content', 'resource_profile',
+                 'renderer', 'pages_renderer'}:
+        fields(body, 'version platform modes content resource_profile renderer pages_renderer')
+        from .protocol import digest
+        digest(body['pages_renderer'])
+    else:
+        fields(body, 'version platform modes content resource_profile renderer')
     if (type(body['version']) is not int or body['version'] != 1
             or body['platform'] not in ('windows', 'android')
             or body['content'] != ['events'] or body['resource_profile'] != 'events-phone-lab-v1'
@@ -37,22 +47,32 @@ class ProfileState:
                        (device['device_id'], encode(body)))
         return {'version': 1, 'state': 'recorded'}
 
-    def save_profile(self, profile_id, name, mode, revision=0):
+    def save_profile(self, profile_id, name, mode, revision=0, orientation=None):
         text(profile_id, 64)
         if profile_id == DEFAULT or not isinstance(name, str) or not 1 <= len(name.strip()) <= 64 or not all(c.isprintable() for c in name):
             raise DeliveryError('invalid_profile_name')
         if mode not in ('tv', 'kiosk'):
             raise DeliveryError('unsupported_display_mode', 409)
+        if orientation is not None and orientation not in ('landscape', 'portrait'):
+            raise DeliveryError('unsupported_display_orientation', 409)
         if type(revision) is not int or revision < 0:
             raise DeliveryError('invalid_profile_revision')
         with self.connection() as db:
             old = db.execute('SELECT * FROM display_profiles WHERE id=?', (profile_id,)).fetchone()
+            saved_orientation = db.execute(
+                'SELECT orientation FROM display_orientations WHERE profile_id=?',
+                (profile_id,)).fetchone()
+            orientation = (orientation or (saved_orientation['orientation']
+                                           if saved_orientation else 'landscape'))
             if old is None and db.execute('SELECT count(*) FROM display_profiles').fetchone()[0] >= 100:
                 raise DeliveryError('profile_capacity', 409)
             if (old['revision'] if old else 0) != revision:
                 raise DeliveryError('profile_changed', 409)
             db.execute('INSERT INTO display_profiles VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,mode=excluded.mode,revision=excluded.revision',
                        (profile_id, name.strip(), mode, revision + 1))
+            db.execute('INSERT INTO display_orientations VALUES (?,?) '
+                       'ON CONFLICT(profile_id) DO UPDATE SET orientation=excluded.orientation',
+                       (profile_id, orientation))
 
     def select_profile(self, device_id, profile_id):
         text(device_id); text(profile_id, 64)
@@ -69,9 +89,11 @@ class ProfileState:
             LEFT JOIN display_profiles p ON p.id=s.profile_id WHERE d.device_id IS NULL OR p.id IS NULL LIMIT 1""").fetchone()
         if orphan:
             raise DeliveryError('profile_reference_invalid', 503)
-        for row in db.execute("""SELECT d.device_id,p.* FROM devices d
+        for row in db.execute("""SELECT d.device_id,p.*,coalesce(o.orientation,'landscape') AS orientation
+            FROM devices d
             LEFT JOIN device_profiles s ON s.device_id=d.device_id
-            JOIN display_profiles p ON p.id=coalesce(s.profile_id,'events-default') ORDER BY d.device_id"""):
+            JOIN display_profiles p ON p.id=coalesce(s.profile_id,'events-default')
+            LEFT JOIN display_orientations o ON o.profile_id=p.id ORDER BY d.device_id"""):
             config = {'version': 1, 'profile_id': row['id'], 'revision': row['revision'], 'mode': row['mode']}
             caps = db.execute('SELECT body FROM device_capabilities WHERE device_id=?', (row['device_id'],)).fetchone()
             reason = 'compatible'
@@ -86,7 +108,8 @@ class ProfileState:
                         from kiosk.display.cache import renderer_compatible
                         if not renderer_compatible(c['renderer'], renderer):
                             reason = 'renderer_update_required'
-            result[row['device_id']] = {'config': config, 'reason': reason}
+            result[row['device_id']] = {'config': config, 'reason': reason,
+                                        'orientation': row['orientation']}
         return result
 
     def profiles_admin(self):

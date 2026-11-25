@@ -8,7 +8,7 @@ imported, and there is no generic hash-signing endpoint.
 from __future__ import annotations
 
 from kiosk.delivery.protocol import decode, encode, sha
-from kiosk.publication import authority, mapping
+from kiosk.publication import authority, mapping, page_release, pages
 from .store import MaintenanceError
 
 MAX_REVIEW_BYTES = 2 * 1024 * 1024
@@ -112,6 +112,103 @@ def validate(document, *, targets, user_id, group_id, origin, now):
         package_files=[dict(path=_text(item['path'], 512), size=int(item['size']),
                             sha256=_text(item['sha256'], 64))
                        for item in publication['package']['files'][:512]],
+    )
+    if len(encode(view)) > MAX_REVIEW_BYTES:
+        raise MaintenanceError('review_limit', 413)
+    return view
+
+
+def _page_object(entry, *, excluded=False):
+    identity = _text(entry['id'], 64)
+    try:
+        kind = pages.kind(identity)
+    except (TypeError, ValueError):
+        raise MaintenanceError('review_content_refused', 409) from None
+    item = dict(id=identity, kind=kind, version=int(entry['version']),
+                author=_text(entry['author'], 64))
+    if excluded:
+        item['reason'] = _text(entry['reason'], 64)
+    return item
+
+
+def validate_page(document, *, targets, user_id, group_id, origin, now, files,
+                  settings_version=0):
+    """Exact v2 page review view model after independent byte re-derivation.
+
+    The caller supplies bounded per-target byte maps fetched from Content. Every
+    outer/inner inventory, canonical entrypoint, projection, metadata hash and
+    renderer identity is rechecked here before a human can sign anything. The
+    returned view exposes authors, included/excluded reasons and configurations;
+    it never exposes draft text that is not part of the frozen revision.
+    """
+    if not isinstance(document, dict):
+        raise MaintenanceError('review_document_refused', 409)
+    try:
+        page_release.validate_document(document, now=now)
+    except (TypeError, ValueError):
+        raise MaintenanceError('review_plan_refused', 409) from None
+    plan = document['plan']
+    if (plan['group_id'] != group_id or plan['origin'] != origin
+            or plan['user_id'] != user_id):
+        raise MaintenanceError('review_scope_refused', 403)
+    if (targets is not None and
+            [item['device_id'] for item in targets] !=
+            [item['device_id'] for item in plan['targets']]):
+        raise MaintenanceError('review_targets_changed', 409)
+    identities = {item['device_id'] for item in document['targets']}
+    if not isinstance(files, dict) or set(files) != identities:
+        raise MaintenanceError('review_files_refused', 409)
+    summaries = []
+    package_files = []
+    for target in document['targets']:
+        device_id = target['device_id']
+        try:
+            reviewed = page_release.review_target(
+                document, device_id=device_id, now=now, files=files[device_id])
+        except (TypeError, ValueError):
+            raise MaintenanceError('review_package_refused', 409) from None
+        metadata = reviewed['target']['metadata']
+        publication = metadata['publication']
+        content = reviewed['content']
+        summaries.append(dict(
+            device_id=_text(device_id, 64),
+            projection=_text(target['projection'], 32),
+            destination=_text(target['destination'], 32),
+            revision_sha256=_text(metadata['revision_sha256'], 64),
+            content_sha256=_text(metadata['content_sha256'], 64),
+            metadata_sha256=sha(encode(metadata)),
+            package_id=_text(publication['package_id'], 64),
+            raw_manifest_sha256=_text(publication['raw_manifest_sha256'], 64),
+            file_count=len(publication['package']['files']),
+            page_target=_text(content['page'].get('target'), 32),
+            start_page=_text(content['page'].get('start_page'), 64),
+            page_count=len(content['page'].get('pages', [])),
+            block_count=len(content['page'].get('blocks', {})),
+            dataset_count=len(content['page'].get('datasets', {})),
+            event_count=len(content.get('events', [])),
+        ))
+        for item in publication['package']['files']:
+            if len(package_files) >= 512:
+                break
+            package_files.append(dict(device_id=device_id,
+                                      path=_text(item['path'], 512),
+                                      size=int(item['size']),
+                                      sha256=_text(item['sha256'], 64)))
+    revision = document['revision']
+    included = [_page_object(entry) for entry in revision['plan']['included']]
+    excluded = [_page_object(entry, excluded=True) for entry in revision['plan']['excluded']]
+    renderer = plan['targets'][0]['renderer'] if plan['targets'] else None
+    view = dict(
+        version=2, plan_id=plan['id'], confirmation=plan['id'][:8].upper(),
+        user_id=plan['user_id'], device_id=plan['device_id'],
+        policy_version=plan['policy_version'], expires=plan['expires'],
+        revision_sha256=plan['revision_sha256'],
+        dependencies_sha256=plan['dependencies_sha256'],
+        renderer=renderer, parents=list(plan['parents']),
+        targets=summaries, included=included, excluded=excluded,
+        package_files=package_files, settings_version=int(settings_version or 0),
+        target_count=len(summaries), included_count=len(included),
+        excluded_count=len(excluded),
     )
     if len(encode(view)) > MAX_REVIEW_BYTES:
         raise MaintenanceError('review_limit', 413)
