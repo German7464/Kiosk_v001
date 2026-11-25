@@ -4,7 +4,7 @@
 
 As of 2026-11-24, ChatGPT Work accepted Stage 5 within the recorded scope. The final matrix contains **37 PASS, 0 FAIL, 0 BLOCKED**. [Dated evidence](#dated-evidence) identifies the matrix and teardown report. Cleanup was verified. Retained data, rollback copies and the original Android application were preserved. Qualification used the recorded working sources and artifacts based on `work/windows-layout-checks` at `72d22ed`.
 
-Anton authorized Stage 6 on 2026-11-25. The Events feature and repeat-safe fixture seed are at `729a8d7`. The isolated page draft workspace and target preview are at `cd3741b`. Source and Chrome component checks are recorded in the [dated evidence](#dated-evidence). Stage 6 is **in progress**. Trusted page publication, target-specific delivery and native activation qualification are open. ChatGPT Work has not formally accepted Stage 6.
+Anton authorized Stage 6 on 2026-11-25. The Events feature and repeat-safe fixture seed are at `729a8d7`. The isolated page draft workspace and target preview are at `cd3741b`. Source and Chrome component checks are recorded in the [dated evidence](#dated-evidence). Stage 6 is **in qualification**. The signed publication contract is at 6860342. The server, Windows and Android groups are at a771eb8, 5eccea3 and c37c73d. Independent checks verified source, packaged builds and a disposable HTTPS native-signature journey with two target variants. Activation receipts in that journey were synthetic. Native lab activation, physical rendering and formal acceptance by ChatGPT Work remain open.
 
 The selected manual Windows offline update/build slice retains its own bounded acceptance. Full Stage 7 and Stages 8–10 remain unselected. Release, production rollout, 100 live clients and the 72-hour run remain outside the accepted scope.
 
@@ -16,6 +16,7 @@ Evidence paths below are relative to the original notebook or retained evidence 
 
 | Date | Evidence | Scope |
 | --- | --- | --- |
+| 2026-11-25 | Notebook `%LOCALAPPDATA%/KioskFlash/stage6-release-20261125-020709/qa-evidence/integration-verdict.md` and `lab-evidence/stage6-loopback-native.json` | Published source c37c73d. Verified immutable groups, packaged Windows host and client, Android APK, and notebook HTTPS two-target approval, refusals and retry. Native and physical-display qualification remain open. |
 | 2026-11-25 | Notebook `%LOCALAPPDATA%/KioskFlash/stage6-20261125-0104/STAGE6_MATRIX.md` and adjacent source, build, browser and cleanup records | Stage 6 draft workspace, fixture migration and PC4 Chrome components. PC4/PC5 and the Android serial were identified. Native page activation and physical Android qualification remain open. |
 | 2026-11-24 | Notebook `logs/stage5-final-20261121/README.md`, final 37-row qualification matrix, and `logs/stage5-final-20261121/coverage-review/r-stage5-final-cleanup-verified.json` | Formal acceptance within recorded Windows, Chrome and physical Android bounds. Reused cases retain their original source, artifact and environment limits. |
 | 2026-11-19 | Notebook `logs/notebook-migration-20261119/report.md` and `essential-manifest.json` in the same directory | Notebook source and development environment migration. PC1 retained as fallback. |
